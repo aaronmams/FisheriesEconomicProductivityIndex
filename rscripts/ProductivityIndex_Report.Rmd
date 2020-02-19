@@ -1,0 +1,39 @@
+---
+title: ""
+author: ""
+date: ""
+output: pdf_document
+---
+  
+```{r, echo = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This analysis uses nationally collected landings data for the `r ifelse(reg.order[r] %in% "National", "whole U.S.", paste0("for the", reg.order[r], "region")) `, downloaded from the NOAA FOSS site <https://foss.nmfs.noaa.gov/apexfoss/f?p=215:200::::::>. 
+
+```{r, echo = FALSE, warnings = FALSE}
+print(warnings.list0)
+```
+
+#### Species in Each category by Common Name
+```{r, echo = FALSE}
+spp.temp
+```
+
+
+
+Where are there negative values?
+```{r, echo = FALSE, warning = FALSE}
+a0<-landings.data#[idx,]
+a0[(a0$Dollars<0 & !(is.na(a0$Dollars))),] %>%
+    knitr::kable(row.names = F, booktabs = T)
+```
+
+Where are there negative values?
+```{r, echo = FALSE, warning = FALSE}
+a0<-landings.data#[idx,]
+a0[(a0$Pounds<0 & !(is.na(a0$Pounds))),] %>%
+    knitr::kable(row.names = F, booktabs = T)
+```
+
+

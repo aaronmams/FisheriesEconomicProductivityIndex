@@ -1,0 +1,177 @@
+---
+title: "ID-ing Landings Species by TSN"
+author: "Emily Markowitz"
+date: "Jan 09, 2019"
+output: 
+  word_document:
+    df_print: kable
+---
+
+```{r setup, include=FALSE, echo=F, message = F}
+# knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=50),tidy=TRUE)
+httr::set_config(httr::config(http_version = 0))
+# install.packages('webshot')
+# library('webshot')
+library(taxize)
+#######DIRECTORIES############
+dir.in<-dirname(getwd())
+#Local Directories
+dir.output<-paste0(dir.in, "/output/")
+dir.data<-paste0(dir.in, "/data/")
+```
+
+# Initial Data Sorting
+
+```{r, echo = F}
+#First load Landings Data (Downloaded December 23, 2019)
+landings.data<-read.csv(file = paste0(dir.data, "landings.csv"))
+```
+
+The objective in this excersize is to define taxonomic categories (defined below) for each TSN. The below categories should, in theory, cover all species.
+
+```{r, echo = T, warning=F}
+
+#Taxonomic categories I have defined
+categories<-list("Plantae" = "kingdom", 
+                 "Chromista" = "kingdom",
+                 "Fungi" = "kingdom",
+                 "Bacteria" = "kingdom",
+                 "Protozoa" = "kingdom",
+                 "Archaea" = "kingdom",
+                 "Porifera" = "phylum", 
+                 "Cnidaria" = "phylum", 
+                 "Platyhelminthes" = "phylum", 
+                 "Nematoda" = "phylum", 
+                 "Annelida" = "phylum",
+                 
+                 "Arthropoda" = "phylum", 
+                 "Echinodermata" = "phylum", 
+                 "Mollusca" = "phylum", 
+                 # "Chordata"  = "phylum", 
+                 "Urochordata" = "subphylum",
+                 "Agnatha" = "infraphylum",
+                 "Chondrichthyes" = "class",
+                 "Sarcopterygii" = "superclass", 
+                 "Tetrapoda" = "superclass", 
+                 "Actinopterygii" = "superclass")
+```
+
+Justification: The bulk of landings are fishes, but we catch a lot more than just fish in landings data. To make sure I cover everything and highlight fish (kingdom: Animalia, Phylum: Chordata), I categorize by all kingdoms except Animalia and all phylum in kingdom Animalia except for chordata, and then cover species in phylum chordata by the classes in phylum chordata.
+
+Then, I used a function called “classification” from the “taxize” R Package using the ITIS database to find the taxonomic ranking and define the relative category (above) for each TSN number. Some notes:
+
+ - When there is no TSN, the category is labeled as “Other”
+
+ - When there is a TSN, but it is invalid according to ITIS, the category is labled as “Uncategorized”
+
+
+```{r, echo = F, warning=F}
+
+itis_reclassify<-function(tsn, categories, missing.name){
+  temp<-classification(tsn, db = 'itis', callopts=list(http_version = 0L))
+  TSN<-NA
+  category0<-NA
+  for (i in 1:length(temp)){
+    # print(i)
+    TSN[i]<-tsn[i]
+    if (is.na(temp[[i]])[1]) {
+      category0[i]<-"Other"
+    } else if (sum(temp[[i]]$name %in% names(categories) & #is the name of the group right?
+                   temp[[i]]$rank %in% as.character(categories))==0 #is the taxonomic level right? Just in case
+    ) {
+      category0[i]<-missing.name
+    } else {
+      category0[i]<-temp[[i]]$name[temp[[i]]$name %in% names(categories) & #is the name of the group right?
+                                     temp[[i]]$rank %in% as.character(categories)] #is the taxonomic level right? Just in case
+    }
+  }
+  tempcategories<-data.frame(TSN = TSN, 
+                             category.tax = category0)
+  return(tempcategories)
+}
+
+#I created this function to use the categories and define which TSN numbers refer to which categories
+spp.cat<-itis_reclassify(tsn = unique(landings.data$Tsn), 
+                         categories, 
+                         missing.name="Uncategorized")
+
+#Create a frequency table of the categories we defined for each TSN number
+freqtable<-table(spp.cat$category.tax)
+
+```
+
+
+As you can see, there are `r data.frame(freqtable)[,2][data.frame(freqtable)[,1] %in% "Uncategorized"]` in the "Uncategorized" category and `r data.frame(freqtable)[,2][data.frame(freqtable)[,1] %in% "Other"]` in the "Other" category. 
+
+```{r, echo = F}
+freqtable
+```
+
+#Category: Uncategorized
+
+```{r, echo = F}
+
+#Get the ITIS data for the "uncategorized" TSN numbers
+a<-sort(spp.cat$TSN[spp.cat$category.tax %in% "Uncategorized"])
+temp<-classification(a, db = 'itis')
+
+#borning data reorganization code
+aaa<-data.frame(lapply(temp, function (x) x))
+aaaa<-data.frame(name = t(aaa[,grep(pattern = ".name", x = names(aaa))]), 
+                 rank = t(aaa[,grep(pattern = ".rank", x = names(aaa))]), 
+                 tsn = t(aaa[,grep(pattern = ".id", x = names(aaa))]))
+names(aaaa)<-c("name", "rank", "tsn")
+
+aaaa1<-merge(x = aaaa, y = landings.data[landings.data$Tsn %in% aaaa$tsn,c("Tsn", "AFS.Name")], by.x = "tsn", by.y = "Tsn")
+```
+
+If we take a closer look, we can see that in the “Uncategorized” category, save the TSN for kingdom Animalia, most of these are invalid accoding to ITIS (I double checked on the ITIS website). Below I merged the results from ITIS and the AFS.Name column from the landings data (Downloaded December 23, 2019) and found that there are `r nrow(aaaa1)` instances of these invalid “uncategorized” entries over the whole time series and across all states. 
+
+
+```{r, echo = F}
+#View Data
+unique(aaaa1) %>%
+  knitr::kable(row.names = F, booktabs = T)
+```
+
+Here is the summary of the above data so you can see the frequencies within the data (e.g. the TSN for “Osteichthyes” (AFS Name = “Finfish **”) was used `r summary(as.character(aaaa1$AFS.Name[aaaa1$name %in% "Osteichthyes"]))[[1]] ` times. Each column of the summary describes the frequency of the column’s data uniquely.
+
+```{r, echo = F}
+summary(aaaa1, maxsum = 50)
+```
+
+```{r, echo = F}
+# And for good measure/so we are on the same page, here is where I checked the valid/invalid state of these values. 
+# webshot::install_phantomjs()
+# #Screenshot of Webpage for example
+# webshot("https://www.itis.gov/servlet/SingleRpt/SingleRpt?search_topic=TSN&search_value=155470#null", paste0(dir.docu, "invalid_ex.png"))
+# knitr::include_graphics(paste0(dir.docu, "invalid_ex.png"))
+```
+
+
+From this I see that:
+
+ - There are a few species that could probably be captured in other (valid) groups.
+
+For example and if possible, to redefine a group like “FINFISH **" from TSN = 161030 (Osteichthyes; invalid) to TSN = 914179 (Gnathostomata; valid), if not TSN = 161061 (Actinopterygii; valid; and probably what they actually meant though I can’t be sure).
+
+ - Some of these species seem out of context. Note the interesting variety of terrestrial frogs and snakes listed above. Do we know the story behind those?
+
+#Category: Other
+
+```{r, echo = F}
+aaaa1<-landings.data[landings.data$Tsn %in% c("", NA),c("Year", "State", "AFS.Name", "Tsn")]
+aaa1<-unique(landings.data[(!(is.numeric(landings.data$Tsn)) | is.na(landings.data$Tsn) | landings.data$Tsn %in% ""),c("Year", "State", "AFS.Name", "Tsn")])
+aaaa1$Year<-factor(aaaa1$Year)
+aaaa1$AFS.Name<-factor(as.character(aaaa1$AFS.Name))
+```
+
+There was no TSN number (aka category “Other”) for `r nrow(aaaa1)` data in the landings data set to date. Below is a summary of when (year) and where (state) this occured. Do we know why these are there or what they represent?
+
+```{r, echo = F}
+#View Data
+summary(aaaa1, maxsum = 30)
+```
+
+

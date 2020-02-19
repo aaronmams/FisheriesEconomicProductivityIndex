@@ -1,0 +1,885 @@
+---
+title: "Productivity Index - Input"
+author: "Emily Markowitz"
+date: "Feb. 05, 2020"
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    df_print: kable
+---
+
+```{r setup, include=FALSE, echo = FALSE, message  = FALSE}
+# knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=50),tidy=FALSE)
+```
+
+
+```{r, echo = FALSE, include=FALSE, echo = FALSE, message  = FALSE}
+options(scipen=10000)
+
+ln<-log #tricky, tricky, Base R! Didn't fool me this time!!!
+
+####COLOR PALLET#####
+#mostly for figures
+NOAALightBlue<-"#C9E1E6"
+NOAADarkBlue<-"#0098A6"
+NOAADarkGrey<-"#56575A" #text
+NOAABlueScale<-colorRampPalette(colors = c(NOAALightBlue, NOAADarkBlue))
+
+dir.data<-paste0(dirname(getwd()), "/Data/")
+```
+
+#Math Theory: General Total Factor Productivity ($TFP$) Equation
+
+The general form of the $TFP$ can be measured as aggregate output ($Y$) divided by real total inputs ($X$). Rates of TFP growth are constructed using the Törnqvist index approach. The TFP growth over two time periods is defined as:
+
+$$ln(TFP_t/TFP_{t-1}) = \sum_{i=1}^n((\frac{R_{i,t} + R_{i,t-1}}{2}) * ln(\frac{Y_{i,t}}{Y_{i,t-1}}))) - \sum_{j=1}^m((\frac{W_{j,t} + W_{j,t-1}}{2}) * ln(\frac{X_{j,t}}{X_{j,t-1}})))$$
+
+Such that:
+ 
+ - Output  = $\sum_{i=1}^n((\frac{R_{it} + R_{it-1}}{2}) * ln(\frac{Y_{it}}{Y_{it-1}}))$
+
+ - Input = $\sum_{j=1}^n((\frac{W_{jt} + W_{jt-1}}{2}) * ln(\frac{X_{jt}}{X_{jt-1}}))$
+
+where: 
+
+ - $Y_i$ are individual outputs. This will later be refered to as $Q_i$ in the following equations. 
+ 
+ - $X_j$ are individual inputs
+ 
+ - $R_i$ are output revenue shares
+ 
+ - $W_j$ are input cost shares
+ 
+ - $t$ and $t-1$ are time subscripts, where 1 is the minimum year in the dataset
+ 
+ - $i$ is category, e.g., Finfish (=1), Shellfish (=2)
+
+ - $s$ is species, e.g., Salmon, Alewife, Surf Clams
+
+-------
+
+#Output Method: From Price to Quantity Measures
+
+###Variable Summary
+
+Variables
+
+ - $Q$ are individual quantity outputs in pounds (lbs). 
+ 
+ - $V$ are individual value outputs in dollars ($)
+
+ - $R$ are output revenue shares
+ 
+ - $P$ are prices
+
+ - $PC$ are price changes
+ 
+ - $PI$ are price indicies, often defined by a price from a base year $baseyr$
+ 
+ - $baseyr$ is the year to base all indicides from
+ 
+ 
+ Inidicies
+ 
+ - $t$ and $t-1$ are time subscripts, where 1 is the minimum year in the dataset
+ 
+ - $i$ is category, e.g., Finfish (=1), Shellfish (=2)
+
+ - $s$ is species, e.g., Salmon, Alewife, Surf Clams
+ 
+
+#Input Method: From Price to Quantity Measures
+
+ - Input = $\sum_{j=1}^n((\frac{W_{jt} + W_{jt-1}}{2}) * ln(\frac{X_{jt}}{X_{jt-1}}))$
+
+###Variable Summary
+
+Variables
+
+ - $Q$ are individual quantity outputs in pounds (lbs). 
+ 
+ - $V$ are individual value outputs in dollars ($)
+
+ - $W$ are weights of the data to the portion
+ 
+ - $P$ are prices
+
+ - $PC$ are price changes
+ 
+ - $PI$ are price indicies, often defined by a price from a base year $baseyr$
+ 
+ - $baseyr$ is the year to base all indicides from
+ 
+ 
+ Inidicies
+ 
+ - $t$ and $t-1$ are time subscripts, where 1 is the minimum year in the dataset
+ 
+ - $i$ is category, e.g., Finfish (=1), Shellfish (=2)
+
+
+categories
+
+ - Capital (K): Length of the vessel times the percent time spent in the fishery. Some vessels spend time in more than one fishery.
+
+ - Labor Input (L): Crew Size * Days at Sea. 
+
+ - Energy (E): Estimated quantity based on econometric models.
+
+ - Materials (M): Estimated quantity of bait and ice based on econometric models.
+
+ - Service (S)
+
+###Data requirements
+
+We need time series data for the price of all categories ($P_{t}$; e.g., Total), price of each category (i) ($P_{i=1}$; e.g., K, L, E, M, and S), and the quantity of each category (i) ($Q_{i=1}$; e.g., K, L, E, M, and S):
+
+#### Edit Data
+
+We amy not have information for each of the K, L, E, M, and S categories, so the code has to be dynamic enough to only take for the data that is available. 
+
+```{r, echo = TRUE, warning = FALSE}
+temp<-read.csv(file = paste0(dir.data, "Tornqvist Index-Calculations_InputEx.csv"))
+rownames(temp)<-temp$year
+temp$year<-NULL
+
+temp.q<-temp[,grepl(pattern = "Q", x = names(temp))]
+temp$QE0_0Total<-rowSums(temp.q, na.rm = T)
+
+temp<-orgional.data<-cbind.data.frame(temp)
+
+```
+
+
+```{r, echo  = FALSE}
+temp %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+
+#### The nameing conventions of the column names. 
+
+For example, in "V0_0Total":
+
+ - "V"... refers to the variable represented in the column (here V = "Value")
+ 
+ - ..."0"... refers to the whole fishery
+ 
+  - ..."_"... is simply a seperator in the title
+ 
+ - Since this is the total, ..."0".. refers to the index of the species, which is not relevant since this is the sum of the category, hense = 0
+ 
+ - ..."Total" is purely descriptive (here the total for the fishery), so you can follow along with what is happening!
+ 
+ 
+Similarly for "Q2_0K": 
+
+ - "Q"... refers to the variable represented in the column (here Q = "Quantity")
+ 
+ - ..."2"... refers to the category index (here, = Capital (K))
+ 
+ - ..."_"... is simply a seperator in the title
+ 
+ - ..."0".. refers to the index of the input value, here these are the total (= 0). 
+ 
+ - ..."K" is purely descriptive (here the name of the species), so you can follow along with what is happening!
+
+
+Here I am just going to do some housekeeping items
+
+```{r, echo  = TRUE}
+    NameBaseTotal<-substr(x = names(temp)[grep(x = names(temp), pattern = "0Total")][1], 
+                        start = 3, stop = nchar(names(temp)[grep(x = names(temp), 
+                                                                 pattern = "0Total")][1]))
+
+    # Find which columns in this table are quantity Columns - we will need this for later
+    QColumns<-grep(pattern = paste0("Q[0-9]+"), 
+                 x = names(temp))
+    
+    # Find which columns in this table are price Columns - we will need this for later
+    PColumns<-grep(pattern = paste0("P[0-9]+"), 
+                 x = names(temp))
+    
+      # Find which columns in this table are value Columns - we will need this for later
+  VColumns<-rep_len(x = "", length.out = length(QColumns))
+  for (j in 1:length(VColumns)){
+    VColumns[j]<-paste0("V", substr(x = names(temp)[QColumns[j]], 
+                                    start = 2, 
+                                    stop = nchar(names(temp)[QColumns[j]])))
+  }
+  
+```
+
+
+###Value for each category ($V_{i,t}$; e.g., K, L, ...)
+We first calculate the value for each input category. 
+
+Price for a species (s) of category (i) in year (t) = 
+$$V_{i,t} = VP_{i,t}*/*Q_{i,t}$$
+
+where: 
+
+ - $P_{i,t}$ is the price per category (i), for each year (t)
+ 
+ - $Q_{i,t}$ is the quantity per category (i), for each year (t)
+ 
+ - $V_{i,t}$ is the value ($) per category (i), for each year (t)
+
+Here we calculate the value for each category
+```{r, echo  = TRUE}
+#####Value for each category#####
+tempV<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+for (c in 1:length(PColumns)) {
+  
+    NameBase<-substr(start = 2, 
+                   stop = nchar(names(temp)[PColumns[c]]), 
+                   x = names(temp)[PColumns[c]]) 
+    
+    Q0<-temp[,names(temp) %in% paste0("Q", NameBase)]
+    P0<-temp[,names(temp) %in% paste0("P", NameBase)] #to make sure its the same column
+  tempV[,c]<-P0*Q0
+  names(tempV)[c]<-paste0("V", NameBase ) #name the column
+}
+
+tempV<-data.frame(tempV)
+temp<-cbind.data.frame(temp, tempV)
+```
+
+```{r, echo  = FALSE}
+temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
+                 temp[,(ncol(temp)-4):ncol(temp)])
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+
+###Sum value of the the fishery
+
+$$V_t = \sum_{i=1}^{m} V_{i,t}$$
+
+where: 
+
+ - $V_{t}$ is the value of the fishery by year
+
+```{r, echo  = TRUE}
+temp[,ncol(temp)+1]<-rowSums(tempV, na.rm = T)
+names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal) #name the column
+```
+
+```{r, echo  = FALSE}
+temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
+                 temp[,(ncol(temp)-4):ncol(temp)])
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+
+###Weight of each category in the fishery ($W_{i,t}$; e.g., K, L, ...) 
+
+$$W_{i,t} = (P_{i,t}*Q_{i,t})/V_{t}$$
+
+where: 
+
+ - $W_{i,t}$ is the weight of the category (i) for each year (t) in the fishery
+ 
+
+```{r, echo  = FALSE}
+tempW<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+for (c in 1:length(VColumns)) {
+  
+  #for renaming the columns
+    NameBase<-substr(start = 2, 
+                   stop = nchar(names(temp)[QColumns[c]]), 
+                   x = names(temp)[QColumns[c]]) 
+    
+  V<-temp[,grep(pattern = paste0("V", NameBaseTotal), x = names(temp))]
+  V0<-temp[,names(temp) %in% paste0("V", NameBase)] #to make sure its the same column
+  tempW[,c]<-V0/V
+  names(tempW)[c]<-paste0("W", NameBase ) #name the column
+}
+
+tempW<-data.frame(tempW)
+temp<-cbind.data.frame(temp, tempW)
+```
+
+```{r, echo  = FALSE}
+rownames(tempW)<-rownames(temp)
+tempW %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+###Price Changes for each category ($PC_{i,t}$ aka $\Delta ln(P_{i,t})$; e.g., K, L, ...)
+
+$$PC_{i,t} = ln(\frac{P_{i,t}}{P_{i,t-1}}) = \sum_{s=1}^n([\frac{W_{i,t} + W_{i,t-1}}{2}] * [ln(\frac{P_{i,t}}{P_{i,t-1}}]) = \sum_{s=1}^n([\frac{W_{i,t} + W_{i,t-1}}{2}] * [ln(P_{i,t}) - ln(P_{i,t-1})]) $$
+
+Where:
+
+ - category's (i) Price for each category (i), for each year (t) = $P_{i,t}$
+
+ - category's (i) Weight for each category (i), for each year (t) = $W_{i,t}$
+
+Which can be adapted to this function/macro:
+
+```{r, echo  = TRUE}
+#A function to caluclate the price change
+print(pricechange)
+```
+
+Now put it into practice for the total dataset:
+
+```{r, echo  = TRUE}
+#Find which columns in this table are price and revenue share columns
+tempPC<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+for (c in 1:length(PColumns)){
+  #For nameing columns
+    NameBase<-substr(start = 2, 
+                   stop = nchar(names(temp)[QColumns[c]]), 
+                   x = names(temp)[QColumns[c]]) 
+  
+  # Calculate
+  P0<-temp[, names(temp) %in% paste0("P", NameBase)]
+  R0<-temp[, names(temp) %in% paste0("W", NameBase)] #to make sure its the same column
+  tempPC[,c]<-pricechange(R0, P0)
+  names(tempPC)[c]<-paste0("PC", NameBase ) #name the column
+}
+
+temp<-cbind.data.frame(temp, tempPC)
+```
+
+For reference, here are the Price Changes for each species ($PC_{s,i,t}$):
+
+```{r, echo  = FALSE}
+rownames(tempPC)<-rownames(temp)
+tempPC %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+
+###Summed Price Change for the fishery ($PC_{t}$)
+
+$$PC_{t} = \sum_{i=1}^{m} PC_{i,t}$$
+
+Where:
+
+ - category's (i) Price Change of the fishery, for each year (t) = $PC_{t}$
+ 
+```{r, echo  = TRUE}
+temp[ncol(temp)+1]<-rowSums(tempPC, na.rm = T)
+names(temp)[ncol(temp)]<-paste0("PC", NameBaseTotal)
+```
+
+```{r, echo  = FALSE}
+temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
+                 temp[,(ncol(temp)-4):ncol(temp)])
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+ 
+###Price for the entire commercial fishery ($P_t$)
+
+$$P_t = P_{t-1}*[1+ln(\frac{P_{i,t}}{P_{i,t-1}})] = P_{t-1}*[1-PC_{t}]$$
+
+Which is represented using this function:
+```{r, echo  = TRUE}
+#Note that the first row of this column is = 1
+tempP<-c(1, rep_len(x = NA, length.out = nrow(temp)-1))
+
+PC0<-temp[,paste0("PC", NameBaseTotal)] #this is equal to ln(P_it/P_it-1)
+
+  #Since the first row is defined, we need to start at the second row
+for (t in 2:length(tempP)){
+    tempP[t]<-tempP[t-1]*(1+PC0[t])
+}
+  
+temp[,ncol(temp)+1]<-tempP
+names(temp)[ncol(temp)]<-paste0("P", NameBaseTotal)
+```
+
+```{r, echo  = FALSE}
+temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
+                 temp[,(ncol(temp)-4):ncol(temp)])
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+###Price Index for the entire commercial fishery ($PI_t$)
+
+$$PI_{t} = \frac{P_{t}}{P_{t=baseyr}}$$
+
+In this example, we'll decide that the base year is 2010, for whatever reason. Notice that the $PI_{i,t=2007} = 1$ 
+
+```{r, echo  = FALSE}
+baseyr<-2007
+temp[,ncol(temp)+1]<-temp[,paste0("P", NameBaseTotal)]/temp[rownames(temp) %in% baseyr,paste0("P", NameBaseTotal)]
+names(temp)[ncol(temp)]<-paste0("PI", NameBaseTotal)
+```
+
+```{r, echo  = FALSE}
+temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
+                 temp[,(ncol(temp)-4):ncol(temp)])
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+### Total Implicit Quantity Input for the entire commercial fishery ($Q_t = Y_t$)
+To get quantity estimates for total output using total value of landings divided by price index as follow: $Y=Q=V/I$ 
+
+$$Q_{t}=V_{t}/PI_{t}$$
+
+```{r, echo  = TRUE}
+temp[,ncol(temp)+1]<-temp[,paste0("V", NameBaseTotal)]/temp[,paste0("PI", NameBaseTotal)]
+names(temp)[ncol(temp)]<-paste0("Q", NameBaseTotal)
+```
+
+```{r, echo  = FALSE}
+temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
+                 temp[,(ncol(temp)-4):ncol(temp)])
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+### Total Implicit Quantity/Output Index
+
+$$QI_t = Q_t/Q_{t=baseyr}$$
+
+Where:
+
+ - $QI$ is the sum of Q after these equations
+ 
+```{r, echo  = TRUE}
+    temp$QI0_0Total<-temp$Q0_0Total/temp$Q0_0Total[rownames(temp) %in% baseyr]
+```
+
+```{r, echo  = FALSE}
+temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
+                 temp[,(ncol(temp)-4):ncol(temp)])
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+### Sum Total Implicit Quantity/Output Index (Optional)
+
+$$QEI_t = QE_t/QE_{t=baseyr}$$
+
+Where:
+
+ - $QE$ is the sum of Q before these equations
+ 
+ - $QEI$ is the index of the sum of Q before these equations
+
+```{r, echo  = TRUE}
+temp$QEI0_0Total<-temp$QE0_0Total/temp$QE0_0Total[rownames(temp) %in% baseyr]
+```
+
+```{r, echo  = FALSE}
+temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
+                 temp[,(ncol(temp)-4):ncol(temp)])
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+### Solve Output portion of the equation for the Input Changes: 
+
+$$QC_t = \sum_{i=1}^n((\frac{R_{it} + R_{it-1}}{2}) * ln(\frac{Q_{it}}{Q_{it-1}}))$$
+
+```{r, echo  = TRUE}
+#Find which columns in this table are price and revenue share columns
+tempQC<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+for (c in 1:length(PColumns)){
+  #For nameing columns
+    NameBase<-substr(start = 2, 
+                   stop = nchar(names(temp)[QColumns[c]]), 
+                   x = names(temp)[QColumns[c]]) 
+  
+  # Calculate
+  P0<-temp[, names(temp) %in% paste0("Q", NameBase)]
+  R0<-temp[, names(temp) %in% paste0("W", NameBase)] #to make sure its the same column
+  tempQC[,c]<-pricechange(R0, P0)
+  names(tempQC)[c]<-paste0("QC", NameBase ) #name the column
+}
+
+temp<-cbind.data.frame(temp, tempQC)
+```
+
+For reference, here are the Price Changes for each species ($PC_{s,i,t}$):
+
+```{r, echo  = FALSE}
+rownames(tempQC)<-rownames(temp)
+tempQC %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+
+###Summed Price Change for the fishery ($PC_{t}$)
+
+$$QC_{t} = \sum_{i=1}^{m} QC_{i,t}$$
+
+Where:
+
+ - category's (i) Price Change of the fishery, for each year (t) = $PC_{t}$
+ 
+```{r, echo  = TRUE}
+temp[ncol(temp)+1]<-rowSums(tempQC, na.rm = T)
+names(temp)[ncol(temp)]<-paste0("QC", NameBaseTotal)
+```
+
+```{r, echo  = FALSE}
+temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
+                 temp[,(ncol(temp)-4):ncol(temp)])
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+```{r, echo  = FALSE}
+temp[names(temp) %in% c("Q0_0Total", "QI0_0Total", "QC0_0Total")] %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+### Graph 1
+```{r, echo  = TRUE}
+#A function I made to plot this pretty in ggplot2
+plot1line(temp, PI = temp$PI0_0Total, 
+            NOAALightBlue, NOAADarkBlue, NOAADarkGrey)
+```
+
+
+### Graph 2
+```{r, echo  = TRUE}
+
+temp0<-temp
+temp0$Year<-rownames(temp0)
+
+tempA<-data.frame(temp0[,names(temp0) %in% c("Year", "QI0_0Total")])
+names(tempA)<-c("Index", "Year")
+tempA$group<-"QI_Total"
+tempA$col<-NOAALightBlue
+
+tempB<-data.frame(temp0[,names(temp0) %in% c("Year", "QEI0_0Total")])
+names(tempB)<-c("Index", "Year")
+tempB$group<-"QEI_Total"
+tempB$col<-NOAADarkBlue
+
+temp0<-rbind.data.frame(tempA, tempB)
+rownames(temp0)<-NULL
+temp0$col<-as.factor(temp0$col)
+
+#A function I made to plot this pretty in ggplot2
+plot2line(temp0, Year = temp0$Year, Index=temp0$Index, col = temp0$col, group = temp0$group, 
+                    NOAALightBlue, NOAADarkBlue, NOAADarkGrey)
+```
+
+## Do same analysis via a function!
+
+Now that we know the method, we can simplify most of it into a function and do this whole analysis in 4 easy steps: 
+
+ - A. Import and Edit data
+ 
+ - B. Enter base year
+ 
+ - C. Run the function
+ 
+ - D. Obtain the implicit quantity estimates
+
+### Function to calculate the Implicit Quanity Input at Fishery Level
+```{r, echo = TRUE}
+print(ImplicitQuantityInput)
+```
+
+### A. Import and Edit data
+```{r, echo = TRUE, warning = FALSE}
+temp<-read.csv(file = paste0(dir.data, "Tornqvist Index-Calculations_InputEx.csv"))
+rownames(temp)<-temp$year
+temp$year<-NULL
+
+temp.q<-temp[,grepl(pattern = "Q", x = names(temp))]
+temp$QE0_0Total<-rowSums(temp.q, na.rm = T)
+
+temp<-orgional.data<-cbind.data.frame(temp)
+```
+
+ 
+### B. Enter base year
+```{r, echo = TRUE, warning = FALSE}
+ baseyr<-2007
+```
+ 
+### C. Run the function
+```{r, echo = TRUE, warning = FALSE}
+temp<-ImplicitQuantityInput(temp, baseyr, calcQEI = T)
+```
+
+### D. Obtain the implicit quantity estimates
+```{r, echo = FALSE, warning = FALSE}
+write.csv(x = temp, file = paste0(dir.docu, "Example_Input.csv"))
+
+temp0<-temp[, grepl(pattern = "0Total", x = names(temp))]
+
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+### Graph 1
+For comparison, let's recreate those graphs to make sure we are getting the same output:
+```{r, echo  = TRUE}
+#A function I made to plot this pretty in ggplot2
+plot1line(temp, PI = temp$PI0_0Total, 
+            NOAALightBlue, NOAADarkBlue, NOAADarkGrey)
+```
+
+### Graph 2
+For comparison, let's recreate those graphs to make sure we are getting the same output:
+```{r, echo  = TRUE}
+
+temp0<-temp
+temp0$Year<-rownames(temp0)
+
+tempA<-data.frame(temp0[,names(temp0) %in% c("Year", "QI0_0Total")])
+names(tempA)<-c("Index", "Year")
+tempA$group<-"QI_Total"
+tempA$col<-NOAALightBlue
+
+tempB<-data.frame(temp0[,names(temp0) %in% c("Year", "QEI0_0Total")])
+names(tempB)<-c("Index", "Year")
+tempB$group<-"QEI_Total"
+tempB$col<-NOAADarkBlue
+
+temp0<-rbind.data.frame(tempA, tempB)
+rownames(temp0)<-NULL
+temp0$col<-as.factor(temp0$col)
+
+plot2line(temp0, Year = temp0$Year, Index=temp0$Index, col = temp0$col, group = temp0$group, 
+                    NOAALightBlue, NOAADarkBlue, NOAADarkGrey)
+```
+
+-------
+
+#Use examples to do the whole $TFP$ Equation
+
+## A. Import and Edit data
+
+Output
+``` {r, echo  = TRUE} 
+temp<-read.csv(file = paste0(dir.data, "Tornqvist Index-Calculations_OutputEx.csv"))
+rownames(temp)<-temp$year
+temp$year<-NULL
+
+temp.q<-temp[,grepl(pattern = "Q", x = names(temp))]
+temp.q$QE0_0Total<-rowSums(temp.q, na.rm = T)
+temp.q$QE1_0Finfish<-rowSums(temp.q[,grepl(x = names(temp.q), pattern = "Q1") ], na.rm = T)
+temp.q$QE2_0Shellfish<-rowSums(temp.q[,grepl(x = names(temp.q), pattern = "Q2") ], na.rm = T)
+
+temp.v<-temp[,grepl(pattern = "V", x = names(temp))]
+temp.v$V0_0Total<-rowSums(temp.v, na.rm = T)
+temp.v$V1_0Finfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V1") ], na.rm = T)
+temp.v$V2_0Shellfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V2") ], na.rm = T)
+
+temp.output<-cbind.data.frame(temp.q, temp.v)
+```
+
+Input:
+``` {r, echo  = TRUE} 
+temp<-read.csv(file = paste0(dir.data, "Tornqvist Index-Calculations_InputEx.csv"))
+rownames(temp)<-temp$year
+temp$year<-NULL
+
+temp.q<-temp[,grepl(pattern = "Q", x = names(temp))]
+temp$QE0_0Total<-rowSums(temp.q, na.rm = T)
+
+temp.input<-orgional.data<-cbind.data.frame(temp)
+```
+
+## B. Enter base year
+
+``` {r, echo  = TRUE} 
+baseyr<-2007
+```
+
+## C. Run the function
+
+
+###Function Method 1 to Calcilate the TFP
+
+$$TFP_t = \frac{Y_t}{X_t}$$
+
+$$TFPCR_t = ln(TFP_{t}/TFP_{t-1})$$
+
+where
+
+ - $TFPCR_t$ is the change rate of the TFP over time t
+
+``` {r, echo  = TRUE} 
+print(TFP_ChangeRate_Method1)
+```
+
+```{r, echo = FALSE}
+TFP1_CR<-TFP_ChangeRate_Method1(temp.output, temp.input, baseyr, calcQEI = T, PercentMissingThreshold)
+```
+
+``` {r, echo  = FALSE} 
+NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
+                                                strsplit(x = names(TFP1_CR)[3], 
+                                                         split = "_")[[1]][2], 
+                                              split = "[a-zA-Z]")[[1]][1]))[1]
+
+temp<-TFP1_CR[, c(grep(pattern = paste0("Y",NumberOfSpecies,".*Total"), x = names(TFP1_CR)) , 
+                grep(pattern = paste0("X",NumberOfSpecies,".*Total"), x = names(TFP1_CR)) ,
+                grep(pattern = "TFP", x = names(TFP1_CR)))]
+names(temp)<-c("Y_Total", "X_Total", "TFP", "TFP_CR")
+temp %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+### Function Method 2 to Calcilate the TFP
+
+$$ln(TFP_t/TFP_{t-1}) = \sum_{i=1}^n((\frac{R_{i,t} + R_{i,t-1}}{2}) * ln(\frac{Y_{i,t}}{Y_{i,t-1}}))) - \sum_{j=1}^m((\frac{W_{j,t} + W_{j,t-1}}{2}) * ln(\frac{X_{j,t}}{X_{j,t-1}})))$$
+
+``` {r, echo  = TRUE} 
+print(TFP_ChangeRate_Method2)
+```
+
+``` {r, echo  = TRUE} 
+TFP2_CR<-TFP_ChangeRate_Method2(temp.output, temp.input, baseyr, calcQEI = T, PercentMissingThreshold)
+```
+ 
+###Method 1 using $YE$ (summed, not calculated, output) for comparison
+```{r, echo = TRUE}
+  NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
+                                                strsplit(x = names(temp)[1], 
+                                                         split = "_")[[1]][2], 
+                                              split = "[a-zA-Z]")[[1]][1]))[1]
+
+  #OUTPUT
+  temp00<-ImplicitQuantityOutput(temp.output, baseyr, calcQEI = T, PercentMissingThreshold)
+temp<-temp00[[1]]
+warnings.list0<-temp00[[2]]
+figures.list0<-temp00[[3]]
+
+  names(temp)<-paste0(gsub(pattern = "Q", replacement = "Y", 
+                           x = substr(x = names(temp), start = 1, stop = 1)), 
+                      substr(x = names(temp), start = 2, stop = nchar(names(temp))))
+  temp.output1<-temp
+  
+  
+  #input
+  temp<-ImplicitQuantityInput(temp.input, baseyr, calcQEI = T)
+  names(temp)<-paste0(gsub(pattern = "Q", replacement = "X", 
+                           x = substr(x = names(temp), start = 1, stop = 1)), 
+                      substr(x = names(temp), start = 2, stop = nchar(names(temp))))
+  temp.input1<-temp
+
+  #Calculate
+  TFP1<-temp.output1[,grep(pattern = paste0("YE",NumberOfSpecies,".*Total"), x = names(temp.output1))] / 
+    temp.input1[,grep(pattern = paste0("X",NumberOfSpecies,".*Total"), x = names(temp.input1))] 
+  
+  
+  TFP1E_CR<-rep_len(x = 0, length.out = length(TFP1))
+  for (i in 2:length(TFP1)) {
+    TFP1E_CR[i] <- ln(TFP1[i]/TFP1[i-1])
+  }
+  
+  TFP1E_CR<-data.frame(TFP1E_CR)
+  names(TFP1E_CR)<-c("TFP1_CR")
+  rownames(TFP1E_CR)<-rownames(temp.output1)
+```
+
+```{r, echo = FALSE}
+TFP1E_CR %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+###Method 2 using $YE$ (summed, not calculated, output) for comparison
+
+```{r, echo = TRUE}
+  #OUTPUT
+
+  temp00<-ImplicitQuantityOutput(temp.output, baseyr, calcQEI = T, PercentMissingThreshold)
+  temp<-temp00[[1]]
+  warnings.list0<-temp00[[2]]
+  figures.list0<-temp00[[3]]
+
+  names(temp)<-paste0(gsub(pattern = "Q", replacement = "Y", 
+                           x = substr(x = names(temp), start = 1, stop = 1)), 
+                      substr(x = names(temp), start = 2, stop = nchar(names(temp))))
+  temp.output1<-temp
+  
+    temp$YEC0_0Total<-rowSums(cbind(pricechange(R0 = temp$R1_0Finfish, P0 = temp$YE1_0Finfish), 
+                            pricechange(R0 = temp$R2_0Shellfish, P0 = temp$YE2_0Shellfish)), 
+                       na.rm = T)
+  
+  
+  #input
+  temp<-ImplicitQuantityInput(temp.input, baseyr, calcQEI = T)
+  names(temp)<-paste0(gsub(pattern = "Q", replacement = "X", 
+                           x = substr(x = names(temp), start = 1, stop = 1)), 
+                      substr(x = names(temp), start = 2, stop = nchar(names(temp))))
+  temp.input1<-temp
+  
+
+  
+  
+  
+  TFP <- temp.output1[,grep(pattern = "YC.*Total", x = names(temp.output1))] - 
+    temp.input1[,grep(pattern = "XC.*Total", x = names(temp.input1))]
+  
+  TFP2E_CR<-data.frame(TFP)
+  names(TFP2E_CR)<-"TFP2_CR"
+  rownames(TFP2E_CR)<-rownames(temp.output1)
+```
+
+```{r, echo = TRUE}
+TFP2E_CR %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+## D. Obtain the implicit quantity estimates
+
+```{r, echo  = TRUE}
+## Graph 1
+# For comparison, let's recreate those graphs to make sure we are getting the same output:
+
+#A function I made to plot this pretty in ggplot2
+# TFP<-cbind.data.frame(TFP1_CR, TFP2_CR)
+# plot2line(temp0 = TFP, PI = TFP$TFP1, 
+            # NOAALightBlue, NOAADarkBlue, NOAADarkGrey)
+```
+
+## Graph 2: Compare methods
+``` {r, echol = FALSE}
+TFP$TFP1<-NULL
+
+TFP1_CR$Year<-rownames(TFP1_CR)
+tempA<-data.frame(TFP1_CR[,names(TFP1_CR) %in% c("Year", "TFP1_CR")])
+names(tempA)<-c("Index", "Year")
+tempA$group<-"M1 with Calc. TFP"
+tempA$col<-NOAALightBlue
+
+TFP2_CR$Year<-rownames(TFP2_CR)
+tempB<-data.frame(TFP2_CR[,names(TFP2_CR) %in% c("Year", "TFP2_CR")])
+names(tempB)<-c("Index", "Year")
+tempB$group<-"M2 with Calc. TFP"
+tempB$col<-NOAADarkBlue
+
+TFP1E_CR$Year<-rownames(TFP1E_CR)
+tempC<-data.frame(TFP1E_CR[,names(TFP1E_CR) %in% c("Year", "TFP1_CR")])
+names(tempC)<-c("Index", "Year")
+tempC$group<-"M1 with Sum. TFP"
+tempC$col<-"#a66600"
+
+TFP2E_CR$Year<-rownames(TFP2E_CR)
+tempD<-data.frame(TFP2E_CR[,names(TFP2E_CR) %in% c("Year", "TFP2_CR")])
+names(tempD)<-c("Index", "Year")
+tempD$group<-"M2 with Sum. TFP"
+tempD$col<-"#a60000"
+
+temp0<-rbind.data.frame(tempA, tempB)#, tempC, tempD)
+rownames(temp0)<-NULL
+temp0$col<-as.factor(temp0$col)
+
+plot2line(temp0, Year = temp0$Year, Index=temp0$Index, col = temp0$col, group = temp0$group, 
+                    NOAALightBlue, NOAADarkBlue, NOAADarkGrey)
+
+```
+

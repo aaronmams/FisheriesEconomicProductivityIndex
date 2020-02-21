@@ -43,6 +43,7 @@ file.copy.rename <- function(from, to) {
   file.rename(from = paste0(todir, "/", fromname),  to = to)
 }
 
+
 CreateLoadedDataMetadata<-function(dir.out, data, title) {
   my_doc <- read_docx() 
   styles_info(my_doc)

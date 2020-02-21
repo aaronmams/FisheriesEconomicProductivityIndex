@@ -2,6 +2,7 @@
 ### Construct the FEUS Commerical Fisheries state and national tables and output them to csv files
 ### updated and simplified from MarineEcon_tables.R, *use this version*
 
+
 options(java.parameters = "-Xmx1000m")
 library(xlsx)
 library(taxize)

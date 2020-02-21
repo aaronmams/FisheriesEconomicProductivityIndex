@@ -339,17 +339,19 @@ rmarkdown::render(ProdI.Docu.Out,
                   output_dir = paste0(dir.docu),
                   output_file = paste0("ProductivityIndex_Documentation_Out_",date0,".pdf"))
 
-my.file.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_",date0,".pdf"),
+file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_",date0,".pdf"),
                to = paste0(dir.output, "ProductivityIndex_Documentation_Output.pdf"))
 
 rmarkdown::render(ProdI.Docu.In,
                   output_dir = paste0(dir.docu),
                   output_file = paste0("ProductivityIndex_Documentation_In_",date0,".pdf"))
 
-my.file.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_In_",date0,".pdf"),
+file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_In_",date0,".pdf"),
                to = paste0(dir.output, "ProductivityIndex_Documentation_Input.pdf"))
 
 ###############METADATA##################
 CreateMetadata(dir.out = paste0(dir.out, "/metadata"), 
-               title = paste0("Marine Economy Metadata ", Sys.Date()))
+               title = paste0("Fisheries Economic Productivity Index Metadata ", Sys.Date()))
 
+file.copy.rename(from = paste0(dir.out, "/metadata/Metadata_", Sys.Date(), ".docx"),
+          to = paste0(dir.output, "/Metadata.docx"))

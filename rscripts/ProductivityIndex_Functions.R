@@ -33,10 +33,14 @@ NOAABlueScale<-colorRampPalette(colors = c(NOAALightBlue, NOAADarkBlue))
 #########***########
 ##########USER FUNCTIONS##############
 
-my.file.rename <- function(from, to) {
+file.copy.rename <- function(from, to) {
   todir <- dirname(to)
+  fromdir <- dirname(from)
+  toname<-strsplit(x = to, split = "/")[[1]][length(strsplit(x = to, split = "/")[[1]])]
+  fromname<-strsplit(x = from, split = "/")[[1]][length(strsplit(x = from, split = "/")[[1]])]
   if (!isTRUE(file.info(todir)$isdir)) dir.create(todir, recursive=TRUE)
-  file.rename(from = from,  to = to)
+  file.copy(from = from, to = todir, overwrite = T)
+  file.rename(from = paste0(todir, "/", fromname),  to = to)
 }
 
 CreateLoadedDataMetadata<-function(dir.out, data, title) {

@@ -325,7 +325,7 @@ Which can be adapted to this function/macro:
 
 ```{r, echo  = TRUE}
 #A function to caluclate the price change
-print(pricechange)
+print(PriceChange)
 ```
 
 Now put it into practice for the total dataset:
@@ -342,7 +342,7 @@ for (c in 1:length(PColumns)){
   # Calculate
   P0<-temp[, names(temp) %in% paste0("P", NameBase)]
   R0<-temp[, names(temp) %in% paste0("W", NameBase)] #to make sure its the same column
-  tempPC[,c]<-pricechange(R0, P0)
+  tempPC[,c]<-PriceChange(R0, P0)
   names(tempPC)[c]<-paste0("PC", NameBase ) #name the column
 }
 
@@ -497,7 +497,7 @@ for (c in 1:length(PColumns)){
   # Calculate
   P0<-temp[, names(temp) %in% paste0("Q", NameBase)]
   R0<-temp[, names(temp) %in% paste0("W", NameBase)] #to make sure its the same column
-  tempQC[,c]<-pricechange(R0, P0)
+  tempQC[,c]<-PriceChange(R0, P0)
   names(tempQC)[c]<-paste0("QC", NameBase ) #name the column
 }
 
@@ -805,8 +805,8 @@ TFP1E_CR %>%
                       substr(x = names(temp), start = 2, stop = nchar(names(temp))))
   temp.output1<-temp
   
-    temp$YEC0_0Total<-rowSums(cbind(pricechange(R0 = temp$R1_0Finfish, P0 = temp$YE1_0Finfish), 
-                            pricechange(R0 = temp$R2_0Shellfish, P0 = temp$YE2_0Shellfish)), 
+    temp$YEC0_0Total<-rowSums(cbind(PriceChange(R0 = temp$R1_0Finfish, P0 = temp$YE1_0Finfish), 
+                            PriceChange(R0 = temp$R2_0Shellfish, P0 = temp$YE2_0Shellfish)), 
                        na.rm = T)
   
   

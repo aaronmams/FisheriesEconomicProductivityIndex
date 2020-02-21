@@ -334,6 +334,8 @@ OutputAnalysis(landings.data, baseyr = 2007,
 
 
 ########DOCUMENTATION#################
+code<-TRUE
+
 rmarkdown::render(ProdI.Docu.Out,
                   output_dir = paste0(dir.docu),
                   output_file = paste0("ProductivityIndex_Documentation_Out_",date0,".pdf"))
@@ -341,6 +343,16 @@ rmarkdown::render(ProdI.Docu.Out,
 file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_",date0,".pdf"),
                to = paste0(dir.output, "ProductivityIndex_Documentation_Output.pdf"))
 
+code<-FALSE
+
+rmarkdown::render(ProdI.Docu.Out,
+                  output_dir = paste0(dir.docu),
+                  output_file = paste0("ProductivityIndex_Documentation_Out_",date0,"_NoCode.pdf"))
+
+file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_",date0,"_NoCode.pdf"),
+                 to = paste0(dir.output, "ProductivityIndex_Documentation_Output_NoCode.pdf"))
+
+#INPUT
 rmarkdown::render(ProdI.Docu.In,
                   output_dir = paste0(dir.docu),
                   output_file = paste0("ProductivityIndex_Documentation_In_",date0,".pdf"))

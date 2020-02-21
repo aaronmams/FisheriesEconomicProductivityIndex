@@ -11,7 +11,7 @@ output:
 ---
 
 ```{r setup, include=FALSE, echo = FALSE, message  = FALSE}
-# knitr::opts_chunk$set(echo = TRUE)
+# knitr::opts_chunk$set(echo = echoTF(TRUE, code))
 knitr::opts_chunk$set(tidy.opts=list(width.cutoff=50),tidy=FALSE)
 ```
 
@@ -84,7 +84,7 @@ We need time series data for the value of all species ($V_{t}$; e.g., Total), va
 
 Here we summate the category and total V because there may be instances where these values may not be the sum of their parts (though they are here). The caluclation Price Index aims to deal with this potiental issue. 
 
-```{r, echo = TRUE, warning = FALSE}
+```{r, echo = echoTF(TRUE, code), warning = FALSE}
 
 temp<-read.csv(file = paste0(dir.data, "Tornqvist Index-Calculations_OutputEx.csv"))
 rownames(temp)<-temp$year
@@ -199,7 +199,7 @@ Here I am just going to do some housekeeping:
 
 ###Remove any V and Q data where V column has less data than the specifed $percentmissingthreshold$
 
-```{r, echo = TRUE}
+```{r, echo = echoTF(TRUE, code)}
 
 VColumns0<-VColumns
 QColumns0<-QColumns<-which(names(temp) %in% 
@@ -234,7 +234,7 @@ temp[,1:6] %>%
 
 Because we removed some columns for not meeting a perecent missing threshold of `r PercentMissingThreshold`% and those columns will not be used at all in any part of the further analysis, we need to re-calculate the totals of $V$ and $Q$ for the catagories and the fishery as a whole. 
 
-```{r, echo = TRUE}
+```{r, echo = echoTF(TRUE, code)}
 names(temp)[grep(pattern = NameBasecategory, x = names(temp))]<-
   paste0("REMOVED_", 
          names(temp)[grep(pattern = NameBasecategory, x = names(temp))])
@@ -457,7 +457,7 @@ where:
 
 Here we divide $V_{s,i,t}$ by $VV_{i,t}$ because $VV_{i,t}$ only includes species used to calculate $V_{s,i,t}$ as per the above price calculations. 
 
-```{r, echo = TRUE}
+```{r, echo = echoTF(TRUE, code)}
 tempR<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
 for (c in 1:length(PColumns)) {
   
@@ -477,13 +477,13 @@ temp<-cbind.data.frame(temp, tempR)
 ```
 
 
-```{r, echo = FALSE}
+```{r, echo = echoTF(FALSE, code)}
 tempR %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
 As an additional check, let's make sure that each row sums to 1. 
-```{r, echo = FALSE}
+```{r, echo = echoTF(FALSE, code)}
 rowSums(tempR, na.rm = T) %>%
     knitr::kable(row.names = T, booktabs = T)
 
@@ -640,7 +640,7 @@ temp0 %>%
 
 ####1. When back calculated, $V_t$ did not equal $P_t * Q_{t}$
 
-$$V_i = P_t * Q_i$$
+$$V_i = PI_t * Q_i$$
   
 ```{r, echo  = TRUE}
   temp0<-temp[names(temp) %in% c(paste0("Q",NameBasecategory), 
@@ -650,8 +650,8 @@ $$V_i = P_t * Q_i$$
   temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBasecategory)]*temp0[,paste0("PI",NameBasecategory)]
   names(temp0)[ncol(temp0)]<-paste0("V", NameBasecategory, "_Check")
   
-  if (sum(temp0[,paste0("V", NameBasecategory, "_Check")] %in% 
-          temp0[,paste0("V", NameBasecategory)]) == nrow(temp0)) {
+  if (length(setdiff(temp0[,paste0("V", NameBasecategory, "_Check")], 
+                     temp0[,paste0("V", NameBasecategory)])) == 0) {
     warnings.list[length(warnings.list)+1]<-"When back calculated, V_{i,t} did not equal PI_{i,t} * Q_{i,t}"
     print("When back calculated, V_{i,t} did not equal PI_{i,t} * Q_{i,t}")
   }
@@ -671,8 +671,8 @@ $$Q_{i,t} = V_t / PI_{i,t}$$
   temp0[,(ncol(temp0)+1)]<-temp0[,paste0("V",NameBasecategory)]/temp0[,paste0("PI",NameBasecategory)]
   names(temp0)[ncol(temp0)]<-paste0("Q", NameBasecategory, "_Check")
   
-  if (sum(temp0[,paste0("Q", NameBasecategory, "_Check")] %in% 
-          temp0[,paste0("Q", NameBasecategory)]) == nrow(temp0)) {
+  if (length(setdiff(temp0[,paste0("Q", NameBasecategory, "_Check")], 
+                     temp0[,paste0("Q", NameBasecategory)])) == 0) {
     warnings.list[length(warnings.list)+1]<-"When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}"
     print("When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}")
   }
@@ -773,13 +773,13 @@ temp$R2_0Shellfish<-temp$V2_0Shellfish/temp$V0_0Total
 
 ```
 
-```{r, echo = FALSE}
+```{r, echo = echoTF(FALSE, code)}
 temp[,c("R1_0Finfish", "R2_0Shellfish", "V1_0Finfish", "V2_0Shellfish", paste0("V", NameBaseTotal))] %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
 As an additional check, let's make sure that each row sums to 1. 
-```{r, echo = FALSE}
+```{r, echo = echoTF(FALSE, code)}
 tempR<-temp[,c("R1_0Finfish", "R2_0Shellfish")]
 
 rowSums(tempR, na.rm = T) %>%
@@ -921,8 +921,8 @@ $$V_i = P_t * Q_i$$
   temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBaseTotal)]*temp0[,paste0("PI",NameBaseTotal)]
   names(temp0)[ncol(temp0)]<-paste0("V", NameBaseTotal, "_Check")
   
-  if (sum(temp0[,paste0("V", NameBaseTotal, "_Check")] %in% 
-          temp0[,paste0("V", NameBaseTotal)]) == nrow(temp0))  {
+  if (length(setdiff(temp0[,paste0("V", NameBaseTotal, "_Check")], 
+                     temp0[,paste0("V", NameBaseTotal)])) == 0) {
   warnings.list[length(warnings.list)+1]<-"When back calculated, V_t did not equal PI_t * Q_t"
   print("When back calculated, V_t did not equal PI_t * Q_t")
   }
@@ -942,8 +942,8 @@ $$Q_{i,t} = V_t / P_{i,t}$$
   temp0[,(ncol(temp0)+1)]<-temp0[,paste0("V",NameBaseTotal)]/temp0[,paste0("PI",NameBaseTotal)]
   names(temp0)[ncol(temp0)]<-paste0("Q", NameBaseTotal, "_Check")
   
-  if (sum(temp0[,paste0("Q", NameBaseTotal, "_Check")] %in% 
-          temp0[,paste0("Q", NameBaseTotal)]) == nrow(temp0))  {
+  if (length(setdiff(temp0[,paste0("Q", NameBaseTotal, "_Check")], 
+                     temp0[,paste0("Q", NameBaseTotal)])) == 0) {
   warnings.list[length(warnings.list)+1]<-"When back calculated, Q_t did not equal V_t/PI_t"
   print("When back calculated, Q_t did not equal V_t/PI_t")
   }
@@ -991,7 +991,8 @@ for (i in 1:(ii)) {
 temp0[,(ncol(temp0)+1)]<-rowSums(temp00)
 names(temp0)[ncol(temp0)]<-"part2"
 
-  if (sum(temp0[,"part1"] %in% temp0[,"part2"]) != nrow(temp0))  {
+  if (length(setdiff(temp0[,"part1"], 
+                     temp0[,"part2"])) == 0) {
   warnings.list[length(warnings.list)+1]<-"When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( frac{R_{i, t} - R_{i, t-1}}{2})  * ln(\frac{Q_{i,t}}{Q_{i,t-1}}))"
   print("When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( \frac{R_{i, t} - R_{i, t-1}}{2})  * ln(frac{Q_{i,t}}{Q_{i,t-1}}))")
   }
@@ -1169,12 +1170,12 @@ Now that we know the method, we can simplify most of it into a function and do t
 ```
 
 ### Function to calculate the Implicit Quanity Output at Fishery Level
-```{r, echo = TRUE}
+```{r, echo = echoTF(TRUE, code)}
 # print(ImplicitQuantityOutput)
 ```
 
 ### A. Import and Edit data
-```{r, echo = TRUE, warning = FALSE}
+```{r, echo = echoTF(TRUE, code), warning = FALSE}
 temp<-read.csv(file = paste0(dir.data, "Tornqvist Index-Calculations_OutputEx.csv"))
 rownames(temp)<-temp$year
 temp$year<-NULL
@@ -1195,12 +1196,12 @@ temp<-orgional.data<-cbind.data.frame(temp.q, temp.v)
 
  
 ### B. Enter base year
-```{r, echo = TRUE, warning = FALSE}
+```{r, echo = echoTF(TRUE, code), warning = FALSE}
  baseyr<-baseyr
 ```
  
 ### C. Run the function
-```{r, echo = TRUE, warning = FALSE}
+```{r, echo = echoTF(TRUE, code), warning = FALSE}
 temp00<-ImplicitQuantityOutput(orgional.data, baseyr, calcQEI = T, PercentMissingThreshold)
 temp<-temp00[[1]]
 warnings.list0<-temp00[[2]]
@@ -1208,7 +1209,7 @@ figures.list0<-temp00[[3]]
 ```
 
 ### D. Obtain the implicit quantity estimates
-```{r, echo = FALSE, warning = FALSE}
+```{r, echo = echoTF(FALSE, code), warning = FALSE}
 write.csv(x = temp, file = paste0(dir.docu, "Example_Output.csv"))
 
 # temp0<-temp[, grepl(pattern = "0Total", x = names(temp))]
@@ -1257,7 +1258,7 @@ figures.list0$`_QuantityCompare`
 ### A. Import and Edit data
 
 Load and subset Data
-```{r, echo = TRUE}
+```{r, echo = echoTF(TRUE, code)}
 #Load Data (This data has been edited to include category columns)
 landings.data<-read.csv(file = paste0(dir.data, "landings_edited.csv"))
 landings.data<-landings.data[landings.data$Year < 2018,] #FUS 2018 hasn't been published yet
@@ -1273,19 +1274,19 @@ summary(landings.data[,c("Tsn", "Year", "State", "AFS.Name", "Pounds", "Dollars"
 ```  
   
 Edit/Restructure Data
-```{r, echo = TRUE}
+```{r, echo = echoTF(TRUE, code)}
 temp00<-EditCommData(dat = landings.data, category0)
 temp<-temp00[[1]]
 ```
 
 ### B. Enter base year
-```{r, echo = TRUE}
+```{r, echo = echoTF(TRUE, code)}
 baseyr<-2010
 PercentMissingThreshold = 0.60
 ```
 
 ### C. Run the function
-```{r, echo = TRUE}
+```{r, echo = echoTF(TRUE, code)}
 temp00<-ImplicitQuantityOutput(temp, baseyr, calcQEI = T, PercentMissingThreshold)
 temp<-temp00[[1]]
 warnings.list0<-temp00[[2]]
@@ -1293,7 +1294,7 @@ figures.list0<-temp00[[3]]
 ```
 
 ### D. Obtain the implicit quantity estimates
-```{r, echo = FALSE, warning = FALSE}
+```{r, echo = echoTF(FALSE, code), warning = FALSE}
 write.csv(x = temp, file = paste0(dir.docu, "Output_Commercial_", region, ".csv"))
 
 temp0<-temp[, grepl(pattern = "0Total", x = names(temp))]

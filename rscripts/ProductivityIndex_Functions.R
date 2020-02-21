@@ -44,6 +44,10 @@ NOAABlueScale<-colorRampPalette(colors = c(NOAALightBlue, NOAADarkBlue))
 #########***########
 ##########USER FUNCTIONS##############
 
+echoTF<-function(typical, code = TRUE) {
+  return(ifelse(code == TRUE, typical, FALSE))
+}
+
 file.copy.rename <- function(from, to) {
   todir <- dirname(to)
   fromdir <- dirname(from)
@@ -639,8 +643,8 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBasecategory)]*temp0[,paste0("PI",NameBasecategory)]
   names(temp0)[ncol(temp0)]<-paste0("V", NameBasecategory, "_Check")
   
-  if (sum(temp0[,paste0("V", NameBasecategory, "_Check")] %in% 
-          temp0[,paste0("V", NameBasecategory)]) == nrow(temp0)) {
+  if ((length(setdiff(temp0[,paste0("V", NameBasecategory, "_Check")], 
+                      temp0[,paste0("V", NameBasecategory)])) == 0)) {
     warnings.list[length(warnings.list)+1]<-"When back calculated, V_{i,t} did not equal PI_{i,t} * Q_{i,t}"
   }
   
@@ -650,9 +654,9 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   
   temp0[,(ncol(temp0)+1)]<-temp0[, paste0("V", NameBasecategory)]/temp0[, paste0("PI", NameBasecategory)]
   names(temp0)[ncol(temp0)]<-paste0("Q", NameBasecategory, "_Check")
-  
-  if (sum(temp0[,paste0("Q", NameBasecategory, "_Check")] %in% 
-          temp0[,paste0("Q", NameBasecategory)]) == nrow(temp0)) {
+    
+ if (length(setdiff(temp0[,paste0("Q", NameBasecategory, "_Check")], 
+                       temp0[,paste0("Q", NameBasecategory)])) == 0) {
     warnings.list[length(warnings.list)+1]<-"When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}"
   }
   
@@ -903,8 +907,8 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBaseTotal)]*temp0[,paste0("PI",NameBaseTotal)]
   names(temp0)[ncol(temp0)]<-paste0("V", NameBaseTotal, "_Check")
   
-  if (sum(temp0[,paste0("V", NameBaseTotal, "_Check")] %in% 
-          temp0[,paste0("V", NameBaseTotal)]) == nrow(temp0))  {
+  if (length(setdiff(temp0[,paste0("V", NameBaseTotal, "_Check")], 
+                      temp0[,paste0("V", NameBaseTotal)])) == 0) {
   warnings.list[length(warnings.list)+1]<-"When back calculated, V_t did not equal PI_t * Q_t"
   }
 
@@ -915,8 +919,8 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   temp0[,(ncol(temp0)+1)]<-temp0[,paste0("V",NameBaseTotal)]/temp0[,paste0("PI",NameBaseTotal)]
   names(temp0)[ncol(temp0)]<-paste0("Q", NameBaseTotal, "_Check")
   
-  if (sum(temp0[,paste0("Q", NameBaseTotal, "_Check")] %in% 
-          temp0[,paste0("Q", NameBaseTotal)]) == nrow(temp0))  {
+  if (length(setdiff(temp0[,paste0("Q", NameBaseTotal, "_Check")], 
+                     temp0[,paste0("Q", NameBaseTotal)])) == 0) {
   warnings.list[length(warnings.list)+1]<-"When back calculated, Q_t did not equal V_t/PI_t"
   }
   
@@ -955,7 +959,8 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   temp0[,(ncol(temp0)+1)]<-c(NA, rowSums(temp00, na.rm = T)[2:length(rowSums(temp00, na.rm = T))])
   names(temp0)[ncol(temp0)]<-"part2"
   
-  if (sum(temp0[,"part1"] %in% temp0[,"part2"]) != nrow(temp0))  {
+  if (length(setdiff(temp0[,"part1"], 
+                     temp0[,"part2"])) == 0) {
     warnings.list[length(warnings.list)+1]<-"When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( frac{R_{i, t} - R_{i, t-1}}{2})  * ln(\frac{Q_{i,t}}{Q_{i,t-1}}))"
   }
   
@@ -1477,8 +1482,9 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   figures.list[[length(figures.list)+1]]<-g
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
-  # How many Q columns have X percentage data missing
-  title00<- "_PercentMissingQ_Bar"
+  
+  ########## How many Q columns have X percentage data missing
+  title00<- "_PercentMissingQ-Bar"
   
   a0<-data.frame(temp.orig[,grepl(
     pattern = paste0("Q[0-9]+_"),

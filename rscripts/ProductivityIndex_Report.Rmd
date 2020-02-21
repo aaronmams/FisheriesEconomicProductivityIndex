@@ -2,7 +2,7 @@
 title: ""
 author: ""
 date: ""
-output: pdf_document
+output: word_document
 ---
   
 ```{r, echo = FALSE, warning = FALSE}

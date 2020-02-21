@@ -2,21 +2,6 @@
 ### Construct the FEUS Commerical Fisheries state and national tables and output them to csv files
 ### updated and simplified from MarineEcon_tables.R, *use this version*
 
-
-options(java.parameters = "-Xmx1000m")
-library(xlsx)
-library(taxize)
-library(reshape2)
-library(tidyverse)
-library(filesstrings)
-library(rmarkdown)
-library(officer)
-library(data.table) # := to tag species codes
-library(sas7bdat)
-library(ggplot2)
-require(plyr)  #ddply function
-library(gridExtra)
-
 #######DIRECTORIES############
 dir.in<-getwd()
 #Local Directories
@@ -143,9 +128,9 @@ for (r in 1:length(reg.order)){
   counter<-funct_counter(counter)
   
   
-  title000<-paste0("_","baseyr",baseyr, 
+  title000<-paste0("_","byr",baseyr, 
                    "_",gsub(pattern = "\\.", replacement = "", x = category0), 
-                   "_percentmissing", gsub(pattern = "\\.", replacement = "_", x = PercentMissingThreshold))
+                   "_pctmiss", gsub(pattern = "\\.", replacement = "", x = PercentMissingThreshold))
   title0<-paste0(counter, "_", gsub(pattern = "\\(", replacement = "", x = 
                                                                         gsub(pattern = ")", replacement = "", x = 
                                                                                gsub(pattern = "`", replacement = "", x = 
@@ -204,7 +189,7 @@ for (r in 1:length(reg.order)){
   #Report
   rmarkdown::render(ProdI.Report, 
                     output_dir = paste0(dir.reports), 
-                    output_file = paste0(title0,".pdf"))
+                    output_file = paste0(title0,".docx"))
 
 }
   ########SPREADSHEETS########
@@ -238,16 +223,24 @@ for (r in 1:length(reg.order)){
                             function(x) x[2])))
   
   for (i in 1:length(figs)){
+    
+    a<-strsplit(x = names(figures.list)[i], split = "_")[[1]][length(strsplit(x = names(figures.list)[i], split = "_")[[1]])]
+    
+    dir.create(paste0(dir.figures, "/", a, "/"))
+    
   fig<-figs[i]
-  q<-grid.arrange(figures.list[grep(pattern = fig, x = names(figures.list))][[1]], 
-                  figures.list[grep(pattern = fig, x = names(figures.list))][[2]], 
-                  figures.list[grep(pattern = fig, x = names(figures.list))][[3]], 
-                  figures.list[grep(pattern = fig, x = names(figures.list))][[4]], 
-                  figures.list[grep(pattern = fig, x = names(figures.list))][[5]], 
-                  figures.list[grep(pattern = fig, x = names(figures.list))][[6]], 
-                  figures.list[grep(pattern = fig, x = names(figures.list))][[7]], 
+  list0<-figures.list[grep(pattern = fig, x = names(figures.list))]
+  
+  q<-grid.arrange(list0[[1]], 
+                  list0[[2]], 
+                  list0[[3]], 
+                  list0[[4]], 
+                  list0[[5]], 
+                  list0[[6]], 
+                  list0[[7]], 
                   nrow=3, newpage = FALSE)
-  ggsave(filename = paste0(dir.figures, "000_All_baseyr",baseyr, 
+  
+  ggsave(filename = paste0(dir.figures, "/", a, "/", "000_All_baseyr",baseyr, 
                            "_",gsub(pattern = "\\.", replacement = "", x = category0), fig, ".png"), 
          plot = q, 
          width = 11, height = 8.5)
@@ -255,7 +248,12 @@ for (r in 1:length(reg.order)){
   
   #make single plots
   for (i in 1:length(figures.list)) {
-    ggsave(filename = paste0(dir.figures, names(figures.list)[i], ".png"), 
+    
+    a<-strsplit(x = names(figures.list)[i], split = "_")[[1]][length(strsplit(x = names(figures.list)[i], split = "_")[[1]])]
+    
+    dir.create(paste0(dir.figures, "/", a, "/"))
+    
+    ggsave(filename = paste0(dir.figures, "/", a, "/", names(figures.list)[i], ".png"), 
            plot = figures.list[[i]], 
            width = 11, height = 8.5)
   }

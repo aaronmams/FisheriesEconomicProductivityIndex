@@ -1,6 +1,6 @@
 ---
 title: "Productivity Index - Output"
-author: "Emily Markowitz"
+author: "Emily Markowitz (Emily.Markowitz@noaa.gov) and Sun-Ling Wang"
 date: "Feb. 05, 2020"
 output: 
   pdf_document:
@@ -13,22 +13,6 @@ output:
 ```{r setup, include=FALSE, echo = FALSE, message  = FALSE}
 # knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(tidy.opts=list(width.cutoff=50),tidy=FALSE)
-```
-
-
-```{r, echo = FALSE, include=FALSE, echo = FALSE, message  = FALSE}
-options(scipen=10000)
-
-ln<-log #tricky, tricky, Base R! Didn't fool me this time!!!
-
-####COLOR PALLET#####
-#mostly for figures
-NOAALightBlue<-"#C9E1E6"
-NOAADarkBlue<-"#0098A6"
-NOAADarkGrey<-"#56575A" #text
-NOAABlueScale<-colorRampPalette(colors = c(NOAALightBlue, NOAADarkBlue))
-
-dir.data<-paste0(dirname(getwd()), "/Data/")
 ```
 
 #Math Theory: General Total Factor Productivity ($TFP$) Equation
@@ -242,13 +226,13 @@ QColumns<-names(temp)[QColumns0]
 
 
 ```{r, echo  = FALSE}
-temp %>%
+temp[,1:6] %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
 ###Caluclate Catagory Sums of $V$ and $Q$
 
-Because we removed some columns for not meeting a perecent missing threshold and those columns will not be used at all in any part of the analysis, we need to calculate the totals of $V$ and $Q$ for the catagories and the fishery as a whole. 
+Because we removed some columns for not meeting a perecent missing threshold of `r PercentMissingThreshold`% and those columns will not be used at all in any part of the further analysis, we need to re-calculate the totals of $V$ and $Q$ for the catagories and the fishery as a whole. 
 
 ```{r, echo = TRUE}
 names(temp)[grep(pattern = NameBasecategory, x = names(temp))]<-
@@ -367,23 +351,18 @@ temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-$$where \begin{cases} if: V_{i,t=1} = 0, then: V_{i,t=1} = V_{i,t=1+1...} \\ if: V_{i,t\neq1} = 0, then: V_{i,t} = V_{i,t-1} \end{cases}$$
+$$where \begin{cases} if: P_{i,t=1} = 0, then: P_{i,t=1} = P_{i,t=1+1...} \\ if: P_{i,t\neq1} = 0, then: P_{i,t} = P_{i,t-1} \end{cases}$$
 
 
-#### 2. If the first value of P is 0 in a timeseries, we let the next available non-zero value of P in the timeseries inform the past. 
+#### 2. If the first value of $P_{i,t,s}$ is 0/NA in a timeseries, we let the next available non-zero/non-NA value of P in the timeseries inform the past. 
+
+We use this function: 
+```{r, echo  = TRUE}
+print(ReplaceFirst)
+```
 
 ```{r, echo  = TRUE}
-
-for (c in 1:length(PColumns)) {
-  
-  #If the first value of the timeseries of this column (c) is 0/NaN/NA
-  #Change the first value (and subsequent 0/NaN/NA values) to the first available non-0/NaN/NA value
-  if (temp[1,PColumns[c]] %in% c(0, NA, NaN)) {
-    findfirstvalue<-temp[which(!(temp[,PColumns[c]]  %in% c(0, NA, NaN))), 
-                         PColumns[c]][1]
-    temp[1,PColumns[c]]<-findfirstvalue
-  }
-}
+temp<-ReplaceFirst(colnames = PColumns, temp) 
 ```
 
 ```{r, echo  = FALSE}
@@ -392,22 +371,14 @@ temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-#### 3. If there is a value in the middle of P's timeseries that is 0, we let the most recent past available non-zero of P in the timeseries inform the future. 
+#### 3. If there is a value in the middle of $P_{i,t,s}$'s timeseries that is 0/NA, we let the most recent past available non-zero/non-NA of $P_{i,t,s}$ in the timeseries inform the future. 
 
 ```{r, echo  = TRUE}
-#Find which columns in this table are price Columns
-for (c in 1:length(PColumns)) {
-  
-  #If a middle value of the timeseries of this column (c) is 0/NaN/NA
-  #Change the currently 0/NaN/NA value to the previous available non-0/NaN/NA value
-  if (sum(temp[,PColumns[c]] %in% c(0, NA, NaN))>0) {
-    troublenumber<-which(temp[,PColumns[c]] %in% c(0, NA, NaN))
-    for (r in 1:length(troublenumber)){
-      findlastvalue<-temp[troublenumber[r]-1, PColumns[c]][1]
-      temp[troublenumber[r],PColumns[c]]<-findlastvalue
-    }
-  }
-}
+print(ReplaceMid) 
+```
+
+```{r, echo  = TRUE}
+temp<-ReplaceMid(colnames = PColumns, temp) 
 ```
 
 ```{r, echo  = FALSE}
@@ -416,10 +387,41 @@ temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
+###Fill in values of $V_{i,t,s}$ where P was able to be calculated
+
+To ensure that the price index does not rise or fall to quickly with changes (that are really because of NA values) we fill in the missing instances of $V_{i,t,s}$. 
+
+$$where \begin{cases} if: V_{i,t=1} = 0, then: V_{i,t=1} = V_{i,t=1+1...} \\ if: V_{i,t\neq1} = 0, then: V_{i,t} = V_{i,t-1} \end{cases}$$ 
+
+
+#### 1. If the first value of $V_{i,t,s}$ is 0/NA in a timeseries, we let the next available non-zero value of $V_{i,t,s}$ in the timeseries inform the past. 
+
+```{r, echo  = TRUE}
+VVColumns<-paste0("V", substr(x = PColumns, start = 2, stop = nchar(PColumns)))
+temp<-ReplaceFirst(colnames = VVColumns, temp) 
+```
+
+```{r, echo  = FALSE}
+temp0<-temp[,VVColumns]
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+#### 2. If there is a value in the middle of $V_{i,t,s}$'s timeseries that is 0/NA, we let the most recent past available non-zero of $V_{i,t,s}$ in the timeseries inform the future. 
+
+```{r, echo  = TRUE}
+temp<-ReplaceMid(colnames = VVColumns, temp) 
+```
+
+```{r, echo  = FALSE}
+temp0<-temp[,VVColumns]
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
 
 ###Value of species $VV_{i,t}$ where P was able to be calculated
 
-$R_{i,t}$, defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{i,t}$ (called $VV_{i,t}$) for the category using only values for species that were used to calculate $P_{i,t}$ (called  $V_{s,i,t, available}$). 
+$R_{i,t}$, as defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{i,t}$ available (called $VV_{i,t}$) for the category using only values for species that were used to calculate $P_{i,t}$ (called  $V_{s,i,t, available}$). 
 
 $$VV_{i,t} = \sum_{s=1}^{n}(V_{s,i,t, available})$$
 
@@ -431,8 +433,6 @@ where:
 
 
 ```{r, echo  = TRUE}
-
-VVColumns<-paste0("V", substr(x = PColumns, start = 2, stop = nchar(PColumns)))
 
 temp0<-data.frame(temp[,names(temp) %in% VVColumns], 
                   rowSums(temp[,names(temp) %in% VVColumns], na.rm = T))
@@ -902,7 +902,7 @@ temp[names(temp) %in% c("Q0_0Total", "QI0_0Total", "QC0_0Total")] %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-## Analysis Warnings Checks
+## Other Analysis Warnings Checks
 
 To make sure our analyses worked as inteded, let's see if we can back calculate our numbers.
 
@@ -1221,8 +1221,8 @@ write.csv(x = temp, file = paste0(dir.docu, "Example_Output.csv"))
                 !grepl(pattern = c("REMOVED"), x = names(temp))]
   names(temp0)<-gsub(pattern = "0", replacement = "", x = names(temp0))
 
-temp0 %>%
-    knitr::kable(row.names = T, booktabs = T)
+# temp0 %>%
+#     knitr::kable(row.names = T, booktabs = T)
 ```
 
 Did all of the analyses work as intended? 

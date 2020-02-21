@@ -1,22 +1,33 @@
 
 #####LOAD CRAN LIBRARIES#######
 
+#Seperating species by taxonomic group
 # install.packages("remotes")
 # remotes::install_github("ropensci/taxize")
 library(taxize)
+
+# Data Managment
 library(tidyr)
 library(reshape2)
 library(tidyverse)
 library(filesstrings)
-library(rmarkdown)
-library(officer)
 library(data.table) # := to tag species codes
-library(ggplot2)
 require(plyr)  #ddply function
-library(knitr)
-library(filesstrings)
+library(sas7bdat)
+
+#RMarkdown
 library(rmarkdown)
+library(knitr)
+library(gridExtra)
+
+#Excel File Management
+library(officer)
+library(xlsx)
+
+#Visuals
 library(ggplot2)
+
+options(java.parameters = "-Xmx1000m")
 options(scipen=10000)
 
 ln<-log #tricky, tricky, Base R! Didn't fool me this time!!!
@@ -298,6 +309,35 @@ PriceIndex <- function(temp, BaseColName, baseyr) {
   return(tempPI)
 }
 
+ReplaceFirst<-function(colnames, temp) {
+  for (c in 1:length(colnames)) {
+    
+    #If the first value of the timeseries of this column (c) is 0/NaN/NA
+    #Change the first value (and subsequent 0/NaN/NA values) to the first available non-0/NaN/NA value
+    if (temp[1,colnames[c]] %in% c(0, NA, NaN)) {
+      findfirstvalue<-temp[which(!(temp[,colnames[c]]  %in% c(0, NA, NaN))), 
+                           colnames[c]][1]
+      temp[1,colnames[c]]<-findfirstvalue
+    }
+  }
+  return(temp)
+}
+
+ReplaceMid<-function(colnames, temp) {
+  for (c in 1:length(colnames)) {
+    #If a middle value of the timeseries of this column (c) is 0/NaN/NA
+    #Change the currently 0/NaN/NA value to the previous available non-0/NaN/NA value
+    if (sum(temp[,colnames[c]] %in% c(0, NA, NaN))>0) {
+      troublenumber<-which(temp[,colnames[c]] %in% c(0, NA, NaN))
+      for (r in 1:length(troublenumber)){
+        findlastvalue<-temp[troublenumber[r]-1, colnames[c]][1]
+        temp[troublenumber[r],colnames[c]]<-findlastvalue
+      }
+    }
+  }
+  return(temp)
+}
+
 ### Function to calculate the Implicit Quanity Output at Species and category Level
 species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThreshold, warnings.list) {
   
@@ -468,6 +508,17 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
       }
     }
   }
+  
+  ###Fill in values of $V_{i,t,s}$ where P was able to be calculated
+  # To ensure that the price index does not rise or fall to quickly with changes (that are really because of NA values) we fill in the missing instances of $V_{i,t,s}$. 
+  # $$where \begin{cases} if: V_{i,t=1} = 0, then: V_{i,t=1} = V_{i,t=1+1...} \\ if: V_{i,t\neq1} = 0, then: V_{i,t} = V_{i,t-1} \end{cases}$$ 
+    
+  #### 1. If the first value of $V_{i,t,s}$ is 0/NA in a timeseries, we let the next available non-zero value of $V_{i,t,s}$ in the timeseries inform the past. 
+  VVColumns<-paste0("V", substr(x = PColumns, start = 2, stop = nchar(PColumns)))
+  temp<-ReplaceFirst(colnames = VVColumns, temp) 
+
+  #### 2. If there is a value in the middle of $V_{i,t,s}$'s timeseries that is 0/NA, we let the most recent past available non-zero of $V_{i,t,s}$ in the timeseries inform the future. 
+  temp<-ReplaceMid(colnames = VVColumns, temp) 
 
   ###Value of species where P was able to be calculated
   # $R_{i,t}$, defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{i,t}$ (called $VV_{i,t}$) for the category using only values for species that were used to calculate $P_{i,t}$ (called  $V_{s,i,t, available}$). 
@@ -1057,7 +1108,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
   #####Price Index
-  title00<- "_PI_Line"
+  title00<- "_PI-Line"
   
   a0<-data.frame(temp[,grepl(
     pattern = paste0("PI[0-9]+_", NumberOfSpecies), 
@@ -1095,7 +1146,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   
   ########VV
-  title00<- "_VV_Line"
+  title00<- "_VV-Line"
   
   a0<-data.frame(temp[,grepl(
     pattern = paste0("VV[0-9]+_", NumberOfSpecies), 
@@ -1133,7 +1184,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   
   ########V
-  title00<- "_V_Line"
+  title00<- "_V-Line"
   
   a0<-data.frame(temp[,grepl(
     pattern = paste0("V[0-9]+_", NumberOfSpecies), 
@@ -1174,7 +1225,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   
   ########V and VV
-  title00<- "_VAndVV_Line"
+  title00<- "_VAndVV-Line"
   
   a0<-data.frame(temp[,grepl(
     pattern = paste0("V[0-9]+_", NumberOfSpecies), 
@@ -1216,7 +1267,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   
   ########VE
-  title00<- "_VE_Line"
+  title00<- "_VE-Line"
   
   a0<-data.frame(temp[,grepl(
     pattern = paste0("V[0-9]+_", NumberOfSpecies), 
@@ -1257,7 +1308,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   
   #################Number Missing V Per Year
-  title00<- "_NumberMissingVPerYear_Line"
+  title00<- "_NumberMissingV-Line"
   
   a0<-data.frame(temp.orig[,grepl(
     pattern = paste0("V[0-9]+_"), 
@@ -1356,7 +1407,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   
   # How many V columns have X percentage data missing 
-  title00<- "_PercentMissingV_Bar"
+  title00<- "_PercentMissingV-Bar"
   
   a0<-data.frame(temp.orig[,grepl(
     pattern = paste0("V[0-9]+_"),

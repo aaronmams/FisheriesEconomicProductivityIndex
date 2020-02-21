@@ -243,7 +243,7 @@ EditCommData<-function(dat, category0) {
 
 
 #A function to caluclate the price change
-pricechange = function(R0, P0) {
+PriceChange = function(R0, P0) {
   PC0<-rep_len(x = 0, length.out = length(P0))
   for (t in 2:length(P0)) {
     temp1<-((R0[t]+R0[t-1])/2)
@@ -251,6 +251,39 @@ pricechange = function(R0, P0) {
     PC0[t]<-temp1*temp2
   }
   return(PC0)
+}
+
+PriceIndex <- function(temp, BaseColName, baseyr) {
+  ###Price Index for the entire commercial fishery ($PI_t$)
+  
+  # We calculate the price index first by comparing by multiplying the previous years $PI_{t-1}$ by that year's price change $PC_{t}$, where the PI of the first year $PI_{t=firstyear} = 1$
+  # $$PI_t = PI_{t-1}*exp(ln(\frac{P_{i,t}}{P_{i,t-1}})) = PI_{t-1}*exp(PC_{t})$$
+  # Where
+  # $$PI_{i, t_{first year}} = 1$$
+  
+  #Note that the first row of this column is = 1
+  tempPI1<-c(1, rep_len(x = NA, length.out = nrow(temp)-1))
+  
+  PC0<-temp[,names(temp) %in% paste0("PC", BaseColName)] #this is equal to ln(P_it/P_it-1)
+  
+  # Calculate
+  for (t in 2:length(tempPI1)){  #Since the first row is defined, we need to start at the second row
+    tempPI1[t]<-tempPI1[t-1]*exp(PC0[t])
+  }
+  
+  tempPI1<-data.frame(tempPI1)
+  rownames(tempPI1)<-rownames(temp)
+  
+  # Then, to change the price (calulated later) into base year dollars, we use the following equation: 
+  # $$PI_{t} = PI_{t}/PI_{t = baseyear}$$
+  # In this example, we'll decide that the base year is `r baseyr`, for whatever reason. Notice that the $PI_{i,t=baseyr} = 1$ 
+  
+  tempPI2<-tempPI1/tempPI1[rownames(tempPI1) %in% baseyr,]
+  
+  tempPI<-data.frame(tempPI2)
+  names(tempPI)<-paste0("PI", BaseColName)
+  
+  return(tempPI)
 }
 
 ### Function to calculate the Implicit Quanity Output at Species and category Level
@@ -294,6 +327,7 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
                                paste0("Q", substr(x = names(temp)[VColumns], 
                                                   start = 2, 
                                                   stop = nchar(names(temp)[VColumns]))))
+  
   for (i in 1:length(VColumns)) {
     
     #if the percent missing is less in V or Q columns for a species than the percentmissingtrheshold, we remove the data before the analysis
@@ -484,7 +518,7 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
     # Calculate
     P0<-temp[, names(temp) %in% paste0("P", NameBase)]
     R0<-temp[, names(temp) %in% paste0("R", NameBase)] #to make sure its the same column
-    tempPC[,c]<-pricechange(R0, P0)
+    tempPC[,c]<-PriceChange(R0, P0)
     names(tempPC)[c]<-paste0("PC", NameBase ) #name the column
   }
   
@@ -501,22 +535,22 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   
 ###6. Price Indexes for each category ($PI_{i,t}$; Finfish & others and Shellfish)
 # We calculate the price index first by comparing by multiplying the previous years $PI_{t-1}$ by that year's price change $PC_{t}$, where the PI of the first year $PI_{t=firstyear} = 1$
-# $$PI_{t} = PI_{t-1}*(1+PC_{t})$$
-# $$PI_{i, t_{first year}} = 1$$
-# Then, to change the price (calulated later) into base year dollars, we use the following equation: 
-# $$PI_{t} = PI_{t}/PI_{t = baseyear}$$
-# In this example, we'll decide that the base year is `r baseyr`, for whatever reason. Notice that the $PI_{i,t=baseyr} = 1$ 
+  ###Price Index for the each category ($PI_t$)
+  # 
+  # We calculate the price index first by comparing by multiplying the previous years $PI_{t-1}$ by that year's price change $PC_{t}$, where the PI of the first year $PI_{t=firstyear} = 1$
+  # $$PI_t = PI_{t-1}*exp(ln(\frac{P_{i,t}}{P_{i,t-1}})) = PI_{t-1}*exp(PC_{t})$$
+  # Where
+  # $$PI_{i, t_{first year}} = 1$$
+  #Note that the first row of this column is = 1
+  # 
+  # Then, to change the price (calulated later) into base year dollars, we use the following equation: 
+    # $$PI_{t} = PI_{t}/PI_{t = baseyear}$$
+    # In this example, we'll decide that the base year is `r baseyr`, for whatever reason. Notice that the $PI_{i,t=baseyr} = 1$ 
   
-  tempPI1<-data.frame(c(1, (rep_len(x = NA, length.out = (nrow(temp)-1)))))
-  rownames(tempPI1)<-rownames(temp)
-  for (i in 2:nrow(tempPI1)){
-    tempPI1[i,]<-tempPI1[i-1,]*(1+temp[i,names(temp) %in% paste0("PC", NameBasecategory)])
-  }
-  
-  tempPI2<-tempPI1/tempPI1[rownames(tempPI1) %in% baseyr,]
-  
-  temp[ncol(temp)+1]<-(tempPI2)
+  tempPI<-PriceIndex(temp, BaseColName = NameBasecategory, baseyr)
+  temp[ncol(temp)+1]<-(tempPI)
   names(temp)[ncol(temp)]<-paste0("PI", NameBasecategory)
+  
   
   #remove duplicates
   temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
@@ -536,27 +570,27 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   # $$V_i = P_t * Q_i$$
   
   temp0<-temp[names(temp) %in% c(paste0("Q",NameBasecategory), 
-                                 paste0("P",NameBasecategory), 
+                                 paste0("PI",NameBasecategory), 
                                  paste0("V",NameBasecategory))]
   
-  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBasecategory)]*temp0[,paste0("P",NameBasecategory)]
+  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBasecategory)]*temp0[,paste0("PI",NameBasecategory)]
   names(temp0)[ncol(temp0)]<-paste0("V", NameBasecategory, "_Check")
   
   if (sum(temp0[,paste0("V", NameBasecategory, "_Check")] %in% 
           temp0[,paste0("V", NameBasecategory)]) == nrow(temp0)) {
-    warnings.list[length(warnings.list)+1]<-"When back calculated, V_{i,t} did not equal P_{i,t} * Q_{i,t}"
+    warnings.list[length(warnings.list)+1]<-"When back calculated, V_{i,t} did not equal PI_{i,t} * Q_{i,t}"
   }
   
   
   ####2. When back calculated, $Q_{t}$ did not equal $V_t / P_{t}$
   # $$Q_{i,t} = V_t / P_{i,t}$$
   
-  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("V",NameBasecategory)]/temp0[,paste0("P",NameBasecategory)]
+  temp0[,(ncol(temp0)+1)]<-temp0[, paste0("V", NameBasecategory)]/temp0[, paste0("PI", NameBasecategory)]
   names(temp0)[ncol(temp0)]<-paste0("Q", NameBasecategory, "_Check")
   
   if (sum(temp0[,paste0("Q", NameBasecategory, "_Check")] %in% 
           temp0[,paste0("Q", NameBasecategory)]) == nrow(temp0)) {
-    warnings.list[length(warnings.list)+1]<-"When back calculated, Q_{i,t} did not equal V_{i,t}/P_{i,t}"
+    warnings.list[length(warnings.list)+1]<-"When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}"
   }
   
 }
@@ -624,7 +658,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
     temp0<-temp0[, !(grepl(pattern = "\\.[0-9]+", x = names(temp0)))]
     
     #If data for a catagory is no longer available after precentmissingthreshold etc, remove it from the category lineup
-    if (sum(names(temp0) %in% paste0("P", NameBasecategory)) == 0) {
+    if (sum(names(temp0) %in% paste0("PI", NameBasecategory)) == 0) {
       category00<-category00[-ii]
     }
     
@@ -717,17 +751,17 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
     # Measure output price changes ($PC_t$) for total output ($Q_t$) using $R_{i,t}$ and $P_{i,t}$ estimates. 
     
     # $$PC_{t} = ln(\frac{P_{t}}{P_{t-1}}) =  \sum_{i=1}^n([\frac{R_{i,t} + R_{i,t-1}}{2}] * [ln(P_{i,t}) - ln(P_{i,t-1})]) $$
-    tempPC[,ii]<-pricechange(R0 = temp[, names(temp) %in% 
+    tempPC[,ii]<-PriceChange(R0 = temp[, names(temp) %in% 
                                           paste0("R", NameBasecategory) & 
                                          !grepl(pattern = "REMOVED_", x = names(temp))], 
                              P0 = temp[, names(temp) %in% 
-                                          paste0("P", NameBasecategory) & 
+                                          paste0("PI", NameBasecategory) & 
                                          !grepl(pattern = "REMOVED_", x = names(temp))])
     
     names(tempPC)[ii]<-paste0("PC", NameBasecategory)
     
     #Calculate Quantity Change
-    tempQC[,ii]<-pricechange(R0 = temp[, names(temp) %in% 
+    tempQC[,ii]<-PriceChange(R0 = temp[, names(temp) %in% 
                                           paste0("R", NameBasecategory) & 
                                          !grepl(pattern = "REMOVED_", x = names(temp))], 
                              P0 = temp[, names(temp) %in% 
@@ -753,44 +787,19 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   temp[,ncol(temp)+1]<-rowSums(tempQC, na.rm = T)
   names(temp)[ncol(temp)]<-paste0("QC", NameBaseTotal)
   
-  ###9. Price for the entire commercial fishery ($PI_t$)
-  
-  # $$P_t = P_{t-1}*[1+ln(\frac{P_{i,t}}{P_{i,t-1}})] = P_{t-1}*[1-PC_{t}]$$
-  
-  # Which is represented using this function:
-  #Note that the first row of this column is = 1
-  tempP<-c(1, rep_len(x = NA, length.out = nrow(temp)-1))
-  PC0<-temp[names(temp) %in% paste0("PC", NameBaseTotal)] #this is equal to ln(P_it/P_it-1)
-  
-  # Calculate
-  
-  #Since the first row is defined, we need to start at the second row
-  for (t in 2:length(tempP)){
-    tempP[t]<-tempP[t-1]*(1+PC0[t,1])
-  }
-  
-  temp[,ncol(temp)+1]<-(tempP)
-  names(temp)[ncol(temp)]<-paste0("P", NameBaseTotal)
-  
-  ###10. Price Index for the entire commercial fishery ($PI_t$)
-  # We calculate the price index first by comparing by multiplying the previous years $PI_{t-1}$ by that year's price change $PC_{t}$, where the PI of the first year $PI_{t=firstyear} = 1
-  # $$PI_{t} = PI_{t-1}*(1+PC_{t})$$
+  ###Price Index for the entire commercial fishery ($PI_t$)
+  # We calculate the price index first by comparing by multiplying the previous years $PI_{t-1}$ by that year's price change $PC_{t}$, where the PI of the first year $PI_{t=firstyear} = 1$
+  # $$PI_t = PI_{t-1}*exp(ln(\frac{P_{i,t}}{P_{i,t-1}})) = PI_{t-1}*exp(PC_{t})$$
+  # Where
   # $$PI_{i, t_{first year}} = 1$$
+  #Note that the first row of this column is = 1
+  # 
   # Then, to change the price (calulated later) into base year dollars, we use the following equation: 
   # $$PI_{t} = PI_{t}/PI_{t = baseyear}$$
-  # In this example, we'll decide that the base year is `r baseyr`, for whatever reason. Notice that the $PI_{i,t=baseyr} = 1$
-  
-  tempPI1<-data.frame(c(1, (rep_len(x = NA, length.out = (nrow(temp)-1)))))
-  rownames(tempPI1)<-rownames(temp)
-  for (i in 2:nrow(tempPI1)){
-    tempPI1[i,]<-tempPI1[i-1,]*(1+temp[i,names(temp) %in% paste0("PC", NameBaseTotal)])
-  }
-  
-  tempPI2<-tempPI1/tempPI1[rownames(tempPI1) %in% baseyr,]
-  
-  temp[ncol(temp)+1]<-(tempPI2)
+  # In this example, we'll decide that the base year is `r baseyr`, for whatever reason. Notice that the $PI_{i,t=baseyr} = 1$ 
+  tempPI<-PriceIndex(temp, BaseColName = NameBaseTotal, baseyr)
+  temp[ncol(temp)+1]<-(tempPI)
   names(temp)[ncol(temp)]<-paste0("PI", NameBaseTotal)
-  
   
   ### 11. Total Implicit Quantity/Output for the entire commercial fishery ($Q_t = Y_t$)
   # To get quantity estimates for total output using total value of landings divided by price index as follow: $Y=V/I$
@@ -821,31 +830,31 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   # To make sure our analyses worked as inteded, let's see if we can back calculate our numbers.
   # We want the calcuated V to equal this check:
   
-  ####1. When back calculated, $V_t$ did not equal $P_t * Q_{t}$
+  ####1. When back calculated, $V_t$ did not equal $PI_t * Q_{t}$
   # $$V_i = P_t * Q_i$$
   
   temp0<-temp[names(temp) %in% c(paste0("Q",NameBaseTotal), 
-                                 paste0("P",NameBaseTotal), 
+                                 paste0("PI",NameBaseTotal), 
                                         paste0("V",NameBaseTotal))]
   
-  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBaseTotal)]*temp0[,paste0("P",NameBaseTotal)]
+  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBaseTotal)]*temp0[,paste0("PI",NameBaseTotal)]
   names(temp0)[ncol(temp0)]<-paste0("V", NameBaseTotal, "_Check")
   
   if (sum(temp0[,paste0("V", NameBaseTotal, "_Check")] %in% 
           temp0[,paste0("V", NameBaseTotal)]) == nrow(temp0))  {
-  warnings.list[length(warnings.list)+1]<-"When back calculated, V_t did not equal P_t * Q_t"
+  warnings.list[length(warnings.list)+1]<-"When back calculated, V_t did not equal PI_t * Q_t"
   }
 
   
   ####2. When back calculated, $Q_{t}$ did not equal $V_t / P_{t}$
   # $$Q_{i,t} = V_t / P_{i,t}$$
   
-  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("V",NameBaseTotal)]/temp0[,paste0("P",NameBaseTotal)]
+  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("V",NameBaseTotal)]/temp0[,paste0("PI",NameBaseTotal)]
   names(temp0)[ncol(temp0)]<-paste0("Q", NameBaseTotal, "_Check")
   
   if (sum(temp0[,paste0("Q", NameBaseTotal, "_Check")] %in% 
           temp0[,paste0("Q", NameBaseTotal)]) == nrow(temp0))  {
-  warnings.list[length(warnings.list)+1]<-"When back calculated, Q_t did not equal V_t/P_t"
+  warnings.list[length(warnings.list)+1]<-"When back calculated, Q_t did not equal V_t/PI_t"
   }
   
   
@@ -860,9 +869,6 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   names0<-c(paste0("Q",NameBaseTotal))
   for (ii in 1:length(category)) {
     names0<-c(names0, 
-              # names(temp)[grep(pattern = paste0("QE", i, "_", NumberOfSpecies), names(temp))
-              #   [!(grep(pattern = paste0("QE", i, "_", NumberOfSpecies), names(temp))) %in% 
-              #               grep(pattern = paste0("REMOVED_"), names(temp))] ],
               names(temp)[grep(pattern = paste0("Q", ii, "_", NumberOfSpecies), names(temp))],
               names(temp)[grep(pattern = paste0("R", ii, "_", NumberOfSpecies), names(temp))])
   }
@@ -937,7 +943,12 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   pp<-(aa[!(is.na(aa))])
   
   
-  warnings.list[length(warnings.list)+1]<-paste0("Out of ", ncol0," columns, ", ifelse(length(vv)==1, 0, length(vv)-1) ," of species V columns are completely empty, ", ifelse(length(qq)==1, 0, length(qq)-1) ," of species Q columns are completely empty, and ", ifelse(length(pp)==1, 0, length(pp)-1) ," of ", ncol0," species P columns are completely empty. ")
+  warnings.list[length(warnings.list)+1]<-paste0("Out of ", ncol0," columns, ", ifelse(length(vv)==1, 0, length(vv)-1) ,
+                                                 " of species V columns are completely empty, ", 
+                                                 ifelse(length(qq)==1, 0, length(qq)-1) ,
+                                                 " of species Q columns are completely empty, and ", 
+                                                 ifelse(length(pp)==1, 0, length(pp)-1) ," of ", ncol0,
+                                                 " species P columns are completely empty. ")
   
   
   # ####5. Negative Numbers
@@ -1638,7 +1649,7 @@ ImplicitQuantityInput<-function(temp, baseyr, calcQEI = F){
     # Calculate
     P0<-temp[, names(temp) %in% paste0("P", NameBase)]
     R0<-temp[, names(temp) %in% paste0("W", NameBase)] #to make sure its the same column
-    tempPC[,c]<-pricechange(R0, P0)
+    tempPC[,c]<-PriceChange(R0, P0)
     names(tempPC)[c]<-paste0("PC", NameBase ) #name the column
   }
   
@@ -1717,7 +1728,7 @@ ImplicitQuantityInput<-function(temp, baseyr, calcQEI = F){
     # Calculate
     P0<-temp[, names(temp) %in% paste0("Q", NameBase)]
     R0<-temp[, names(temp) %in% paste0("W", NameBase)] #to make sure its the same column
-    tempQC[,c]<-pricechange(R0, P0)
+    tempQC[,c]<-PriceChange(R0, P0)
     names(tempQC)[c]<-paste0("QC", NameBase ) #name the column
   }
   

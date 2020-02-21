@@ -285,6 +285,7 @@ temp0 %>%
 We first measure output price for each species in each of the categories (e.g., Finfish & Others and Shellfish) using detailed landings time series data on value ($) and pounds (lbs). 
 
 Price for a species (s) of category (i) in year (t) = 
+
 $$P_{s,i,t} = V_{s,i,t}/Q_{s,i,t}$$
 
 where: 
@@ -416,7 +417,7 @@ temp0 %>%
 ```
 
 
-###Value of species where P was able to be calculated
+###Value of species $VV_{i,t}$ where P was able to be calculated
 
 $R_{i,t}$, defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{i,t}$ (called $VV_{i,t}$) for the category using only values for species that were used to calculate $P_{i,t}$ (called  $V_{s,i,t, available}$). 
 
@@ -429,7 +430,7 @@ where:
  - $V_{s,i,t, available}$ are the $V_{s,i,t}$ where P were able to be calculated
 
 
-```{r, echo  = FALSE}
+```{r, echo  = TRUE}
 
 VVColumns<-paste0("V", substr(x = PColumns, start = 2, stop = nchar(PColumns)))
 
@@ -508,7 +509,7 @@ Which can be adapted to this function/macro:
 
 ```{r, echo  = TRUE}
 #A function to caluclate the price change
-# print(pricechange)
+# print(PriceChange)
 ```
 
 Now put it into practice for the total dataset:
@@ -525,7 +526,7 @@ for (c in 1:length(PColumns)){
   # Calculate
   P0<-temp[, names(temp) %in% paste0("P", NameBase)]
   R0<-temp[, names(temp) %in% paste0("R", NameBase)] #to make sure its the same column
-  tempPC[,c]<-pricechange(R0, P0)
+  tempPC[,c]<-PriceChange(R0, P0)
   names(tempPC)[c]<-paste0("PC", NameBase ) #name the column
 }
 
@@ -554,61 +555,39 @@ temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-###Price for each category ($P_{i,t}$; Finfish & others and Shellfish)
 
-$$P_{i,t} = P_{i,t-1}*[1+ln(\frac{P_{s,i,t}}{P_{s,i,t-1}})]$$
+###Price Index for the each category ($PI_t$)
 
-Which is represented using this function:
-```{r, echo  = TRUE}
-# #Note that the first row of this column is = 1
-# tempP<-c(1, rep_len(x = NA, length.out = nrow(temp)-1))
-# 
-# PC0<-temp[,names(temp) %in% paste0("PC", NameBasecategory)]
-# 
-#   #Since the first row is defined, we need to start at the second row
-# for (t in 2:length(tempP)){
-#     tempP[t]<-tempP[t-1]*(1+PC0[t])
-# }
-# 
-# temp[ncol(temp)+1]<-(tempP)
-# names(temp)[ncol(temp)]<-paste0("P", NameBasecategory)
-# # temp$P1_Finfish<-tempP
-```
+We calculate the price index first by comparing by multiplying the previous years $PI_{t-1}$ by that year's price change $PC_{t}$, where the PI of the first year $PI_{t=firstyear} = 1$
 
-```{r, echo  = FALSE}
-# temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
-#                  temp[,(ncol(temp)-4):ncol(temp)])
-# temp0 %>%
-#     knitr::kable(row.names = T, booktabs = T)
-```
+$$PI_t = PI_{t-1}*exp(ln(\frac{P_{i,t}}{P_{i,t-1}})) = PI_{t-1}*exp(PC_{t})$$
 
-###Price Indexes for each category ($PI_{i,t}$; Finfish & others and Shellfish) 
+Where
 
-We calculate the price index first by comparing by multiplying the previous years $PI_{i,t-1}$ by that year's price change $PC_{i,t}$, where the PI of the first year $PI_{i, t=firstyear} = 1$
-
-$$PI_{i,t} = PI_{i,t-1}*(1+PC_{i,t})$$
 $$PI_{i, t_{first year}} = 1$$
+
+```{r, echo  = TRUE}
+#Note that the first row of this column is = 1
+tempPI1<-data.frame(c(1, rep_len(x = NA, length.out = nrow(temp)-1)))
+rownames(tempPI1)<-rownames(temp)
+
+PC0<-temp[,names(temp) %in% paste0("PC", NameBasecategory)] #this is equal to ln(P_it/P_it-1)
+
+  # Calculate
+for (t in 2:length(tempPI1)){  #Since the first row is defined, we need to start at the second row
+    tempPI1[t]<-tempPI1[t-1]*exp(PC0[t])
+}
+```
 
 Then, to change the price (calulated later) into base year dollars, we use the following equation: 
 
-$$PI_{i,t} = PI_{i,t}/PI_{i, t = baseyear}$$
+$$PI_{t} = PI_{t}/PI_{t = baseyear}$$
 
+In this example, we'll decide that the base year is `r baseyr`, for whatever reason. Notice that the $PI_{i,t=baseyr} = 1$ 
 
-In this example, we'll decide that the base year is `r baseyr`. Notice that the $PI_{i,t=baseyr} = 1$ 
-
-```{r, echo  = FALSE}
-tempPI1<-data.frame(c(1, (rep_len(x = NA, length.out = (nrow(temp)-1)))))
-rownames(tempPI1)<-rownames(temp)
-for (i in 2:nrow(tempPI1)){
-    tempPI1[i,]<-tempPI1[i-1,]*(1+temp[i,names(temp) %in% paste0("PC", NameBasecategory)])
-}
-
+```{r, echo  = TRUE}
 tempPI2<-tempPI1/tempPI1[rownames(tempPI1) %in% baseyr,]
-
-temp[ncol(temp)+1]<-(tempPI2)
-names(temp)[ncol(temp)]<-paste0("PI", NameBasecategory)
 ```
-
 
 ```{r, echo  = FALSE}
 temp0<-cbind.data.frame(tempPI1, tempPI2)
@@ -617,9 +596,27 @@ temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
+Which can be summarized in this function: 
+```{r, echo  = TRUE}
+print(PriceIndex)
+```
+
+And we add the $PI$ to the data
+```{r, echo  = TRUE}
+tempPI<-PriceIndex(temp, BaseColName = NameBasecategory, baseyr)
+temp[ncol(temp)+1]<-(tempPI)
+names(temp)[ncol(temp)]<-paste0("PI", NameBasecategory)
+```
+
+```{r, echo  = FALSE}
+temp0<-tempPI
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
 ###Implicit Quantity/Output for each category ($Q_{i,t}$; Finfish & others and Shellfish)
 
-Note here that all columns of $V$ are being used, despite having been removed earlier in the analysis when $P$ could not be calculated and $P$ columns have functionally been removed from the analysis. 
+Note here that all columns of $V$ are being used, despite having been removed earlier in the analysis when $PI$ could not be calculated and $PI$ columns have functionally been removed from the analysis. 
 
 $$Q_{i,t}=V_{i,t}/PI_{i,t}$$
 
@@ -647,16 +644,16 @@ $$V_i = P_t * Q_i$$
   
 ```{r, echo  = TRUE}
   temp0<-temp[names(temp) %in% c(paste0("Q",NameBasecategory), 
-                                 paste0("P",NameBasecategory), 
+                                 paste0("PI",NameBasecategory), 
                                  paste0("V",NameBasecategory))]
   
-  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBasecategory)]*temp0[,paste0("P",NameBasecategory)]
+  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBasecategory)]*temp0[,paste0("PI",NameBasecategory)]
   names(temp0)[ncol(temp0)]<-paste0("V", NameBasecategory, "_Check")
   
   if (sum(temp0[,paste0("V", NameBasecategory, "_Check")] %in% 
           temp0[,paste0("V", NameBasecategory)]) == nrow(temp0)) {
-    warnings.list[length(warnings.list)+1]<-"When back calculated, V_{i,t} did not equal P_{i,t} * Q_{i,t}"
-    print("When back calculated, V_{i,t} did not equal P_{i,t} * Q_{i,t}")
+    warnings.list[length(warnings.list)+1]<-"When back calculated, V_{i,t} did not equal PI_{i,t} * Q_{i,t}"
+    print("When back calculated, V_{i,t} did not equal PI_{i,t} * Q_{i,t}")
   }
 ```
 
@@ -666,18 +663,18 @@ temp0%>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-####2. When back calculated, $Q_{t}$ did not equal $V_t / P_{t}$
+####2. When back calculated, $Q_{t}$ did not equal $V_t / PI_{t}$
   
-$$Q_{i,t} = V_t / P_{i,t}$$
+$$Q_{i,t} = V_t / PI_{i,t}$$
   
 ```{r, echo  = TRUE}
-  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("V",NameBasecategory)]/temp0[,paste0("P",NameBasecategory)]
+  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("V",NameBasecategory)]/temp0[,paste0("PI",NameBasecategory)]
   names(temp0)[ncol(temp0)]<-paste0("Q", NameBasecategory, "_Check")
   
   if (sum(temp0[,paste0("Q", NameBasecategory, "_Check")] %in% 
           temp0[,paste0("Q", NameBasecategory)]) == nrow(temp0)) {
-    warnings.list[length(warnings.list)+1]<-"When back calculated, Q_{i,t} did not equal V_{i,t}/P_{i,t}"
-    print("When back calculated, Q_{i,t} did not equal V_{i,t}/P_{i,t}")
+    warnings.list[length(warnings.list)+1]<-"When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}"
+    print("When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}")
   }
 ```
 
@@ -720,7 +717,7 @@ temp0 %>%
 
 ###Value for all fisheries for species where P was able to be calculated
 
-$R_{i,t}$, defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{i,t}$ (called $VV_{t}$) for the category using only values for species that were used to calculate $P_{i,t}$. 
+$R_{i,t}$, defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{i,t}$ (called $VV_{t}$) for the category using only values for species that were used to calculate $PI_{i,t}$. 
 
 $$VV_{t} = \sum_{s=1}^{n}(VV_{i,t})$$ 
 
@@ -799,39 +796,11 @@ Measure output price changes ($PC_t$) for total output ($Q_t$) using $R_{i,t}$ a
 $$PC_{t} = ln(\frac{P_{t}}{P_{t-1}}) =  \sum_{i=1}^n([\frac{R_{i,t} + R_{i,t-1}}{2}] * [ln(P_{i,t}) - ln(P_{i,t-1})]) $$
 
 ```{r, echo  = TRUE}
-temp$PC0_0Total<-rowSums(cbind(pricechange(R0 = temp$R1_0Finfish, P0 = temp$P1_0Finfish), 
-                            pricechange(R0 = temp$R2_0Shellfish, P0 = temp$P2_0Shellfish)), 
+temp$PC0_0Total<-rowSums(cbind(PriceChange(R0 = temp$R1_0Finfish, P0 = temp$PI1_0Finfish), 
+                            PriceChange(R0 = temp$R2_0Shellfish, P0 = temp$PI2_0Shellfish)), 
                        na.rm = T)
 ```
 
-
-```{r, echo  = FALSE}
-temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
-                 temp[,(ncol(temp)-4):ncol(temp)])
-temp0 %>%
-    knitr::kable(row.names = T, booktabs = T)
-```
-
-###Price for the entire commercial fishery ($P_t$)
-
-$$P_t = P_{t-1}*[1+ln(\frac{P_{i,t}}{P_{i,t-1}})] = P_{t-1}*[1-PC_{t}]$$
-
-Which is represented using this function:
-```{r, echo  = TRUE}
-#Note that the first row of this column is = 1
-tempP<-c(1, rep_len(x = NA, length.out = nrow(temp)-1))
-
-PC0<-temp$PC0_0Total #this is equal to ln(P_it/P_it-1)
-
-  # Calculate
-  
-  #Since the first row is defined, we need to start at the second row
-for (t in 2:length(tempP)){
-    tempP[t]<-tempP[t-1]*(1+PC0[t])
-}
-  
-temp$P0_0Total<-tempP
-```
 
 ```{r, echo  = FALSE}
 temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
@@ -844,35 +813,20 @@ temp0 %>%
 
 We calculate the price index first by comparing by multiplying the previous years $PI_{t-1}$ by that year's price change $PC_{t}$, where the PI of the first year $PI_{t=firstyear} = 1$
 
-$$PI_{t} = PI_{t-1}*(1+PC_{t})$$
+$$PI_t = PI_{t-1}*exp(ln(\frac{P_{i,t}}{P_{i,t-1}})) = PI_{t-1}*exp(PC_{t})$$
+
+Where
 
 $$PI_{i, t_{first year}} = 1$$
 
-Then, to change the price (calulated later) into base year dollars, we use the following equation: 
-
-$$PI_{t} = PI_{t}/PI_{t = baseyear}$$
-
-In this example, we'll decide that the base year is `r baseyr`, for whatever reason. Notice that the $PI_{i,t=baseyr} = 1$ 
-
-```{r, echo  = FALSE}
-# temp$PI0_0Total<-temp$P0_0Total/temp$P0_0Total[rownames(temp) %in% baseyr]
-
-tempPI1<-data.frame(c(1, (rep_len(x = NA, length.out = (nrow(temp)-1)))))
-rownames(tempPI1)<-rownames(temp)
-for (i in 2:nrow(tempPI1)){
-    tempPI1[i,]<-tempPI1[i-1,]*(1+temp[i,names(temp) %in% paste0("PC", NameBaseTotal)])
-}
-
-tempPI2<-tempPI1/tempPI1[rownames(tempPI1) %in% baseyr,]
-
-temp[ncol(temp)+1]<-(tempPI2)
+```{r, echo  = TRUE}
+tempPI<-PriceIndex(temp, BaseColName = NameBaseTotal, baseyr)
+temp[ncol(temp)+1]<-(tempPI)
 names(temp)[ncol(temp)]<-paste0("PI", NameBaseTotal)
-
 ```
 
 ```{r, echo  = FALSE}
-temp0<-cbind.data.frame(tempPI1, tempPI2)
-names(temp0)<-c("tempPI1", "tempPI2")
+temp0<-tempPI
 temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
@@ -887,8 +841,7 @@ temp$Q0_0Total<-temp$V0_0Total/temp$PI0_0Total
 ```
 
 ```{r, echo  = FALSE}
-temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
-                 temp[,(ncol(temp)-4):ncol(temp)])
+temp0<-temp$Q0_0Total
 temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
@@ -938,8 +891,8 @@ temp0 %>%
 $$QC_{t} = \sum_{i=1}^n((\frac{R_{it} + R_{it-1}}{2}) * ln(\frac{Q_{it}}{Q_{it-1}}))$$
 
 ```{r, echo  = TRUE}
-temp$QC0_0Total<-rowSums(cbind(pricechange(R0 = temp$R1_0Finfish, P0 = temp$Q1_0Finfish), 
-                            pricechange(R0 = temp$R2_0Shellfish, P0 = temp$Q2_0Shellfish)), 
+temp$QC0_0Total<-rowSums(cbind(PriceChange(R0 = temp$R1_0Finfish, P0 = temp$Q1_0Finfish), 
+                            PriceChange(R0 = temp$R2_0Shellfish, P0 = temp$Q2_0Shellfish)), 
                        na.rm = T)
 ```
 
@@ -955,23 +908,23 @@ To make sure our analyses worked as inteded, let's see if we can back calculate 
 
 We want the calcuated V to equal this check:
 
-####1. When back calculated, $V_t$ did not equal $P_t * Q_{t}$?
+####1. When back calculated, $V_t$ did not equal $PI_t * Q_{t}$?
 
 
 $$V_i = P_t * Q_i$$
 
 ```{r, echo  = TRUE}
   temp0<-temp[names(temp) %in% c(paste0("Q",NameBaseTotal), 
-                                 paste0("P",NameBaseTotal), 
+                                 paste0("PI",NameBaseTotal), 
                                         paste0("V",NameBaseTotal))]
   
-  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBaseTotal)]*temp0[,paste0("P",NameBaseTotal)]
+  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBaseTotal)]*temp0[,paste0("PI",NameBaseTotal)]
   names(temp0)[ncol(temp0)]<-paste0("V", NameBaseTotal, "_Check")
   
   if (sum(temp0[,paste0("V", NameBaseTotal, "_Check")] %in% 
           temp0[,paste0("V", NameBaseTotal)]) == nrow(temp0))  {
-  warnings.list[length(warnings.list)+1]<-"When back calculated, V_t did not equal P_t * Q_t"
-  print("When back calculated, V_t did not equal P_t * Q_t")
+  warnings.list[length(warnings.list)+1]<-"When back calculated, V_t did not equal PI_t * Q_t"
+  print("When back calculated, V_t did not equal PI_t * Q_t")
   }
 ```
 
@@ -986,13 +939,13 @@ $$Q_{i,t} = V_t / P_{i,t}$$
 
 
 ```{r, echo  = TRUE}
-  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("V",NameBaseTotal)]/temp0[,paste0("P",NameBaseTotal)]
+  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("V",NameBaseTotal)]/temp0[,paste0("PI",NameBaseTotal)]
   names(temp0)[ncol(temp0)]<-paste0("Q", NameBaseTotal, "_Check")
   
   if (sum(temp0[,paste0("Q", NameBaseTotal, "_Check")] %in% 
           temp0[,paste0("Q", NameBaseTotal)]) == nrow(temp0))  {
-  warnings.list[length(warnings.list)+1]<-"When back calculated, Q_t did not equal V_t/P_t"
-  print("When back calculated, Q_t did not equal V_t/P_t")
+  warnings.list[length(warnings.list)+1]<-"When back calculated, Q_t did not equal V_t/PI_t"
+  print("When back calculated, Q_t did not equal V_t/PI_t")
   }
 ```
 
@@ -1123,7 +1076,7 @@ qq<-length(a)
 
 #Price
 a<-temp
-a<-a[,grep(pattern = "P[1-9]+_[1-9]+", x = names(a))]
+a<-a[,grep(pattern = "PI[1-9]+_[1-9]+", x = names(a))]
 a<-names(a)[(grep(pattern = "REMOVED_", x = names(a)))]
 pp<-length(a)
 
@@ -1139,7 +1092,7 @@ temp0%>%
 ```
 
 ### Graph 1: Price Index
-In theory, $PI$ should be negative after the baseyear and positive after the base year, but because this data was fabricated without thinking of this, we don't see that here. The index value for the base year is =1, however. 
+In theory, $PI$ should be negative slope after the baseyear and positive after the base year, but because this data was fabricated without thinking of this, we don't see that here. The index value for the base year is =1, however. 
 
 ```{r, echo  = TRUE}
 # A function I made to plot this pretty in ggplot2
@@ -1147,8 +1100,6 @@ temp <- temp[, !duplicated(colnames(temp))]
 plot1line(temp, PI = temp$PI0_0Total,
             NOAALightBlue, NOAADarkBlue, NOAADarkGrey)
 ```
-
-
 
 
 ### Graph 2: Quantity Index Compare
@@ -1320,12 +1271,6 @@ Summary information about the commercial dataset:
 ```{r, echo  = TRUE}
 summary(landings.data[,c("Tsn", "Year", "State", "AFS.Name", "Pounds", "Dollars", "category.orig")])
 ```  
-
-We can do the structuring work in a function
-```{r, echo  = TRUE}
-# This function structures the data for the Implicit Quantity function
-# print(EditCommData)
-```
   
 Edit/Restructure Data
 ```{r, echo = TRUE}
@@ -1336,7 +1281,7 @@ temp<-temp00[[1]]
 ### B. Enter base year
 ```{r, echo = TRUE}
 baseyr<-2010
-PercentMissingThreshold = 0.50
+PercentMissingThreshold = 0.60
 ```
 
 ### C. Run the function

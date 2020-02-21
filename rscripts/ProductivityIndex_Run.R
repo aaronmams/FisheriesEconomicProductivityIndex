@@ -43,13 +43,13 @@ dir.create(dir.outputtables)
 date0<-""
 date00<-paste0(Sys.Date())
 
-ProdI.Run<-paste0(dir.scripts, "ProductivityIndex_Run_",date0,".R")
-ProdI.Data<-paste0(dir.scripts, "ProductivityIndex_Data_",date0,".R")
-ProdI.DataDL<-paste0(dir.scripts, "ProductivityIndex_CensusDownloadClean_",date0,".R")
-ProdI.Funct<-paste0(dir.scripts, "ProductivityIndex_Functions_",date0,".R")
-ProdI.Report<-paste0(dir.scripts, "ProductivityIndex_Report_",date0,".rmd")
-ProdI.Docu.Out<-paste0(dir.scripts, "ProductivityIndex_Documentation_Output_",date0,".rmd")
-ProdI.Docu.In<-paste0(dir.scripts, "ProductivityIndex_Documentation_Input_",date0,".rmd")
+ProdI.Run<-paste0(dir.scripts, "ProductivityIndex_Run",date0,".R")
+ProdI.Data<-paste0(dir.scripts, "ProductivityIndex_Data",date0,".R")
+ProdI.DataDL<-paste0(dir.scripts, "ProductivityIndex_CensusDownloadClean",date0,".R")
+ProdI.Funct<-paste0(dir.scripts, "ProductivityIndex_Functions",date0,".R")
+ProdI.Report<-paste0(dir.scripts, "ProductivityIndex_Report",date0,".rmd")
+ProdI.Docu.Out<-paste0(dir.scripts, "ProductivityIndex_Documentation_Output",date0,".rmd")
+ProdI.Docu.In<-paste0(dir.scripts, "ProductivityIndex_Documentation_Input",date0,".rmd")
 
 ######SAVE WORKING FILES########
 #From Specific Files

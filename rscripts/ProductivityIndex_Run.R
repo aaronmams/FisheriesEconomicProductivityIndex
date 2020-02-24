@@ -335,6 +335,7 @@ OutputAnalysis(landings.data, baseyr = 2007,
 
 ########DOCUMENTATION#################
 code<-TRUE
+showresults<-TRUE
 
 rmarkdown::render(ProdI.Docu.Out,
                   output_dir = paste0(dir.docu),
@@ -344,6 +345,7 @@ file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_",
                to = paste0(dir.output, "ProductivityIndex_Documentation_Output.pdf"))
 
 code<-FALSE
+showresults<-FALSE
 
 rmarkdown::render(ProdI.Docu.Out,
                   output_dir = paste0(dir.docu),

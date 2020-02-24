@@ -48,6 +48,11 @@ echoTF<-function(typical, code = TRUE) {
   return(ifelse(code == TRUE, typical, FALSE))
 }
 
+includeTF<-function(typical, showresults = TRUE) {
+  return(ifelse(showresults == TRUE, typical, FALSE))
+}
+
+
 file.copy.rename <- function(from, to) {
   todir <- dirname(to)
   fromdir <- dirname(from)
@@ -410,7 +415,7 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   ####
   #if there are still columns to assess that haven't been "removed"
   if (length(VColumns) == 0) {
-    warnings.list[length(warnings.list)+1]<-paste0(NameBasecategory, " is no longer being calculated because there were no more available columns after data was removed for not meeting the percentmissingthreshold")
+    warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns after data was removed for not meeting the percentmissingthreshold")
     
   } else {
     
@@ -562,7 +567,7 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   
   #Note if there is an error
   if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
-    warnings.list[length(warnings.list)+1]<-paste0("Rows of R_{s,i,t} for ",NameBasecategory," did not sum to 1")
+    warnings.list[length(warnings.list)+1]<-paste0("FYI: Rows of R_{s,i,t} for ",NameBasecategory," did not sum to 1")
   }
   
   #remove duplicates
@@ -644,8 +649,8 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   names(temp0)[ncol(temp0)]<-paste0("V", NameBasecategory, "_Check")
   
   if ((length(setdiff(temp0[,paste0("V", NameBasecategory, "_Check")], 
-                      temp0[,paste0("V", NameBasecategory)])) == 0)) {
-    warnings.list[length(warnings.list)+1]<-"When back calculated, V_{i,t} did not equal PI_{i,t} * Q_{i,t}"
+                      temp0[,paste0("V", NameBasecategory)])) != 0)) {
+    warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, V_{i,t} did not equal PI_{i,t} * Q_{i,t}"
   }
   
   
@@ -656,8 +661,8 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   names(temp0)[ncol(temp0)]<-paste0("Q", NameBasecategory, "_Check")
     
  if (length(setdiff(temp0[,paste0("Q", NameBasecategory, "_Check")], 
-                       temp0[,paste0("Q", NameBasecategory)])) == 0) {
-    warnings.list[length(warnings.list)+1]<-"When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}"
+                       temp0[,paste0("Q", NameBasecategory)])) != 0) {
+    warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}"
   }
   
 }
@@ -845,7 +850,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
 
   #Note if there is an Error
   if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
-    warnings.list[length(warnings.list)+1]<-paste0("Rows of R_{i,t} for ",NameBaseTotal," did not sum to 1")
+    warnings.list[length(warnings.list)+1]<-paste0("Warning: Rows of R_{i,t} for ",NameBaseTotal," did not sum to 1")
   }
   
   ###14.  Solve Output portion of the equation for the Output Changes: 
@@ -908,26 +913,26 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   names(temp0)[ncol(temp0)]<-paste0("V", NameBaseTotal, "_Check")
   
   if (length(setdiff(temp0[,paste0("V", NameBaseTotal, "_Check")], 
-                      temp0[,paste0("V", NameBaseTotal)])) == 0) {
-  warnings.list[length(warnings.list)+1]<-"When back calculated, V_t did not equal PI_t * Q_t"
+                      temp0[,paste0("V", NameBaseTotal)])) != 0) {
+  warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, V_t did not equal PI_t * Q_t"
   }
 
   
-  ####2. When back calculated, $Q_{t}$ did not equal $V_t / P_{t}$
+  ####2. When back calculated, $Q_{t}$ did not equal $V_t / PI_{t}$
   # $$Q_{i,t} = V_t / P_{i,t}$$
   
   temp0[,(ncol(temp0)+1)]<-temp0[,paste0("V",NameBaseTotal)]/temp0[,paste0("PI",NameBaseTotal)]
   names(temp0)[ncol(temp0)]<-paste0("Q", NameBaseTotal, "_Check")
   
   if (length(setdiff(temp0[,paste0("Q", NameBaseTotal, "_Check")], 
-                     temp0[,paste0("Q", NameBaseTotal)])) == 0) {
-  warnings.list[length(warnings.list)+1]<-"When back calculated, Q_t did not equal V_t/PI_t"
+                     temp0[,paste0("Q", NameBaseTotal)])) != 0) {
+  warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, Q_t did not equal V_t/PI_t"
   }
   
   
   ####3. When back calculated, growth rate ?
   
-  # $$ln(Q_t/Q_{t-1}) = \sum( ( \frac{R_{i, t} - R_{i, t-1}}{2})  * ln(\frac{Q_{i,t}}{Q_{i,t-1}}))$$  
+  # $$ln(Q_t/Q_{t-1}) = \sum( ( \frac{R_{i, t} + R_{i, t-1}}{2})  * ln(\frac{Q_{i,t}}{Q_{i,t-1}}))$$  
   
   #Remove Duplicate Columns
   temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
@@ -952,7 +957,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
     Q0<-temp0[,grep(pattern = paste0("Q", ii), x = names(temp0)) ]
     
     for (r in 2:(nrow(temp))){
-      temp00[r,ii]<-(((R0[r]-R0[r-1])/2) * ln(Q0[r] / Q0[r-1]) )
+      temp00[r,ii]<-(((R0[r] + R0[r-1])/2) * ln(Q0[r] / Q0[r-1]) )
     }
   }
   
@@ -960,8 +965,8 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   names(temp0)[ncol(temp0)]<-"part2"
   
   if (length(setdiff(temp0[,"part1"], 
-                     temp0[,"part2"])) == 0) {
-    warnings.list[length(warnings.list)+1]<-"When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( frac{R_{i, t} - R_{i, t-1}}{2})  * ln(\frac{Q_{i,t}}{Q_{i,t-1}}))"
+                     temp0[,"part2"])) != 0) {
+    warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( frac{R_{i, t} - R_{i, t-1}}{2})  * ln(\frac{Q_{i,t}}{Q_{i,t-1}}))"
   }
   
   
@@ -1011,7 +1016,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   pp<-(aa[!(is.na(aa))])
   
   
-  warnings.list[length(warnings.list)+1]<-paste0("Out of ", ncol0," columns, ", ifelse(length(vv)==1, 0, length(vv)-1) ,
+  warnings.list[length(warnings.list)+1]<-paste0("FYI: Out of ", ncol0," columns, ", ifelse(length(vv)==1, 0, length(vv)-1) ,
                                                  " of species V columns are completely empty, ", 
                                                  ifelse(length(qq)==1, 0, length(qq)-1) ,
                                                  " of species Q columns are completely empty, and ", 

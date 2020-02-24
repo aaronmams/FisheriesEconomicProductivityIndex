@@ -1,7 +1,7 @@
 ---
 title: "Productivity Index - Output"
 author: "Emily Markowitz (Emily.Markowitz@noaa.gov) and Sun-Ling Wang"
-date: "Feb. 21, 2020"
+date: "Feb. 23, 2020"
 output: 
   pdf_document:
     toc: true
@@ -483,22 +483,26 @@ tempR %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
+####Analysis Warnings Checks
+
 As an additional check, let's make sure that each row sums to 1. 
 ```{r, echo = echoTF(FALSE, code)}
 rowSums(tempR, na.rm = T) %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-Was there a warning?
+Is there a warning?
 
 ```{r, echo = echoTF(FALSE, code)}
 if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
   warnings.list[length(warnings.list)+1]<-paste0("Rows of R_{s,i,t} for ",NameBasecategory," did not sum to 1")
-  print(warnings.list[length(warnings.list)])
+    a<-warnings.list[length(warnings.list)][[1]]
 } else {
-  print("No warning.")
+    a<-"No warning."
 }
 ```
+
+*`r a `*
 
 ###Price Changes for each species ($PC_{s,i,t}$ aka $\Delta ln(P_{s,i,t})$; e.g., Salmon and Flounder)
 
@@ -654,28 +658,31 @@ $$V_i = PI_t * Q_i$$
                                  paste0("PI",NameBasecategory), 
                                  paste0("V",NameBasecategory))]
   
-  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBasecategory)]*temp0[,paste0("PI",NameBasecategory)]
+  temp0[,(ncol(temp0)+1)]<-temp0[,paste0("Q",NameBasecategory)]*
+    temp0[,paste0("PI",NameBasecategory)]
   names(temp0)[ncol(temp0)]<-paste0("V", NameBasecategory, "_Check")
   
 ```
 
 
 ```{r, echo = echoTF(FALSE, code)}
-temp0%>%
+temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
 Is there a warning?
 ```{r, echo = echoTF(FALSE, code)}
-  if (length(setdiff(temp0[,paste0("V", NameBasecategory, "_Check")], 
-                     temp0[,paste0("V", NameBasecategory)])) != 0) {
+  if (length(setdiff(as.character(temp0[,paste0("V", NameBasecategory, "_Check")]), 
+                     as.character(temp0[,paste0("V", NameBasecategory)]))) != 0) {
     warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, V_{i,t} did not equal PI_{i,t} * Q_{i,t}"
-  print(warnings.list[length(warnings.list)])
+    
+    a<-warnings.list[length(warnings.list)][[1]]
 } else {
-  print("No warning.")
+    a<-"No warning."
 }
 ```
 
+*`r a `*
 
 
 ####2. When back calculated, $Q_{t}$ should equal $V_t / PI_{t}$
@@ -696,14 +703,17 @@ temp0%>%
 Is there a warning?
 
 ```{r, echo = echoTF(FALSE, code)}
-  if (length(setdiff(temp0[,paste0("Q", NameBasecategory, "_Check")], 
-                     temp0[,paste0("Q", NameBasecategory)])) != 0) {
+  if (length(setdiff(as.character(temp0[,paste0("Q", NameBasecategory, "_Check")]), 
+                     as.character(temp0[,paste0("Q", NameBasecategory)]))) != 0) {
     warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}"
-  print(warnings.list[length(warnings.list)])
+    a<-warnings.list[length(warnings.list)][[1]]
 } else {
-  print("No warning.")
+    a<-"No warning."
 }
 ```
+
+*`r a `*
+
 
 ## Redo Analysis for Shellfish
 
@@ -802,7 +812,10 @@ temp[,c("R1_0Finfish", "R2_0Shellfish", "V1_0Finfish", "V2_0Shellfish", paste0("
     knitr::kable(row.names = T, booktabs = T)
 ```
 
+####Analysis Warnings Checks
+
 As an additional check, let's make sure that each row sums to 1. 
+
 ```{r, echo = echoTF(FALSE, code)}
 tempR<-temp[,c("R1_0Finfish", "R2_0Shellfish")]
 
@@ -814,13 +827,13 @@ Is there a warning?
 ```{r, echo = echoTF(FALSE, code)}
 if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
   warnings.list[length(warnings.list)+1]<-paste0("Warning: Rows of R_{i,t} for ",NameBaseTotal," did not sum to 1")
-  print(warnings.list[length(warnings.list)])
+    a<-warnings.list[length(warnings.list)][[1]]
 } else {
-  print(
-  "No warning. "
-  )
+  a<-"No warning."
 }
 ```
+
+*`r a `*
 
 ###Price Changes for the entire commercial fishery ($PC_t$)
 Measure output price changes ($PC_t$) for total output ($Q_t$) using $R_{i,t}$ and $P_{i,t}$ estimates. 
@@ -959,18 +972,20 @@ temp0%>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-Was there a warning?
+Is there a warning?
   
 ```{r, echo = echoTF(TRUE, code)}
-  if (length(setdiff(temp0[,paste0("V", NameBaseTotal, "_Check")], 
-                     temp0[,paste0("V", NameBaseTotal)])) != 0) {
-  warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, V_t did not equal PI_t * Q_t"
-  print(warnings.list[length(warnings.list)])
+  if (length(setdiff(as.character(temp0[,paste0("V", NameBaseTotal, "_Check")]), 
+                     as.character(temp0[,paste0("V", NameBaseTotal)]))) != 0) {
+  warnings.list[length(warnings.list)+1] <- "Warning: When back calculated, V_t did not equal PI_t x Q_t"
+  
+    a<-warnings.list[length(warnings.list)][[1]]
 } else {
-  print("No warning.")
+    a<-"No warning."
 }
 ```
 
+*`r a `*
 
 ####2. When back calculated, $Q_{t}$ did not equal $V_t / P_{t}$?
 
@@ -987,17 +1002,19 @@ temp0%>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-Was there a warning?
+Is there a warning?
 
 ```{r, echo = echoTF(FALSE, code)}
-  if (length(setdiff(temp0[,paste0("Q", NameBaseTotal, "_Check")], 
-                     temp0[,paste0("Q", NameBaseTotal)])) == 0) {
+  if (length(setdiff(as.character(temp0[,paste0("Q", NameBaseTotal, "_Check")]), 
+                     as.character(temp0[,paste0("Q", NameBaseTotal)]))) == 0) {
   warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, Q_t did not equal V_t/PI_t"
-  print(warnings.list[length(warnings.list)])
+    a<-warnings.list[length(warnings.list)][[1]]
 } else {
-  print("No warning.")
+    a<-"No warning."
 }
 ```
+
+*`r a `*
 
 ####3. When back calculated, growth rate?
 
@@ -1039,18 +1056,20 @@ temp0%>%
 ```
 
 
-Was there a warning?
+Is there a warning?
   
 ```{r, echo = echoTF(TRUE, code)}
 
-  if (length(setdiff(temp0[,"part1"], 
-                     temp0[,"part2"])) != 0) {
-  warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( frac{R_{i, t} - R_{i, t-1}}{2})  * ln(\frac{Q_{i,t}}{Q_{i,t-1}}))"
-  print(warnings.list[length(warnings.list)])
+  if (length(setdiff(as.character(temp0[,"part1"]), 
+                     as.character(temp0[,"part2"]))) != 0) {
+  warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ((R_{i, t} - R_{i, t-1})(2))  * ln((Q_{i,t})(Q_{i,t-1}))"
+    a<-warnings.list[length(warnings.list)][[1]]
 } else {
-  print("No warning.")
+    a<-"No warning."
 }
 ```
+
+*`r a `*
 
 
 ####4. Missing Data
@@ -1102,9 +1121,11 @@ pp<-(aa[!(is.na(aa))])
 
   warnings.list[length(warnings.list)+1]<-paste0("FYI: Out of ", ncol0," columns, ", ifelse(length(vv)==1, 0, length(vv)-1) ," of species V columns are completely empty, ", ifelse(length(qq)==1, 0, length(qq)-1) ," of species Q columns are completely empty, and ", ifelse(length(pp)==1, 0, length(pp)-1) ," of ", ncol0," species P columns are completely empty. ")
   
-    print(warnings.list[[length(warnings.list)]])
+    a<-warnings.list[[length(warnings.list)]]
 
 ```
+
+*`r a `*
 
 ####5. Removed Data
 
@@ -1131,9 +1152,10 @@ pp<-length(a)
 
   warnings.list[length(warnings.list)+1]<-paste0("FYI: Out of ", ncol0," columns, ", vv ," of species V columns were removed, ", qq ," of species Q columns were removed, and ", pp ," of ", ncol0," species P columns were removed. ")
 
-print(warnings.list[[length(warnings.list)]])
+a<-warnings.list[[length(warnings.list)]]
 ```
 
+*`r a `*
 
 ### Graph 1: Price Index
 In theory, $PI$ should be negative slope after the baseyear and positive after the base year, but because this data was fabricated without thinking of this, we don't see that here. The index value for the base year is = 1, however. 
@@ -1238,7 +1260,7 @@ temp<-orgional.data<-cbind.data.frame(temp.q, temp.v)
  
 ### B. Enter base year
 ```{r, echo = echoTF(TRUE, code), warning = FALSE}
- baseyr<-baseyr
+baseyr<-baseyr
 ```
  
 ### C. Run the function
@@ -1268,26 +1290,30 @@ write.csv(x = temp, file = paste0(dir.docu, "Example_Output.csv"))
 ```
 
 Did all of the analyses work as intended? 
-```{r, echo = echoTF(TRUE, code)}
-print(warnings.list0)
-```
+
+*`r warnings.list0`*
 
 ### E. Graph
 
 #### Graph 1: Price Index
+
 For comparison, let's recreate those graphs to make sure we are getting the same output:
+
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_PI_Line`
+figures.list0$`_PI-Line`
 ```
 
 
 #### Graph 2: Quantity Index Compare
+
 For comparison, let's recreate those graphs to make sure we are getting the same output:
+
 ```{r, echo = echoTF(TRUE, code)}
 figures.list0$`_QuantityIndexCompare`
 ```
 
 #### Graph 3: Quantity Compare
+
 ```{r, echo = echoTF(TRUE, code)}
 figures.list0$`_QuantityCompare`
 ```
@@ -1310,15 +1336,16 @@ category0 = "category.orig"
 ```
   
 Summary information about the commercial dataset:
-```{r, echo = echoTF(TRUE, code)}
-summary(landings.data[,c("Tsn", "Year", "State", "AFS.Name", "Pounds", "Dollars", "category.orig")])
-```  
+
+`r data.frame(summary(landings.data[,c("Tsn", "Year", "State", "AFS.Name", "Pounds", "Dollars", "category.orig")])) `  
   
 Edit/Restructure Data
 ```{r, echo = echoTF(TRUE, code)}
 temp00<-EditCommData(dat = landings.data, category0)
 temp<-temp00[[1]]
 ```
+
+`r data.frame(temp[1:5, 1:5]) ` 
 
 ### B. Enter base year
 ```{r, echo = echoTF(TRUE, code)}
@@ -1339,6 +1366,7 @@ figures.list0<-temp00[[3]]
 write.csv(x = temp, file = paste0(dir.docu, "Output_Commercial_", region, ".csv"))
 
 temp0<-temp[, grepl(pattern = "0Total", x = names(temp))]
+temp0<-temp0[, !grepl(pattern = "REMOVED_", x = names(temp0))]
 names(temp0)<-gsub(pattern = "0", replacement = "", x = names(temp0))
 temp0$QE_Total<-NULL
 temp0$QEI_Total<-NULL
@@ -1347,26 +1375,30 @@ temp0 %>%
 ```
 
 Did all of the analyses work as intended? 
-```{r, echo = echoTF(TRUE, code)}
-print(warnings.list0)
-```
+
+*`r warnings.list0`*
 
 ### E. Graph
 
 #### Graph 1: Price Index
+
 For comparison, let's recreate those graphs to make sure we are getting the same output:
+
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_PI_Line`
+figures.list0$`_PI-Line`
 ```
 
 
 #### Graph 2: Quantity Index Compare
+
 For comparison, let's recreate those graphs to make sure we are getting the same output:
+
 ```{r, echo = echoTF(TRUE, code)}
 figures.list0$`_QuantityIndexCompare`
 ```
 
 #### Graph 3: Quantity Compare
+
 ```{r, echo = echoTF(TRUE, code)}
 figures.list0$`_QuantityCompare`
 ```

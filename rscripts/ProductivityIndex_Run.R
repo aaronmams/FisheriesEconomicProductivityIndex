@@ -40,18 +40,18 @@ ProdI.Docu.In<-paste0(dir.scripts, "ProductivityIndex_Documentation_Input",date0
 ######SAVE WORKING FILES########
 #From Specific Files
 listfiles<-list.files(path = dir.scripts, pattern = date0) 
+listfiles<-listfiles[-(listfiles %in% "old")]
 
 for (i in 1:length(listfiles)){
   file.copy(from = paste0(dir.scripts, listfiles[i]), 
-            to = paste0(dir.out, "/rscripts/", 
-                        gsub(pattern = date0, replacement = date00, x = listfiles[i])), 
+            to = paste0(dir.out, "/rscripts/", listfiles[i]), 
             overwrite = T)
 }
 
 
 #Move most updated  word styles file from reference "common" file to getwd()/rscript
 file.copy(from = paste0(dir.scripts, "/word-styles-reference.docx"), 
-          to = paste0(dir.out, "/rscripts", "/word-styles-reference", Sys.Date(),".docx"), 
+          to = paste0(dir.out, "/rscripts", "/word-styles-reference.docx"), 
           overwrite = T)
 
 ### SOURCE FILES AND DATA #####
@@ -97,10 +97,11 @@ counter<-0
 # plotlist<-list()
 
 OutputAnalysis<-function(landings.data, category0, baseyr, 
-         reg.order, state.codes, titleadd,
+         state.codes, titleadd,
          counter, dir.rawdata, dir.reports, PercentMissingThreshold, dir.figures, dir.outputtables) {
   
-  dir.analyses1<-paste0(dir.analyses, "/",titleadd, "_", gsub(pattern = "\\.", replacement = "", x = category0),"/")
+  dir.analyses1<-paste0(dir.analyses, "/",titleadd, "_", 
+                        gsub(pattern = "\\.", replacement = "", x = category0),"/")
   dir.create(dir.analyses1) 
   dir.reports<-paste0(dir.analyses1, "/reports/")
   dir.create(paste0(dir.analyses1, "/reports/")) 
@@ -193,6 +194,9 @@ for (r in 1:length(reg.order)){
 
 }
   ########SPREADSHEETS########
+  
+  print("Create spreadsheets")
+  
   for (r in 1:length(reg.order)){
     
     #Raw
@@ -217,6 +221,8 @@ for (r in 1:length(reg.order)){
     
     ######PLOTS##########
 
+  print("Create plots")
+  
   #Side by Side graphs
   figs<-unique(paste0(lapply(X = strsplit(x = names(figures.list),
                                          split = gsub(pattern = "\\.", replacement = "", x = category0)),
@@ -251,7 +257,7 @@ for (r in 1:length(reg.order)){
     
     a<-strsplit(x = names(figures.list)[i], split = "_")[[1]][length(strsplit(x = names(figures.list)[i], split = "_")[[1]])]
     
-    dir.create(paste0(dir.figures, "/", a, "/"))
+    # dir.create(paste0(dir.figures, "/", a, "/"))
     
     ggsave(filename = paste0(dir.figures, "/", a, "/", names(figures.list)[i], ".png"), 
            plot = figures.list[[i]], 
@@ -264,23 +270,23 @@ for (r in 1:length(reg.order)){
 
 ########*** No. 1############
 # OutputAnalysis(landings.data, category0 = "category.taxsimp", baseyr = 2010, 
-#                          reg.order, state.codes, 
+#                          state.codes, 
 #                          counter, dir.rawdata, dir.reports, PercentMissingThreshold = 1.00, dir.figures, dir.outputtables) 
 
 ########*** No. 2############
 # OutputAnalysis(landings.data, category0 = "category.taxsimp", baseyr = 2007, 
-#                reg.order, state.codes, 
+#                state.codes, 
 #                counter, dir.rawdata, dir.reports, PercentMissingThreshold = 0.50, dir.figures, dir.outputtables) 
 
 
 ########*** No. 3############
 # OutputAnalysis(landings.data, category0 = "category.orig", baseyr = 2010, 
-#                reg.order, state.codes, 
+#                state.codes, 
 #                counter, dir.rawdata, dir.reports, PercentMissingThreshold = 1.00, dir.figures, dir.outputtables) 
 
 ########*** No. 4############
 # OutputAnalysis(landings.data, category0 = "category.orig", baseyr = 2007, 
-#                reg.order, state.codes, 
+#                state.codes, 
 #                counter, dir.rawdata, dir.reports, PercentMissingThreshold = 0.50, dir.figures, dir.outputtables) 
 
 
@@ -289,49 +295,48 @@ category0 = "category.orig"
 
 #Data for the whole Time Series
 OutputAnalysis(landings.data, category0, baseyr = 2007, 
-               reg.order, state.codes, titleadd = "WholeTimeseries",
+               state.codes, titleadd = "WholeTimeseries",
                counter, dir.rawdata, PercentMissingThreshold = 0.60) 
 
 #Data just from the last 20 years
 OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,], 
                category0, baseyr = 2007, 
-               reg.order, state.codes, titleadd = "1997ToPresent",
+               state.codes, titleadd = "1997ToPresent",
                counter, dir.rawdata, PercentMissingThreshold = 0.60) 
 
 #Data just since 2008
-OutputAnalysis(landings.data[landings.data$Year>=2007,], baseyr = 2007, 
-               reg.order, state.codes, titleadd = "2007ToPresent",
+OutputAnalysis(landings.data[landings.data$Year>=2007,], category0, baseyr = 2007, 
+               state.codes, titleadd = "2007ToPresent",
                counter, dir.rawdata, PercentMissingThreshold = 0.60) 
 
 #Data for the whole timeseries with no PercentMissingThreshold
-OutputAnalysis(landings.data, baseyr = 2007, 
-               reg.order, state.codes, titleadd = "WholeTimeseries",
-               counter, dir.rawdata, PercentMissingThreshold = 1) 
+OutputAnalysis(landings.data, category0, baseyr = 2007, 
+               state.codes, titleadd = "WholeTimeseries1",
+               counter, dir.rawdata, PercentMissingThreshold = 1.00) 
 
 ########*** No. 6############
 category0 = "category.tax"
 
 #Data for the whole Time Series
 OutputAnalysis(landings.data, category0, baseyr = 2007, 
-               reg.order, state.codes, titleadd = "WholeTimeseries",
+               state.codes, titleadd = "WholeTimeseries",
                counter, dir.rawdata, PercentMissingThreshold = 0.60) 
 
 #Data just from the last 20 years
 OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,], 
                category0, baseyr = 2007, 
-               reg.order, state.codes, titleadd = "1997ToPresent",
+               state.codes, titleadd = "1997ToPresent",
                counter, dir.rawdata, PercentMissingThreshold = 0.60) 
 
 #Data just since 2008
-OutputAnalysis(landings.data[landings.data$Year>=2007,], baseyr = 2007, 
-               reg.order, state.codes, titleadd = "2007ToPresent",
+OutputAnalysis(landings.data[landings.data$Year>=2007,], category0, baseyr = 2007, 
+               state.codes, titleadd = "2007ToPresent",
                counter, dir.rawdata, PercentMissingThreshold = 0.60) 
 
 #Data for the whole timeseries with no PercentMissingThreshold
-OutputAnalysis(landings.data, baseyr = 2007, 
-               reg.order, state.codes, titleadd = "WholeTimeseries",
+OutputAnalysis(landings.data, category0, baseyr = 2007, 
+               state.codes, titleadd = "WholeTimeseries",
                counter, dir.rawdata, PercentMissingThreshold = 1) 
-
 
 ########DOCUMENTATION#################
 code<-TRUE

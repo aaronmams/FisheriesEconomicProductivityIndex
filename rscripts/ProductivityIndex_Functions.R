@@ -688,8 +688,12 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
                                                                  pattern = paste0(NumberOfSpecies, "Total"))][2]))
   
   ######START ANALYSIS
-  category<-unique(substr(x = names(temp), start = 2, stop = 2))
-  category<-category[!(category %in% c("0", "E"))]
+  category<-unique(as.character(lapply(X = strsplit(x = as.character(names(temp)), 
+                                             split = paste0("_")), 
+                                function(x) x[1])))
+  category<-unique(substr(x = category, start = 2, stop = nchar(category)))
+  category<-category[!grepl(pattern = "E", x = category)]
+  category<-category[!(category %in% 0)]
   
   temp0<-data.frame(rep_len(x = NA, length.out = nrow(temp)))
   tempPC<-data.frame(rep_len(x = NA, length.out = nrow(temp0)))
@@ -702,14 +706,14 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   for (ii in 1:length(category)){
 
-    VColumns<-grep(pattern = paste0("V", ii,"_"),
+    VColumns<-grep(pattern = paste0("V", category[ii],"_"),
                    x = substr(x = names(temp),
                               start = 1,
-                              stop = (2+nchar(ii))))
+                              stop = (2+nchar(category[ii]))))
     
     NameBasecategory<-names(temp)[grepl(pattern = NumberOfSpecies, 
                                         x = names(temp)) &
-                                    grepl(pattern = paste0("V", ii), x = names(temp))]
+                                    grepl(pattern = paste0("V", category[ii]), x = names(temp))]
     
     NameBasecategory<-substr(start = 2,
                              stop = nchar(NameBasecategory),
@@ -783,7 +787,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
     tempR<-data.frame(rep_len(x = NA, length.out = nrow(temp)))
     for (ii in 1:length(category)){
       
-      NameBasecategory<-paste0(ii, "_", NumberOfSpecies)
+      NameBasecategory<-paste0(category[ii], "_", NumberOfSpecies)
       NameBasecategory<-paste0(NameBasecategory, 
                                strsplit(x = names(temp)[grep(pattern = NameBasecategory, 
                                                              x = names(temp))][1], split = NumberOfSpecies)[[1]][2])
@@ -880,7 +884,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
     temp[, names(temp) %in% paste0("PI", NameBaseTotal)]
   names(temp)[ncol(temp)]<-paste0("Q", NameBaseTotal)
   
-    ### 12. Total Implicit Quantity/Output Index
+  ### 12. Total Implicit Quantity/Output Index
     temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("Q", NameBaseTotal)]/
       temp[rownames(temp) %in% baseyr, names(temp) %in% paste0("Q", NameBaseTotal)]
     names(temp)[ncol(temp)]<-paste0("QI", NameBaseTotal)
@@ -941,8 +945,8 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   names0<-c(paste0("Q",NameBaseTotal))
   for (ii in 1:length(category)) {
     names0<-c(names0, 
-              names(temp)[grep(pattern = paste0("Q", ii, "_", NumberOfSpecies), names(temp))],
-              names(temp)[grep(pattern = paste0("R", ii, "_", NumberOfSpecies), names(temp))])
+              names(temp)[grep(pattern = paste0("Q", category[ii], "_", NumberOfSpecies), names(temp))],
+              names(temp)[grep(pattern = paste0("R", category[ii], "_", NumberOfSpecies), names(temp))])
   }
   
   temp0<-temp[,unique(names0)]
@@ -953,8 +957,8 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   temp00<-data.frame(rep_len(x = NA, length.out = nrow(temp)))
   for (ii in 1:length(category)) { 
-    R0<-temp0[,grep(pattern = paste0("R", ii), x = names(temp0)) ]
-    Q0<-temp0[,grep(pattern = paste0("Q", ii), x = names(temp0)) ]
+    R0<-temp0[,grep(pattern = paste0("R", category[ii]), x = names(temp0)) ]
+    Q0<-temp0[,grep(pattern = paste0("Q", category[ii]), x = names(temp0)) ]
     
     for (r in 2:(nrow(temp))){
       temp00[r,ii]<-(((R0[r] + R0[r-1])/2) * ln(Q0[r] / Q0[r-1]) )
@@ -1332,7 +1336,14 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   cat0<-data.frame(names0 = (names(temp.orig)[grepl(
     pattern = paste0("V[0-9]+_", NumberOfSpecies), 
     x = names(temp.orig))]))
-  cat0$no<-substr(x = cat0$names0, start = 2, stop = 2)
+  
+  cat0$no<-as.character(lapply(X = strsplit(x = as.character(cat0$names0), split = "_"), 
+                                       function(x) x[1]))
+  cat0$no<-unique(substr(x = cat0$no, start = 2, stop = nchar(cat0$no)))
+  # cat0$no<-cat0$no[!grepl(pattern = "[a-zA-Z]", x = cat0$no)]
+  # cat0<-cat0[!(cat0$no %in% 0),]
+  
+  # cat0$no<-substr(x = cat0$names0, start = 2, stop = 2)
   
   cat0$catname<-as.character(lapply(X = strsplit(x = as.character(cat0$names0), split = NumberOfSpecies),
                                     function(x) x[2]))
@@ -1352,10 +1363,14 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   a00 <- gather(a0, Category, xx, names(a0)[grepl(pattern = "V", x = names(a0))], factor_key=TRUE)
   
-  aa<-data.frame(substr(x = a00$Category, start = 2, stop = 2))
-  names(aa)<-"no"
+  a00$Category<-as.character(lapply(X = strsplit(x = as.character(a00$Category), split = "_"), 
+                               function(x) x[1]))
+  a00$Category<-(substr(x = a00$Category, start = 2, stop = nchar(a00$Category)))
+
+  aa<-a00
+  names(aa)[2]<-"no"
   
-  a00$Category<-merge(x = aa, y = cat0, by = "no")[,2]
+  a00$Category<-merge(x = aa, y = cat0, by = "no")[,4]
   
   #SUM
   a<-aggregate(x = a00$xx, 
@@ -1417,148 +1432,158 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   
   # How many V columns have X percentage data missing 
-  title00<- "_PercentMissingV-Bar"
+  # title00<- "_PercentMissingV-Bar"
+  # 
+  # a0<-data.frame(temp.orig[,grepl(
+  #   pattern = paste0("V[0-9]+_"),
+  #   x = names(temp.orig)) &
+  #     !(grepl(
+  #       pattern = paste0("V[0-9]+_", NumberOfSpecies),
+  #       x = names(temp.orig)))])
+  # 
+  # total.no.v<-ncol(a0)*nrow(a0)
+  # 
+  # a00<-a0
+  # 
+  # a00[!is.na(a00)]<-1
+  # 
+  # a000<-nrow(a0)-colSums(a00, na.rm = T)#nmber missing
+  # 
+  # a<-data.frame(x = a000, Category = names(a000)) 
+  # 
+  # # a00$Category<-(substr(x = a00$Category, start = 2, stop = nchar(a00$Category)))
+  # a$no<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = "_"), 
+  #                                   function(x) x[1]))
+  # a$no<-(substr(x = a$no, start = 2, stop = nchar(a$no)))
+  # 
+  # a$Category<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = "[0-9]"), 
+  #                                 function(x) x[length(x)]))
+  # 
+  # aa<-a
+  # # names(aa)[2]<-"no"
+  # 
+  # cat00<-merge(x = cat0, y = data.frame(t(table(aa$no))), by.x = "no", by.y = "Var2")
+  # # cat0$Var1<-NULL
+  # a<-merge(x = aa, y = cat0, by = "no")
+  # a<-a[,c("x", "catname")]
+  # 
+  # a<-rbind.data.frame(a,
+  #                     data.frame(x = sum(a$x), 
+  #                                catname = "Total"))
+  # 
+  # a$x.perc<-(a$x/nrow(temp.orig))*100
+  # a$bins<-round_any(a$x.perc, 10)
+  # 
+  # a<-data.frame(table(a[,names(a) %in% c("bins", "Category")]))
+  # 
+  # cat000<-merge(y = cat00, x = a, by.y = "catname", by.x = "Category")
+  # cat000$Var1<-NULL
+  # cat00<-rbind.data.frame(cat000,
+  #                         data.frame(Category = "Total",
+  #                                    bins = aggregate(x = cat000$Freq.x,
+  #                                                     by = list(bins = cat000$bins), FUN = sum)[,1],
+  #                                    Freq.x = aggregate(x = cat000$Freq.x,
+  #                                                       by = list(bins = cat000$bins), FUN = sum)[,2],
+  #                                    no = 0,
+  #                                    Freq.y = sum(cat000$Freq.x)))
+  # 
+  # cat00$label<-paste0(cat00$Category, " (n=",  cat00$Freq.y,")")
+  # 
+  # cat000<-unique(cat00[,names(cat00) %in% c("Category", "label")])
+  # 
+  # a<-merge(x = a, y = cat000, by = "Category")
+  # 
+  # xnames<-paste0(sort(as.numeric(paste(unique(a$bins)))), "%")
+  # 
+  # g<-ggplot(data = a, aes(x = factor(bins), y = Freq, fill = label)) +
+  #   geom_bar(stat="identity", position=position_dodge()) +
+  #   theme(
+  #     panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
+  #     panel.grid.minor.y = element_blank(),
+  #     panel.grid.major.x = element_blank(),
+  #     panel.grid.minor.x = element_blank(),
+  #     axis.line = element_line( color=NOAALightBlue, size = .1 ),
+  #     axis.ticks = element_blank(), # remove ticks
+  #     panel.background = element_blank()
+  #   )  +
+  #   scale_x_discrete(labels = xnames) +
+  #   ggtitle(paste0(place, " ", title00))
+  # 
+  # figures.list[[length(figures.list)+1]]<-g
+  # names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
-  a0<-data.frame(temp.orig[,grepl(
-    pattern = paste0("V[0-9]+_"),
-    x = names(temp.orig)) &
-      !(grepl(
-        pattern = paste0("V[0-9]+_", NumberOfSpecies),
-        x = names(temp.orig)))])
   
-  total.no.v<-ncol(a0)*nrow(a0)
-  
-  a00<-a0
-  
-  a00[!is.na(a00)]<-1
-  
-  a000<-nrow(a0)-colSums(a00, na.rm = T)#nmber missing
-  
-  a<-data.frame(x = a000, Category = names(a000)) 
-  
-  aa<-data.frame(substr(x = a$Category, start = 2, stop = 2))
-  names(aa)<-"no"
-  cat00<-merge(x = cat0, y = data.frame(t(table(aa$no))), by.x = "no", by.y = "Var2")
-  # cat0$Var1<-NULL
-  a$Category<-merge(x = aa, y = cat0, by = "no")[,2]
-  
-  a<-rbind.data.frame(a,
-                      data.frame(Category = "Total",
-                                 x = sum(a$xx)))
-  
-  a$x.perc<-(a$x/nrow(temp.orig))*100
-  a$bins<-round_any(a$x.perc, 10)
-  
-  a<-data.frame(table(a[,names(a) %in% c("bins", "Category")]))
-  
-  cat000<-merge(y = cat00, x = a, by.y = "catname", by.x = "Category")
-  cat000$Var1<-NULL
-  cat00<-rbind.data.frame(cat000,
-                          data.frame(Category = "Total",
-                                     bins = aggregate(x = cat000$Freq.x,
-                                                      by = list(bins = cat000$bins), FUN = sum)[,1],
-                                     Freq.x = aggregate(x = cat000$Freq.x,
-                                                        by = list(bins = cat000$bins), FUN = sum)[,2],
-                                     no = 0,
-                                     Freq.y = sum(cat000$Freq.x)))
-  
-  cat00$label<-paste0(cat00$Category, " (n=",  cat00$Freq.y,")")
-  
-  cat000<-unique(cat00[,names(cat00) %in% c("Category", "label")])
-  
-  a<-merge(x = a, y = cat000, by = "Category")
-  
-  xnames<-paste0(sort(as.numeric(paste(unique(a$bins)))), "%")
-  
-  g<-ggplot(data = a, aes(x = factor(bins), y = Freq, fill = label)) +
-    geom_bar(stat="identity", position=position_dodge()) +
-    theme(
-      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-      panel.grid.minor.y = element_blank(),
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      axis.line = element_line( color=NOAALightBlue, size = .1 ),
-      axis.ticks = element_blank(), # remove ticks
-      panel.background = element_blank()
-    )  +
-    scale_x_discrete(labels = xnames) +
-    ggtitle(paste0(place, " ", title00))
-  
-  figures.list[[length(figures.list)+1]]<-g
-  names(figures.list)[length(figures.list)]<-paste0(title0, title00)
-  
-  
-  ########## How many Q columns have X percentage data missing
-  title00<- "_PercentMissingQ-Bar"
-  
-  a0<-data.frame(temp.orig[,grepl(
-    pattern = paste0("Q[0-9]+_"),
-    x = names(temp.orig)) &
-      !(grepl(
-        pattern = paste0("Q[0-9]+_", NumberOfSpecies),
-        x = names(temp.orig)))])
-  
-  total.no.v<-ncol(a0)*nrow(a0)
-  
-  a00<-a0
-  
-  a00[!is.na(a00)]<-1
-  
-  a000<-nrow(a0)-colSums(a00, na.rm = T)#nmber missing
-  
-  a<-data.frame(x = a000, Category = names(a000)) 
-  
-  aa<-data.frame(substr(x = a$Category, start = 2, stop = 2))
-  names(aa)<-"no"
-  cat00<-merge(x = cat0, y = data.frame(t(table(aa$no))), by.x = "no", by.y = "Var2")
-  # cat0$Var1<-NULL
-  a$Category<-merge(x = aa, y = cat0, by = "no")[,2]
-  
-  a<-rbind.data.frame(a,
-                      data.frame(Category = "Total",
-                                 x = sum(a$xx)))
-  
-  a$x.perc<-(a$x/nrow(temp.orig))*100
-  a$bins<-round_any(a$x.perc, 10)
-  
-  a<-data.frame(table(a[,names(a) %in% c("bins", "Category")]))
-  
-  cat000<-merge(y = cat00, x = a, by.y = "catname", by.x = "Category")
-  cat000$Var1<-NULL
-  cat00<-rbind.data.frame(cat000,
-                          data.frame(Category = "Total",
-                                     bins = aggregate(x = cat000$Freq.x,
-                                                      by = list(bins = cat000$bins), FUN = sum)[,1],
-                                     Freq.x = aggregate(x = cat000$Freq.x,
-                                                        by = list(bins = cat000$bins), FUN = sum)[,2],
-                                     no = 0,
-                                     Freq.y = sum(cat000$Freq.x)))
-  
-  cat00$label<-paste0(cat00$Category, " (n=",  cat00$Freq.y,")")
-  
-  cat000<-unique(cat00[,names(cat00) %in% c("Category", "label")])
-  
-  a<-merge(x = a, y = cat000, by = "Category")
-  
-  xnames<-paste0(sort(as.numeric(paste(unique(a$bins)))), "%")
-  
-  g<-ggplot(data = a, aes(x = factor(bins), y = Freq, fill = label)) +
-    geom_bar(stat="identity", position=position_dodge()) +
-    theme(
-      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-      panel.grid.minor.y = element_blank(),
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      axis.line = element_line( color=NOAALightBlue, size = .1 ),
-      axis.ticks = element_blank(), # remove ticks
-      panel.background = element_blank()
-    )  +
-    scale_x_discrete(labels = xnames) +
-    # guides(fill=FALSE) + 
-    ggtitle(paste0(place, " ", title00))
-  
-  figures.list[[length(figures.list)+1]]<-g
-  names(figures.list)[length(figures.list)]<-paste0(title0, title00)
+  # ########## How many Q columns have X percentage data missing
+  # title00<- "_PercentMissingQ-Bar"
+  # 
+  # a0<-data.frame(temp.orig[,grepl(
+  #   pattern = paste0("Q[0-9]+_"),
+  #   x = names(temp.orig)) &
+  #     !(grepl(
+  #       pattern = paste0("Q[0-9]+_", NumberOfSpecies),
+  #       x = names(temp.orig)))])
+  # 
+  # total.no.v<-ncol(a0)*nrow(a0)
+  # 
+  # a00<-a0
+  # 
+  # a00[!is.na(a00)]<-1
+  # 
+  # a000<-nrow(a0)-colSums(a00, na.rm = T)#nmber missing
+  # 
+  # a<-data.frame(x = a000, Category = names(a000)) 
+  # 
+  # aa<-data.frame(substr(x = a$Category, start = 2, stop = 2))
+  # names(aa)<-"no"
+  # cat00<-merge(x = cat0, y = data.frame(t(table(aa$no))), by.x = "no", by.y = "Var2")
+  # # cat0$Var1<-NULL
+  # a$Category<-merge(x = aa, y = cat0, by = "no")[,2]
+  # 
+  # a<-rbind.data.frame(a,
+  #                     data.frame(Category = "Total",
+  #                                x = sum(a$xx)))
+  # 
+  # a$x.perc<-(a$x/nrow(temp.orig))*100
+  # a$bins<-round_any(a$x.perc, 10)
+  # 
+  # a<-data.frame(table(a[,names(a) %in% c("bins", "Category")]))
+  # 
+  # cat000<-merge(y = cat00, x = a, by.y = "catname", by.x = "Category")
+  # cat000$Var1<-NULL
+  # cat00<-rbind.data.frame(cat000,
+  #                         data.frame(Category = "Total",
+  #                                    bins = aggregate(x = cat000$Freq.x,
+  #                                                     by = list(bins = cat000$bins), FUN = sum)[,1],
+  #                                    Freq.x = aggregate(x = cat000$Freq.x,
+  #                                                       by = list(bins = cat000$bins), FUN = sum)[,2],
+  #                                    no = 0,
+  #                                    Freq.y = sum(cat000$Freq.x)))
+  # 
+  # cat00$label<-paste0(cat00$Category, " (n=",  cat00$Freq.y,")")
+  # 
+  # cat000<-unique(cat00[,names(cat00) %in% c("Category", "label")])
+  # 
+  # a<-merge(x = a, y = cat000, by = "Category")
+  # 
+  # xnames<-paste0(sort(as.numeric(paste(unique(a$bins)))), "%")
+  # 
+  # g<-ggplot(data = a, aes(x = factor(bins), y = Freq, fill = label)) +
+  #   geom_bar(stat="identity", position=position_dodge()) +
+  #   theme(
+  #     panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
+  #     panel.grid.minor.y = element_blank(),
+  #     panel.grid.major.x = element_blank(),
+  #     panel.grid.minor.x = element_blank(),
+  #     axis.line = element_line( color=NOAALightBlue, size = .1 ),
+  #     axis.ticks = element_blank(), # remove ticks
+  #     panel.background = element_blank()
+  #   )  +
+  #   scale_x_discrete(labels = xnames) +
+  #   # guides(fill=FALSE) + 
+  #   ggtitle(paste0(place, " ", title00))
+  # 
+  # figures.list[[length(figures.list)+1]]<-g
+  # names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
   
   #### Quantity Index Compare

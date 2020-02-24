@@ -110,7 +110,6 @@ OutputAnalysis<-function(landings.data, category0, baseyr,
   dir.outputtables<-paste0(dir.analyses1, "/outputtables/")
   dir.create(paste0(dir.analyses1, "/outputtables/")) 
   
-  
 reg.order<-c("National", "North Pacific", "Pacific", "Western Pacific (Hawai`i)", "New England", "Mid-Atlantic", "South Atlantic", "Gulf of Mexico") 
 reg.order0<-c("US", "NP", "Pac", "WP", "NE", "MA", "SA", "GOM")
 temp0tot<-list()
@@ -263,8 +262,6 @@ for (r in 1:length(reg.order)){
            plot = figures.list[[i]], 
            width = 11, height = 8.5)
   }
-
-  
   
 }
 
@@ -335,8 +332,9 @@ OutputAnalysis(landings.data[landings.data$Year>=2007,], category0, baseyr = 200
 
 #Data for the whole timeseries with no PercentMissingThreshold
 OutputAnalysis(landings.data, category0, baseyr = 2007, 
-               state.codes, titleadd = "WholeTimeseries",
-               counter, dir.rawdata, PercentMissingThreshold = 1) 
+               state.codes, titleadd = "WholeTimeseries1",
+               counter, dir.rawdata, PercentMissingThreshold = 1.00) 
+
 
 ########DOCUMENTATION#################
 code<-TRUE

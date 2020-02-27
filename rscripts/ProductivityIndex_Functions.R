@@ -1510,7 +1510,6 @@ ImplicitQuantityOutput<-function(temp, baseyr, pctmiss = 1.00,
   figures.list[[length(figures.list)+1]]<-g
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
-
   return(list(temp, warnings.list, figures.list))
 }
 

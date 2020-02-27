@@ -199,7 +199,7 @@ for (r in 1:length(reg.order)){
   write.csv(x = finaltable.list[[r]], file = paste0(dir.outputtables, title0,"_Final.csv"))
   
   #Species Table
-  temp0<-data.frame(Analysis  = title0,
+  spptable0<-data.frame(Analysis  = title0,
                   Place = place,
                   Catagory = rep_len(x = NA, length.out = length(spp.temp)), 
                   TotCount = rep_len(x = NA, length.out = length(spp.temp)), 
@@ -236,13 +236,13 @@ for (r in 1:length(reg.order)){
     RColumns<-RColumns[-grep(pattern = paste0(NumberOfSpecies, cat),
                              x = names(temp)[RColumns])]
     
-    temp0$Catagory[i]<- cat
-    temp0$TotCount[i]<-length(spp.temp[names(spp.temp) %in% cat][[1]])
-    temp0$UsedCount[i]<-ifelse(is.na(length(RColumns)), 0, length(RColumns))
-    temp0$MissCount[i]<-temp0$TotCount[i] - temp0$UsedCount[i]
+    spptable0$Catagory[i]<- cat
+    spptable0$TotCount[i]<-length(spp.temp[names(spp.temp) %in% cat][[1]])
+    spptable0$UsedCount[i]<-ifelse(is.na(length(RColumns)), 0, length(RColumns))
+    spptable0$MissCount[i]<-spptable0$TotCount[i] - spptable0$UsedCount[i]
   }
   
-  spptable<-rbind.data.frame(spptable, temp0)
+  spptable<-rbind.data.frame(spptable, spptable0)
   write.csv(x = temp0, file = paste0(dir.outputtables, title0,"_Species.csv"))
   
   #Report

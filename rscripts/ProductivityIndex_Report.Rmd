@@ -2,7 +2,9 @@
 title: ""
 author: ""
 date: ""
-output: word_document
+output: 
+  word_document
+    df_print: kable
 ---
   
 ```{r, echo = FALSE, warning = FALSE}
@@ -13,6 +15,12 @@ This analysis uses nationally collected landings data for the `r ifelse(reg.orde
 
 ```{r, echo = FALSE, warnings = FALSE}
 print(warnings.list0)
+```
+
+The number of species in origional data, used in the analysis, and removed from the analysis: 
+```{r, echo = FALSE, warnings = FALSE}
+spptable0[,-1] %>%
+    knitr::kable(row.names = T, booktabs = T)
 ```
 
 #### Species in Each category by Common Name

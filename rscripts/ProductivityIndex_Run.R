@@ -98,7 +98,7 @@ counter<-0
 
 OutputAnalysis<-function(landings.data, category0, baseyr, 
          state.codes, titleadd,
-         counter, dir.rawdata, dir.reports, PercentMissingThreshold, dir.figures, dir.outputtables) {
+         counter, dir.rawdata, dir.reports, pctmiss, dir.figures, dir.outputtables) {
   
   dir.analyses1<-paste0(dir.analyses, "/",titleadd, "_", 
                         gsub(pattern = "\\.", replacement = "", x = category0),"/")
@@ -112,15 +112,20 @@ OutputAnalysis<-function(landings.data, category0, baseyr,
   
 reg.order<-c("National", "North Pacific", "Pacific", "Western Pacific (Hawai`i)", "New England", "Mid-Atlantic", "South Atlantic", "Gulf of Mexico") 
 reg.order0<-c("US", "NP", "Pac", "WP", "NE", "MA", "SA", "GOM")
-temp0tot<-list()
-  temp0raw<-list()
-  figures.list<-list()
-  temp0final<-list()
+
+#Save Stuff
+editeddata.list<-list()
+rawtable.list<-list()
+tottable.list<-list()
+finaltable.list<-list()
+spptable<-data.frame()
+figures.list<-list()
   
 for (r in 1:length(reg.order)){
   
-  remove(place, title0, temp00, temp0, temp, title000, title0)
-  
+  if (r != 1) { #only because I am tired of getting the warning messages
+    remove(place, title0, temp00, temp0, temp, title000, title0)
+  }
   ### A. Import and Edit data
   #subset data
   place<-reg.order[r]
@@ -130,7 +135,7 @@ for (r in 1:length(reg.order)){
   
   title000<-paste0("_","byr",baseyr, 
                    "_",gsub(pattern = "\\.", replacement = "", x = category0), 
-                   "_pctmiss", gsub(pattern = "\\.", replacement = "", x = PercentMissingThreshold))
+                   "_pctmiss", gsub(pattern = "\\.", replacement = "", x = pctmiss))
   title0<-paste0(counter, "_", gsub(pattern = "\\(", replacement = "", x = 
                                                                         gsub(pattern = ")", replacement = "", x = 
                                                                                gsub(pattern = "`", replacement = "", x = 
@@ -156,8 +161,7 @@ for (r in 1:length(reg.order)){
   ### B. Enter base year
 
   ### C. Run the function
-  temp00<-ImplicitQuantityOutput(temp = temp.orig, baseyr, 
-                                 calcQEI = T, PercentMissingThreshold, 
+  temp00<-ImplicitQuantityOutput(temp = temp.orig, baseyr, pctmiss, 
                                  title0 = title0, place = place)
   temp<-temp00[[1]] #Data Output
   warnings.list0<-temp00[[2]] # Warnings
@@ -166,25 +170,80 @@ for (r in 1:length(reg.order)){
   
   ### D. Obtain the implicit quantity estimates
   
+  #EditedData
+  editeddata.list[[r]]<-temp.orig
+  names(editeddata.list)[r]<-place
+  write.csv(x = editeddata.list[[r]], file = paste0(dir.outputtables, title0,"_EditedData.csv"))
+  
   #Raw
   write.csv(x = temp, file = paste0(dir.outputtables, title0,"_AllData.csv"))
-  temp0raw[[r]]<-temp
-
+  rawtable.list[[r]]<-temp
+  names(rawtable.list)[r]<-place
+  
   #Review
   temp0<-temp[, grepl(pattern = paste0("_", NumberOfSpecies), x = names(temp))]
   names(temp0)<-gsub(pattern = "0", replacement = "", x = names(temp0))
   temp0<-temp0[,-grep(pattern = "REMOVED_", x = names(temp0))]
 
-  temp0tot[[r]]<-temp0
-  write.csv(x = temp0tot[[r]], file = paste0(dir.outputtables, title0,"_Review.csv"))
+  tottable.list[[r]]<-temp0
+  names(tottable.list)[r]<-place
+  write.csv(x = tottable.list[[r]], file = paste0(dir.outputtables, title0,"_Review.csv"))
   
   #Final
   temp0<-temp[, grepl(pattern = paste0("0_", NumberOfSpecies, "Total"), x = names(temp))]
   names(temp0)<-gsub(pattern = "0", replacement = "", x = names(temp0))
   temp0<-temp0[,-grep(pattern = "REMOVED_", x = names(temp0))]
   
-  temp0final[[r]]<-temp0
-  write.csv(x = temp0final[[r]], file = paste0(dir.outputtables, title0,"_Final.csv"))
+  finaltable.list[[r]]<-temp0
+  names(finaltable.list)[r]<-place
+  write.csv(x = finaltable.list[[r]], file = paste0(dir.outputtables, title0,"_Final.csv"))
+  
+  #Species Table
+  temp0<-data.frame(Analysis  = title0,
+                  Place = place,
+                  Catagory = rep_len(x = NA, length.out = length(spp.temp)), 
+                  TotCount = rep_len(x = NA, length.out = length(spp.temp)), 
+                  MissCount = rep_len(x = NA, length.out = length(spp.temp)), 
+                  UsedCount = rep_len(x = NA, length.out = length(spp.temp)))
+  
+  for (i in 1:length(spp.temp)) {
+    
+    #Find the name of the ith species group (in terms of how the data is organized)
+    cat<-names(spp.temp)[i]
+    XColumns<-grep(pattern = paste0(NumberOfSpecies, cat),
+                   x = names(temp))
+        #Test
+    XColumns<-c(XColumns, 1) #in case there is only one column for the next step
+    cat0<-as.character(lapply(X = strsplit(x = names(temp[,XColumns])[1], 
+                                              split = paste0("_", NumberOfSpecies)), 
+                                 function(x) x[2]))
+    #Find the number of this ith species group (in terms of how the data is organized)
+    ii<-as.character(lapply(X = strsplit(x = names(temp[,XColumns])[1], 
+                                         split = paste0("_", NumberOfSpecies)), 
+                            function(x) x[1]))
+    ii<-gsub(pattern = "[a-zA-Z]", replacement = "", x = ii)
+
+    #check your work
+    # VColumns<-grep(pattern = paste0("V", ii,"_"),
+    #                x = substr(x = names(temp),
+    #                           start = 1,
+    #                           stop = (2+nchar(ii))))
+    
+    RColumns<-grep(pattern = paste0("R", ii,"_"),
+                   x = substr(x = names(temp),
+                              start = 1,
+                              stop = (2+nchar(ii))))
+    RColumns<-RColumns[-grep(pattern = paste0(NumberOfSpecies, cat),
+                             x = names(temp)[RColumns])]
+    
+    temp0$Catagory[i]<- cat
+    temp0$TotCount[i]<-length(spp.temp[names(spp.temp) %in% cat][[1]])
+    temp0$UsedCount[i]<-ifelse(is.na(length(RColumns)), 0, length(RColumns))
+    temp0$MissCount[i]<-temp0$TotCount[i] - temp0$UsedCount[i]
+  }
+  
+  spptable<-rbind.data.frame(spptable, temp0)
+  write.csv(x = temp0, file = paste0(dir.outputtables, title0,"_Species.csv"))
   
   #Report
   rmarkdown::render(ProdI.Report, 
@@ -196,22 +255,34 @@ for (r in 1:length(reg.order)){
   
   print("Create spreadsheets")
   
+  save(editeddata.list, rawtable.list, finaltable.list, tottable.list, spptable, 
+       file = paste0(dir.outputtables, "AllOutputs.rdata"))
+  
+  write.csv(x = spptable, file = paste0(dir.outputtables, "000_All", title000,"_Species.csv"))
+  
+
   for (r in 1:length(reg.order)){
     
     #Raw
-    # write.xlsx2(x = temp0raw[[r]], 
+    # write.xlsx2(x = rawtable.list[[r]], 
     #             file = paste0(dir.outputtables, "000_All", title000, "_Raw.xlsx"), 
     #             sheetName = reg.order[r], 
     #             col.names = T, row.names = T, append = T)
     
+    #Edited Data
+    # write.xlsx2(x = editeddata.list[[r]],
+    #             file = paste0(dir.outputtables, "000_All", title000, "_EditedData.xlsx"),
+    #             sheetName = reg.order[r],
+    #             col.names = T, row.names = T, append = T)
+    
     #Print
-    write.xlsx2(x = temp0final[[r]], 
+    write.xlsx2(x = finaltable.list[[r]], 
                 file = paste0(dir.outputtables, "000_All", title000, "_", titleadd, "_FinalOutput.xlsx"), 
                 sheetName = reg.order[r], 
                 col.names = T, row.names = T, append = T)
     
     #Review
-    write.xlsx2(x = temp0tot[[r]], 
+    write.xlsx2(x = tottable.list[[r]], 
                 file = paste0(dir.outputtables, "000_All", title000, "_", titleadd, "_Review.xlsx"), 
                 sheetName = reg.order[r], 
                 col.names = T, row.names = T, append = T)
@@ -226,6 +297,7 @@ for (r in 1:length(reg.order)){
   figs<-unique(paste0(lapply(X = strsplit(x = names(figures.list),
                                          split = gsub(pattern = "\\.", replacement = "", x = category0)),
                             function(x) x[2])))
+  gridfigures.list<-list()
   
   for (i in 1:length(figs)){
     
@@ -236,7 +308,7 @@ for (r in 1:length(reg.order)){
   fig<-figs[i]
   list0<-figures.list[grep(pattern = fig, x = names(figures.list))]
   
-  q<-grid.arrange(list0[[1]], 
+  g<-grid.arrange(list0[[1]], 
                   list0[[2]], 
                   list0[[3]], 
                   list0[[4]], 
@@ -247,9 +319,17 @@ for (r in 1:length(reg.order)){
   
   ggsave(filename = paste0(dir.figures, "/", a, "/", "000_All_baseyr",baseyr, 
                            "_",gsub(pattern = "\\.", replacement = "", x = category0), fig, ".png"), 
-         plot = q, 
+         plot = g, 
          width = 11, height = 8.5)
+  
+  gridfigures.list[length(gridfigures.list)+1]<-g
+  names(gridfigures.list)[length(gridfigures.list)]<-paste0("000_All_baseyr",baseyr, 
+                                                            "_",gsub(pattern = "\\.", replacement = "", x = category0), fig)
   }
+  
+  
+  save(figures.list, gridfigures.list,
+       file = paste0(dir.figures, "AllFigures.rdata"))
   
   #make single plots
   for (i in 1:length(figures.list)) {
@@ -268,23 +348,23 @@ for (r in 1:length(reg.order)){
 ########*** No. 1############
 # OutputAnalysis(landings.data, category0 = "category.taxsimp", baseyr = 2010, 
 #                          state.codes, 
-#                          counter, dir.rawdata, dir.reports, PercentMissingThreshold = 1.00, dir.figures, dir.outputtables) 
+#                          counter, dir.rawdata, dir.reports, pctmiss = 1.00, dir.figures, dir.outputtables) 
 
 ########*** No. 2############
 # OutputAnalysis(landings.data, category0 = "category.taxsimp", baseyr = 2007, 
 #                state.codes, 
-#                counter, dir.rawdata, dir.reports, PercentMissingThreshold = 0.50, dir.figures, dir.outputtables) 
+#                counter, dir.rawdata, dir.reports, pctmiss = 0.50, dir.figures, dir.outputtables) 
 
 
 ########*** No. 3############
 # OutputAnalysis(landings.data, category0 = "category.orig", baseyr = 2010, 
 #                state.codes, 
-#                counter, dir.rawdata, dir.reports, PercentMissingThreshold = 1.00, dir.figures, dir.outputtables) 
+#                counter, dir.rawdata, dir.reports, pctmiss = 1.00, dir.figures, dir.outputtables) 
 
 ########*** No. 4############
 # OutputAnalysis(landings.data, category0 = "category.orig", baseyr = 2007, 
 #                state.codes, 
-#                counter, dir.rawdata, dir.reports, PercentMissingThreshold = 0.50, dir.figures, dir.outputtables) 
+#                counter, dir.rawdata, dir.reports, pctmiss = 0.50, dir.figures, dir.outputtables) 
 
 
 ########*** No. 5############
@@ -293,23 +373,23 @@ category0 = "category.orig"
 #Data for the whole Time Series
 OutputAnalysis(landings.data, category0, baseyr = 2007, 
                state.codes, titleadd = "WholeTimeseries",
-               counter, dir.rawdata, PercentMissingThreshold = 0.60) 
+               counter, dir.rawdata, pctmiss = 0.60) 
 
 #Data just from the last 20 years
 OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,], 
                category0, baseyr = 2007, 
                state.codes, titleadd = "1997ToPresent",
-               counter, dir.rawdata, PercentMissingThreshold = 0.60) 
+               counter, dir.rawdata, pctmiss = 0.60) 
 
-#Data just since 2008
-OutputAnalysis(landings.data[landings.data$Year>=2007,], category0, baseyr = 2007, 
-               state.codes, titleadd = "2007ToPresent",
-               counter, dir.rawdata, PercentMissingThreshold = 0.60) 
-
-#Data for the whole timeseries with no PercentMissingThreshold
-OutputAnalysis(landings.data, category0, baseyr = 2007, 
-               state.codes, titleadd = "WholeTimeseries1",
-               counter, dir.rawdata, PercentMissingThreshold = 1.00) 
+# #Data just since 2008
+# OutputAnalysis(landings.data[landings.data$Year>=2007,], category0, baseyr = 2007, 
+#                state.codes, titleadd = "2007ToPresent",
+#                counter, dir.rawdata, pctmiss = 0.60) 
+# 
+# #Data for the whole timeseries with no pctmiss
+# OutputAnalysis(landings.data, category0, baseyr = 2007, 
+#                state.codes, titleadd = "WholeTimeseries1",
+#                counter, dir.rawdata, pctmiss = 1.00) 
 
 ########*** No. 6############
 category0 = "category.tax"
@@ -317,23 +397,23 @@ category0 = "category.tax"
 #Data for the whole Time Series
 OutputAnalysis(landings.data, category0, baseyr = 2007, 
                state.codes, titleadd = "WholeTimeseries",
-               counter, dir.rawdata, PercentMissingThreshold = 0.60) 
+               counter, dir.rawdata, pctmiss = 0.60) 
 
 #Data just from the last 20 years
 OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,], 
                category0, baseyr = 2007, 
                state.codes, titleadd = "1997ToPresent",
-               counter, dir.rawdata, PercentMissingThreshold = 0.60) 
+               counter, dir.rawdata, pctmiss = 0.60) 
 
-#Data just since 2008
-OutputAnalysis(landings.data[landings.data$Year>=2007,], category0, baseyr = 2007, 
-               state.codes, titleadd = "2007ToPresent",
-               counter, dir.rawdata, PercentMissingThreshold = 0.60) 
-
-#Data for the whole timeseries with no PercentMissingThreshold
-OutputAnalysis(landings.data, category0, baseyr = 2007, 
-               state.codes, titleadd = "WholeTimeseries1",
-               counter, dir.rawdata, PercentMissingThreshold = 1.00) 
+# #Data just since 2008
+# OutputAnalysis(landings.data[landings.data$Year>=2007,], category0, baseyr = 2007, 
+#                state.codes, titleadd = "2007ToPresent",
+#                counter, dir.rawdata, pctmiss = 0.60) 
+# 
+# #Data for the whole timeseries with no pctmiss
+# OutputAnalysis(landings.data, category0, baseyr = 2007, 
+#                state.codes, titleadd = "WholeTimeseries1",
+#                counter, dir.rawdata, pctmiss = 1.00) 
 
 
 ########DOCUMENTATION#################

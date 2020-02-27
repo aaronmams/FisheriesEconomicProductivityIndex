@@ -225,7 +225,7 @@ EditCommData<-function(dat, category0) {
   temp.q$species<-NULL
   temp.q<-data.frame(t(temp.q))
   temp.q$temp<-rowSums(temp.q, na.rm = T)
-  names(temp.q)[names(temp.q) %in% "temp"]<-paste0("QE0_", 
+  names(temp.q)[names(temp.q) %in% "temp"]<-paste0("QE",numbers0(x = c(0, length(cat0)))[1],"_", 
                                                    paste(rep_len(x = 0, 
                                                                  length.out = nchar(numbers0(x = as.numeric(factor(temp$species)))[1])), collapse = ""), 
                                                    "Total")
@@ -250,7 +250,7 @@ EditCommData<-function(dat, category0) {
   temp.v<-data.frame(t(temp.v))
   
   temp.v$temp<-rowSums(temp.v, na.rm = T)
-  names(temp.v)[names(temp.v) %in% "temp"]<-paste0("V0_", 
+  names(temp.v)[names(temp.v) %in% "temp"]<-paste0("V",numbers0(x = c(0, length(cat0)))[1],"_", 
                                                    paste(rep_len(x = 0, 
                                                                  length.out = nchar(numbers0(x = as.numeric(factor(temp$species)))[1])), collapse = ""), 
                                                    "Total")
@@ -276,13 +276,13 @@ EditCommData<-function(dat, category0) {
 
 #A function to caluclate the price change
 PriceChange = function(R0, P0) {
-  PC0<-rep_len(x = 0, length.out = length(P0))
+  PCW<-rep_len(x = 0, length.out = length(P0))
   for (t in 2:length(P0)) {
-    temp1<-((R0[t]+R0[t-1])/2)
-    temp2<-ln(P0[t]/P0[t-1])
-    PC0[t]<-temp1*temp2
+    AverageR<-((R0[t]+R0[t-1])/2) #Average Revenue Share
+    PC<-ln(P0[t]/P0[t-1]) #Price Change
+    PCW[t]<-AverageR*PC #Revenue Share-Weighted Price Chage
   }
-  return(PC0)
+  return(PCW)
 }
 
 PriceIndex <- function(temp, BaseColName, baseyr) {
@@ -294,25 +294,25 @@ PriceIndex <- function(temp, BaseColName, baseyr) {
   # $$PI_{i, t_{first year}} = 1$$
   
   #Note that the first row of this column is = 1
-  tempPI1<-c(1, rep_len(x = NA, length.out = nrow(temp)-1))
+  tempPI_yr1<-c(1, rep_len(x = NA, length.out = nrow(temp)-1))
   
   PC0<-temp[,names(temp) %in% paste0("PC", BaseColName)] #this is equal to ln(P_it/P_it-1)
   
   # Calculate
-  for (t in 2:length(tempPI1)){  #Since the first row is defined, we need to start at the second row
-    tempPI1[t]<-tempPI1[t-1]*exp(PC0[t])
+  for (t in 2:length(tempPI_yr1)){  #Since the first row is defined, we need to start at the second row
+    tempPI_yr1[t]<-tempPI_yr1[t-1]*exp(PC0[t])
   }
   
-  tempPI1<-data.frame(tempPI1)
-  rownames(tempPI1)<-rownames(temp)
+  tempPI_yr1<-data.frame(tempPI_yr1)
+  rownames(tempPI_yr1)<-rownames(temp)
   
   # Then, to change the price (calulated later) into base year dollars, we use the following equation: 
   # $$PI_{t} = PI_{t}/PI_{t = baseyear}$$
   # In this example, we'll decide that the base year is `r baseyr`, for whatever reason. Notice that the $PI_{i,t=baseyr} = 1$ 
   
-  tempPI2<-tempPI1/tempPI1[rownames(tempPI1) %in% baseyr,]
+  tempPI_yrb<-tempPI_yr1/tempPI_yr1[rownames(tempPI_yr1) %in% baseyr,]
   
-  tempPI<-data.frame(tempPI2)
+  tempPI<-data.frame(tempPI_yrb)
   names(tempPI)<-paste0("PI", BaseColName)
   
   return(tempPI)
@@ -348,7 +348,7 @@ ReplaceMid<-function(colnames, temp) {
 }
 
 ### Function to calculate the Implicit Quanity Output at Species and category Level
-species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThreshold, warnings.list) {
+ImplicitQuantityOutput.species.cat<-function(temp, ii, baseyr, maxyr, minyr, pctmiss, warnings.list) {
   
   ########Housekeeping
   # Here I am just going to collect some housekeeping items
@@ -382,7 +382,7 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
                              x = names(temp)[VColumns]))]
   
   
-  ###Remove any related V and Q data where V column has less data than the $percentmissingthreshold$
+  ###Remove any related V and Q data where V column has less data than the $pctmiss$
   VColumns0<-VColumns
   QColumns0<-QColumns<-which(names(temp) %in% 
                                paste0("Q", substr(x = names(temp)[VColumns], 
@@ -392,7 +392,7 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   for (i in 1:length(VColumns)) {
     
     #if the percent missing is less in V or Q columns for a species than the percentmissingtrheshold, we remove the data before the analysis
-    if (sum(is.na(temp[VColumns[i]]))/nrow(temp) > PercentMissingThreshold) {
+    if (sum(is.na(temp[VColumns[i]]))/nrow(temp) > pctmiss) {
       
       names(temp)[VColumns[i]]<-paste0("REMOVED_", names(temp)[VColumns[i]])
       VColumns0<-VColumns0[!(VColumns0 %in% VColumns[i])]
@@ -414,13 +414,14 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   
   ####
   #if there are still columns to assess that haven't been "removed"
+  PColumns<-c()
   if (length(VColumns) == 0) {
-    warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns after data was removed for not meeting the percentmissingthreshold")
+    warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns of V after data was removed for not meeting the pctmiss")
     
   } else {
     
     # Q
-  temp.q<-temp[,grepl(pattern = paste0("Q", ii), x = substr(names(temp), start = 1, stop = 2)) ]
+  temp.q<-temp[,grepl(pattern = paste0("Q", ii), x = substr(names(temp), start = 1, stop = 2+nchar(ii))) ]
   temp.q<-data.frame(temp.q)
   if (ncol(temp.q)>1) {
     temp.q<-rowSums(temp.q, na.rm = T)
@@ -429,7 +430,7 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   names(temp)[ncol(temp)]<-paste0("QE",NameBasecategory)
   
   # V
-  temp.v<-temp[,grepl(pattern = paste0("V", ii), x = substr(names(temp), start = 1, stop = 2)) ]
+  temp.v<-temp[,grepl(pattern = paste0("V", ii), x = substr(names(temp), start = 1, stop = 2+nchar(ii))) ]
   temp.v<-data.frame(temp.v)
   if (ncol(temp.v)>1) {
     temp.v<-rowSums(temp.v, na.rm = T)
@@ -480,9 +481,9 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
     #If price could never be caluclated at any point in the timeseries (is 0/NaN/NA) for a column (c) 
     #Remove the column from the analysis. 
     #We will not be removing the column from the data, but simply remove it from the varaible "PColumns"
-    if (sum(temp[,PColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > PercentMissingThreshold |
-        # sum(temp[,QColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > PercentMissingThreshold|
-        sum(temp[,VColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > PercentMissingThreshold) {
+    if (sum(temp[,PColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > pctmiss |
+        # sum(temp[,QColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > pctmiss|
+        sum(temp[,VColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > pctmiss) {
       cc<-c(cc, c)#Collect offending columns
     }
   }
@@ -491,6 +492,15 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
     PColumns<-PColumns[-cc]
     # VColumns<-VColumns[-cc]
   }
+  
+  }
+  
+  if (length(PColumns) == 0) {
+    
+    warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")
+    
+  } else {
+    
   
   # 2.1. If the first value of P is 0 in a timeseries, we let the next available non-zero value of P in the timeseries inform the past.
   
@@ -576,6 +586,40 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
   temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
   temp <- temp[, !duplicated(colnames(temp))]
   
+  
+  ###Price Changes for each species ($PC_{s,i,t}$ aka $\Delta ln(P_{s,i,t})$; e.g., Salmon and Flounder)
+  
+  # $$PCW_{i,t,s} = \frac{R_{s,i,t} + R_{s,i,t-1}}{2} * ln(\frac{P_{s,i,t}}{P_{s,i,t-1}}) = \frac{R_{s,i,t} + R_{s,i,t-1}}{2} * [ln(P_{s,i,t}) - ln(P_{s,i,t-1})] $$
+  # Where: 
+    # - $PCW_{i,t,s}$ = Revenue share-weighted price change for a species (s)
+  # Such that: 
+    # - category's (i) Price Change for each species (s) = $\frac{R_{s,i,t} + R_{s,i,t-1}}{2}$
+    # - category's (i) Revenue Share for each species (s) = $ln(\frac{P_{s,i,t}}{P_{s,i,t-1}} = [ln(P_{s,i,t}) - ln(P_{s,i,t-1})]$
+                                                               
+  #Find which columns in this table are price and revenue share columns
+  tempPC<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+  for (c in 1:length(PColumns)){
+    #For nameing columns
+    NameBase<-substr(start = 2,
+                     stop = nchar(PColumns[c]),
+                     x = PColumns[c])
+    
+    # Calculate
+    P0<-temp[, names(temp) %in% paste0("P", NameBase)]
+    R0<-temp[, names(temp) %in% paste0("R", NameBase)] #to make sure its the same column
+    tempPC[,c]<-PriceChange(R0, P0)
+    names(tempPC)[c]<-paste0("PCW", NameBase ) #name the column
+  }
+  
+  temp<-cbind.data.frame(temp, tempPC)
+  
+  ###Price Changes for the catagory ($PC_{i,t}$; e.g., Finfish)
+  # $$PC_{i,t} = ln(\frac{P_{i,t}}{P_{i,t-1}}) = \sum_{s=1}^n(PCW_{i,t,s}) $$ 
+  #   Where: 
+  #   - $PC_{i,t}$ = Revenue share-weighted price change for a catagory (i)
+  
+  temp[ncol(temp)+1]<-rowSums(tempPC, na.rm = T)
+  names(temp)[ncol(temp)]<-paste0("PC", NameBasecategory)
   
   ###4. Price Changes for each species ($PC_{s,i,t}$ aka $\Delta ln(P_{s,i,t})$; e.g., Salmon and Flounder)
   
@@ -670,7 +714,8 @@ species.cat.level<-function(temp, ii, baseyr, maxyr, minyr, PercentMissingThresh
 }
 
 ### Function to calculate the Implicit Quanity Output at Fishery Level
-ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThreshold = 1.00, title0 = "", place = ""){
+ImplicitQuantityOutput<-function(temp, baseyr, pctmiss = 1.00, 
+                                 title0 = "", place = ""){
   
   temp.orig<-temp
   
@@ -678,7 +723,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   figures.list<-list()
   
   NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
-                                              strsplit(x = names(temp)[1], 
+                                              strsplit(x = names(temp)[3], 
                                                        split = "_")[[1]][2], 
                                             split = "[a-zA-Z]")[[1]][1]))[1]
   
@@ -692,8 +737,8 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
                                              split = paste0("_")), 
                                 function(x) x[1])))
   category<-unique(substr(x = category, start = 2, stop = nchar(category)))
-  category<-category[!grepl(pattern = "E", x = category)]
-  category<-category[!(category %in% 0)]
+  category<-category[!grepl(pattern = "[a-zA-Z]", x = category)]
+  category<-category[!(category %in% numbers0(c(0, (category)[1]))[1])]
   
   temp0<-data.frame(rep_len(x = NA, length.out = nrow(temp)))
   tempPC<-data.frame(rep_len(x = NA, length.out = nrow(temp0)))
@@ -703,6 +748,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   minyr<-min(rownames(temp))
   
   category<-category00<-sort(category)
+  category.rm<-c()
   
   for (ii in 1:length(category)){
 
@@ -725,28 +771,32 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
     #if there are still columns to assess that haven't been "removed"
     # if (length(VColumns) != 0) {
     ###Append species and category level calculations
-    temp0<-cbind.data.frame(temp0,
-                            species.cat.level(temp, ii=category[ii],
-                                              baseyr, maxyr, minyr, 
-                                              PercentMissingThreshold, warnings.list)[[1]])
-    
-    ###Remove duplicate columns
-    temp0<-temp0[, !(grepl(pattern = "\\.[0-9]+", x = names(temp0)))]
+    temp00<-ImplicitQuantityOutput.species.cat(temp, ii=category[ii],
+                                               baseyr, maxyr, minyr, 
+                                               pctmiss, warnings.list)
+
     
     #If data for a catagory is no longer available after precentmissingthreshold etc, remove it from the category lineup
-    if (sum(names(temp0) %in% paste0("PI", NameBasecategory)) == 0) {
-      category00<-category00[-ii]
+    if (sum(names(temp00[1][[1]]) %in% paste0("PI", NameBasecategory)) == 0) {
+      category.rm<-c(category.rm, ii)
+    } else {
+     temp0<-cbind.data.frame(temp0, temp00[[1]])
     }
     
-    warnings.list<-species.cat.level(temp, ii=category[ii],
+    ###Remove duplicate columns
+    temp0<-temp0[, !(grepl(pattern = "\\.[0-9]+", x = names(temp0)))]    
+    
+    warnings.list<-ImplicitQuantityOutput.species.cat(temp, ii=category[ii],
                                      baseyr, maxyr, minyr, 
-                                     PercentMissingThreshold, warnings.list)[[2]]
+                                     pctmiss, warnings.list)[[2]]
     
 
 
   }
   
-  category<-category00
+  if(!(is.null(category.rm))) {
+    category<-category[-category.rm]
+  }
   
   temp<-temp0#[,2:ncol(temp0)]
   
@@ -785,6 +835,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
     
     
     tempR<-data.frame(rep_len(x = NA, length.out = nrow(temp)))
+    
     for (ii in 1:length(category)){
       
       NameBasecategory<-paste0(category[ii], "_", NumberOfSpecies)
@@ -792,15 +843,15 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
                                strsplit(x = names(temp)[grep(pattern = NameBasecategory, 
                                                              x = names(temp))][1], split = NumberOfSpecies)[[1]][2])
       
-      names(temp)[names(temp) %in% paste0("V", NameBaseTotal)]<-paste0("REMOVED_V", NameBaseTotal)
-      
-      temp0<-temp[grep(x = names(temp), 
-                       pattern = paste0("V[1-9]+_", NumberOfSpecies))]
-      temp0<-temp0[,-(grep(x = names(temp0), pattern = c("VV")))]
-      temp0<-temp0[,-(grep(x = names(temp0), pattern = c("REMOVED_")))]
-      
-      temp[ncol(temp)+1]<-rowSums(temp0, na.rm = T)
-      names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal)
+      # names(temp)[names(temp) %in% paste0("V", NameBaseTotal)]<-paste0("REMOVED_V", NameBaseTotal)
+      # 
+      # temp0<-temp[grep(x = names(temp),
+      #                  pattern = paste0("V[1-9]+_", NumberOfSpecies))]
+      # temp0<-temp0[,-(grep(x = names(temp0), pattern = c("VV")))]
+      # temp0<-temp0[,-(grep(x = names(temp0), pattern = c("REMOVED_")))]
+      # 
+      # temp[ncol(temp)+1]<-rowSums(temp0, na.rm = T)
+      # names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal)
       
       #remove duplicates
       temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
@@ -986,11 +1037,15 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   }
   ncol0<-ncol(a)
   aa<-0
-  for (iii in 1:ncol(a)) {
+  a<-data.frame(a)
+  if(ncol(a) != 0){
+    for (iii in 1:ncol(a)) {
     aa<-c(aa, ifelse(sum(a[,iii] %in% c(NA, NaN, 0)) == nrow(a), iii, NA))
   }
   vv<-(aa[!(is.na(aa))])
-  
+} else {
+  pp<-0
+}
   #quantity
   a<-temp
   a<-a[,grep(pattern = "Q[1-9]+_[1-9]+", x = names(a))]
@@ -1000,11 +1055,15 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   }
   ncol0<-ncol(a)
   aa<-0
-  for (iii in 1:ncol(a)) {
+  a<-data.frame(a)
+  if(ncol(a) != 0){
+    for (iii in 1:ncol(a)) {
     aa<-c(aa, ifelse(sum(a[,iii] %in% c(NA, NaN, 0)) == nrow(a), iii, NA))
   }
   qq<-(aa[!(is.na(aa))])
-  
+  } else {
+    pp<-0
+  }
   #Price
   a<-temp
   a<-a[,grep(pattern = "P[1-9]+_[1-9]+", x = names(a))]
@@ -1014,13 +1073,19 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   }
   ncol0<-ncol(a)
   aa<-0
-  for (iii in 1:ncol(a)) {
+  
+  a<-data.frame(a)
+  if (ncol(a) != 0) {
+   for (iii in 1:ncol(a)) {
     aa<-c(aa, ifelse(sum(a[,iii] %in% c(NA, NaN, 0)) == nrow(a), iii, NA))
+   }
+    pp<-(aa[!(is.na(aa))])
+  } else {
+    pp<-0
   }
-  pp<-(aa[!(is.na(aa))])
   
   
-  warnings.list[length(warnings.list)+1]<-paste0("FYI: Out of ", ncol0," columns, ", ifelse(length(vv)==1, 0, length(vv)-1) ,
+  warnings.list[length(warnings.list)+1]<-paste0("FYI: ", ifelse(length(vv)==1, 0, length(vv)-1) ,
                                                  " of species V columns are completely empty, ", 
                                                  ifelse(length(qq)==1, 0, length(qq)-1) ,
                                                  " of species Q columns are completely empty, and ", 
@@ -1047,7 +1112,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   
   #####Calculated Q by Species
-  title00<- "_CalculatedQBySpecies"
+  title00<- "_QBySpecies"
   
   a0<-data.frame(temp[,grepl(
     pattern = paste0("Q[0-9]+_", NumberOfSpecies), 
@@ -1055,37 +1120,20 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   a0$Year<-rownames(a0)
   
-  a <- gather(a0, Category, Q, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
+  a <- gather(a0, Category, val, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
   
-  a$Category<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
+  a$cat<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
   
-  xnames<-as.numeric(paste0(a$Year))
-  xnames[!(xnames %in% seq(from = min((as.numeric(xnames))),
-                           to = max(as.numeric(xnames)),
-                           by = 10))]<-""
+  temp0<-a
   
-  g<-ggplot(data = a, aes(x = factor(Year), y = Q, color = Category)) +
-    geom_line(aes(group = Category)) +
-    geom_point() +
-    theme(
-      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-      panel.grid.minor.y = element_blank(),
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      axis.line = element_line( color=NOAALightBlue, size = .1 ),
-      axis.ticks = element_blank(), # remove ticks
-      panel.background = element_blank()
-    )  +
-    scale_x_discrete(labels= xnames) +
-    guides(fill=FALSE) + 
-    ggtitle(paste0(place, " ", title00))
+  g<-plotnlines(dat = temp0, title00, place)
   
   figures.list[[length(figures.list)+1]]<-g
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
   
   #####Summed Q By Species
-  title00<- "_SummedQBySpecies"
+  title00<- "_QE-Species"
   
   a0<-data.frame(temp[,grepl(
     pattern = paste0("QE[0-9]+_", NumberOfSpecies), 
@@ -1093,30 +1141,13 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   a0$Year<-rownames(a0)
   
-  a <- gather(a0, Category, xx, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
+  a <- gather(a0, Category, val, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
   
-  a$Category<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
+  a$cat<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
   
-  xnames<-as.numeric(paste0(a$Year))
-  xnames[!(xnames %in% seq(from = min((as.numeric(xnames))),
-                           to = max(as.numeric(xnames)),
-                           by = 10))]<-""
-  
-  g<-ggplot(data = a, aes(x = factor(Year), y = xx, color = Category)) +
-    geom_line(aes(group = Category)) +
-    geom_point() +
-    theme(
-      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-      panel.grid.minor.y = element_blank(),
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      axis.line = element_line( color=NOAALightBlue, size = .1 ),
-      axis.ticks = element_blank(), # remove ticks
-      panel.background = element_blank()
-    )  +
-    scale_x_discrete(labels= xnames) +
-    guides(fill=FALSE) + 
-    ggtitle(paste0(place, " ", title00))
+  temp0<-a
+
+  g<-plotnlines(dat = temp0, title00, place) 
   
   figures.list[[length(figures.list)+1]]<-g
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
@@ -1130,31 +1161,14 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   a0$Year<-rownames(a0)
   
-  a <- gather(a0, Category, xx, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
+  a <- gather(a0, Category, val, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
   
-  a$Category<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
+  a$cat<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
   
-  xnames<-as.numeric(paste0(a$Year))
-  xnames[!(xnames %in% seq(from = min((as.numeric(xnames))),
-                           to = max(as.numeric(xnames)),
-                           by = 10))]<-""
+  temp0<-a
   
-  g<-ggplot(data = a, aes(x = factor(Year), y = xx, color = Category)) +
-    geom_line(aes(group = Category)) +
-    geom_point() +
-    theme(
-      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-      panel.grid.minor.y = element_blank(),
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      axis.line = element_line( color=NOAALightBlue, size = .1 ),
-      axis.ticks = element_blank(), # remove ticks
-      panel.background = element_blank()
-    )  +
-    scale_x_discrete(labels= xnames) +
-    guides(fill=FALSE) + 
-    ggtitle(paste0(place, " ", title00))
-  
+  g<-plotnlines(dat = temp0, title00, place) 
+
   figures.list[[length(figures.list)+1]]<-g
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
@@ -1168,30 +1182,13 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   a0$Year<-rownames(a0)
   
-  a <- gather(a0, Category, xx, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
+  a <- gather(a0, Category, val, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
   
-  a$Category<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
+  a$cat<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
   
-  xnames<-as.numeric(paste0(a$Year))
-  xnames[!(xnames %in% seq(from = min((as.numeric(xnames))),
-                           to = max(as.numeric(xnames)),
-                           by = 10))]<-""
+  temp0<-a
   
-  g<-ggplot(data = a, aes(x = factor(Year), y = xx, color = Category)) +
-    geom_line(aes(group = Category)) +
-    geom_point() +
-    theme(
-      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-      panel.grid.minor.y = element_blank(),
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      axis.line = element_line( color=NOAALightBlue, size = .1 ),
-      axis.ticks = element_blank(), # remove ticks
-      panel.background = element_blank()
-    )  +
-    scale_x_discrete(labels= xnames) +
-    guides(fill=FALSE) + 
-    ggtitle(paste0(place, " ", title00))
+  g<-plotnlines(dat = temp0, title00, place) 
   
   figures.list[[length(figures.list)+1]]<-g
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
@@ -1208,30 +1205,13 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   a0$Year<-rownames(a0)
   
-  a <- gather(a0, Category, xx, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
+  a <- gather(a0, Category, val, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
   
-  a$Category<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
+  a$cat<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
   
-  xnames<-as.numeric(paste0(a$Year))
-  xnames[!(xnames %in% seq(from = min((as.numeric(xnames))),
-                           to = max(as.numeric(xnames)),
-                           by = 10))]<-""
+  temp0<-a
   
-  g<-ggplot(data = a, aes(x = factor(Year), y = xx, color = Category)) +
-    geom_line(aes(group = Category)) +
-    geom_point() +
-    theme(
-      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-      panel.grid.minor.y = element_blank(),
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      axis.line = element_line( color=NOAALightBlue, size = .1 ),
-      axis.ticks = element_blank(), # remove ticks
-      panel.background = element_blank()
-    )  +
-    scale_x_discrete(labels= xnames) +
-    guides(fill=FALSE) + 
-    ggtitle(paste0(place, " ", title00))
+  g<-plotnlines(dat = temp0, title00, place) 
   
   figures.list[[length(figures.list)+1]]<-g
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
@@ -1239,7 +1219,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   
   ########V and VV
-  title00<- "_VAndVV-Line"
+  title00<- "_VvVV-Line"
   
   a0<-data.frame(temp[,grepl(
     pattern = paste0("V[0-9]+_", NumberOfSpecies), 
@@ -1249,32 +1229,15 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   a0$Year<-rownames(a0)
   
-  a <- gather(a0, Category, xx, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
+  a <- gather(a0, Category, val, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
   
-  a$Category<-paste0(as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[1])), 
+  a$cat<-paste0(as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[1])), 
                      "_",
                      as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2])))
   
-  xnames<-as.numeric(paste0(a$Year))
-  xnames[!(xnames %in% seq(from = min((as.numeric(xnames))),
-                           to = max(as.numeric(xnames)),
-                           by = 10))]<-""
+  temp0<-a
   
-  g<-ggplot(data = a, aes(x = factor(Year), y = xx, color = Category)) +
-    geom_line(aes(group = Category)) +
-    geom_point() +
-    theme(
-      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-      panel.grid.minor.y = element_blank(),
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      axis.line = element_line( color=NOAALightBlue, size = .1 ),
-      axis.ticks = element_blank(), # remove ticks
-      panel.background = element_blank()
-    )  +
-    scale_x_discrete(labels= xnames) +
-    guides(fill=FALSE) + 
-    ggtitle(paste0(place, " ", title00))
+  g<-plotnlines(dat = temp0, title00, place) 
   
   figures.list[[length(figures.list)+1]]<-g
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
@@ -1286,43 +1249,126 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   a0<-data.frame(temp[,grepl(
     pattern = paste0("V[0-9]+_", NumberOfSpecies), 
     x = names(temp))])
+  
   a0<-a0[,grep(pattern = "REMOVED_", x = names(a0))]
   names(a0)<-gsub(pattern = "REMOVED_", replacement = "", x = names(a0))
   names(a0)<-paste0("VE", substr(x = names(a0), start = 3, stop = nchar(names(a0))))
   
   a0$Year<-rownames(a0)
   
-  a <- gather(a0, Category, xx, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
+  temp0<-a0
   
-  a$Category<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
+  temp0<-gather(temp0, cat, val, 
+                names(temp0)[1]:names(temp0)[length(names(temp0))-1], 
+                factor_key = T)  
   
-  xnames<-as.numeric(paste0(a$Year))
-  xnames[!(xnames %in% seq(from = min((as.numeric(xnames))),
-                           to = max(as.numeric(xnames)),
-                           by = 10))]<-""
+  temp0$cat<-paste0(as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
+                                                     split = paste0("_", NumberOfSpecies)), function(x) x[1])), 
+                "_",
+                as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
+                                                 split = paste0("_", NumberOfSpecies)), function(x) x[2])))
   
-  g<-ggplot(data = a, aes(x = factor(Year), y = xx, color = Category)) +
-    geom_line(aes(group = Category)) +
-    geom_point() +
-    theme(
-      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-      panel.grid.minor.y = element_blank(),
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      axis.line = element_line( color=NOAALightBlue, size = .1 ),
-      axis.ticks = element_blank(), # remove ticks
-      panel.background = element_blank()
-    )  +
-    scale_x_discrete(labels= xnames) +
-    guides(fill=FALSE) + 
-    ggtitle(paste0(place, " ", title00))
+  
+  g<-plotnlines(dat = temp0, title00, place) 
+  
+  figures.list[[length(figures.list)+1]]<-g
+  names(figures.list)[length(figures.list)]<-paste0(title0, title00)
+  
+  #### Quantity Index Compare
+  # For comparison, let's recreate those graphs to make sure we are getting the same output:
+  title00<-"_QIvQEI-Line"
+  
+  temp0<-temp
+  temp0$Year<-rownames(temp0)
+  
+  temp0<-data.frame(temp0[,names(temp0) %in% c("Year", 
+                                               paste0("QI", NameBaseTotal), 
+                                               paste0("QEI", NameBaseTotal))])
+  temp0$Year<-rownames(temp)
+  
+  temp0<-gather(temp0, cat, val, 
+                names(temp0)[1]:names(temp0)[length(names(temp0))-1], 
+                factor_key = T)  
+  
+  temp0$cat<-paste0(as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
+                                                     split = paste0("_", NumberOfSpecies)), function(x) x[1])), 
+                    "_",
+                    as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
+                                                     split = paste0("_", NumberOfSpecies)), function(x) x[2])))
+  
+  g<-plotnlines(dat = temp0, title00, place) 
+  
+  figures.list[[length(figures.list)+1]]<-g
+  names(figures.list)[length(figures.list)]<-paste0(title0, title00)
+  
+  #### Quantity Compare
+  title00<-"_QvQE-Line"
+  temp0<-temp
+  temp0$Year<-rownames(temp0)
+  
+  temp0<-data.frame(temp0[,names(temp0) %in% c("Year", 
+                                               paste0("Q", NameBaseTotal), 
+                                               paste0("QE", NameBaseTotal))])
+  temp0$Year<-rownames(temp)
+  
+  temp0<-gather(temp0, cat, val, 
+                names(temp0)[1]:names(temp0)[length(names(temp0))-1], 
+                factor_key = T)  
+  
+  temp0$cat<-paste0(as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
+                                                     split = paste0("_", NumberOfSpecies)), function(x) x[1])), 
+                    "_",
+                    as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
+                                                     split = paste0("_", NumberOfSpecies)), function(x) x[2])))
+  
+  g<-plotnlines(dat = temp0, title00, place) 
   
   figures.list[[length(figures.list)+1]]<-g
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
   
+  #### Revenue Share
+  title00<-"_R-Line"
+  temp0<-temp
+  
+  temp0<-temp0[grep(pattern = paste0("R[0-9]+_", NumberOfSpecies), x = names(temp0))]
+  temp0$Year<-rownames(temp)
+  
+  temp0<-gather(temp0, cat, val, 
+                names(temp0)[1]:names(temp0)[length(names(temp0))-1], 
+                factor_key = T)  
+
+  plotnlines(dat = temp0, title00, place) 
+  
+  figures.list[[length(figures.list)+1]]<-g
+  names(figures.list)[length(figures.list)]<-paste0(title0, title00)
+  
+  #### Price Change
+  title00<-"_PC-Line"
+  temp0<-temp
+  
+  temp0<-temp0[grep(pattern = paste0("PC[0-9]+_", NumberOfSpecies), x = names(temp0))]
+  temp0$Year<-rownames(temp)
+  
+  temp0<-gather(temp0, cat, val, 
+                names(temp0)[1]:names(temp0)[length(names(temp0))-1], 
+                factor_key = T)  
+  
+  temp0$cat<-paste0(as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
+                                                     split = paste0("_", NumberOfSpecies)), function(x) x[1])), 
+                    "_",
+                    as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
+                                                     split = paste0("_", NumberOfSpecies)), function(x) x[2])))
+
+  g<-plotnlines(dat = temp0, title00, place)
+  
+  figures.list[[length(figures.list)+1]]<-g
+  names(figures.list)[length(figures.list)]<-paste0(title0, title00)
+  
+  
+  
   #################Number Missing V Per Year
-  title00<- "_NumberMissingV-Line"
+  title00<- "_VNumberMissing-Line"
   
   a0<-data.frame(temp.orig[,grepl(
     pattern = paste0("V[0-9]+_"), 
@@ -1333,63 +1379,64 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   total.no.v<-ncol(a0)*nrow(a0)
   
-  cat0<-data.frame(names0 = (names(temp.orig)[grepl(
-    pattern = paste0("V[0-9]+_", NumberOfSpecies), 
-    x = names(temp.orig))]))
+  cat0<-data.frame(names0 = (names(temp.orig)[grepl(pattern = paste0("V[0-9]+_", NumberOfSpecies), 
+                                                    x = names(temp.orig))]))
   
   cat0$no<-as.character(lapply(X = strsplit(x = as.character(cat0$names0), split = "_"), 
                                        function(x) x[1]))
-  cat0$no<-unique(substr(x = cat0$no, start = 2, stop = nchar(cat0$no)))
-  # cat0$no<-cat0$no[!grepl(pattern = "[a-zA-Z]", x = cat0$no)]
-  # cat0<-cat0[!(cat0$no %in% 0),]
   
-  # cat0$no<-substr(x = cat0$names0, start = 2, stop = 2)
+  cat0$numberofspp<-NA
+  for (i in 1:nrow(cat0)) {
+    cat0$numberofspp[i]<-length(grep(pattern = cat0$no[i], 
+                                    x = substr(x = names(a0), 
+                                               start = 1, 
+                                               stop = max(nchar(cat0$no))) ))
+  }
+  
+  
+  cat0$no<-as.character(gsub(pattern = "[a-zA-Z]", replacement = "", x = cat0$no))
   
   cat0$catname<-as.character(lapply(X = strsplit(x = as.character(cat0$names0), split = NumberOfSpecies),
                                     function(x) x[2]))
+  cat0$label<-paste0(cat0$catname, " (n=",  cat0$numberofspp,")")
   
   # cat0$catname<-(names(temp00[[2]]))[merge(x = merge(names(temp00[[2]])]
-  cat0$names0<-NULL
+  # cat0$names0<-NULL
+  a<-temp.orig
+  a$Year<-rownames(a)
+  a<-a[,!grepl(pattern = NumberOfSpecies, x = names(a))]
+  a00<-gather(data = a, spp, val, names(a)[1]:names(a)[length(names(a))-1], factor_key = T)
+  a00<-a00[grep(pattern = "V", x = substr(x = a00$spp, start = 1, stop = 1)),]
+  a00$na<-0
+  a00$na[(is.na(a00$val)) | a00$val %in% 0]<-1
+  a00$no<-gsub(pattern = "[a-zA-Z]", replacement = "", x = as.character(lapply(X = strsplit(x = as.character(a00$spp), split = "_"), 
+                               function(x) x[1])) ) #catagory number
+  a00$x<-1
   
-  for (i in 1:ncol(a0)) {
-    a00<-rep_len(x = 0, length.out = nrow(a0))
-    if (sum(is.na(a0[,i])) > 0) {
-      a00[is.na(a0[,i])]<-1
-    }
-    a0[,i]<-a00
-  }
-  
-  a0$Year<-rownames(a0)
-  
-  a00 <- gather(a0, Category, xx, names(a0)[grepl(pattern = "V", x = names(a0))], factor_key=TRUE)
-  
-  a00$Category<-as.character(lapply(X = strsplit(x = as.character(a00$Category), split = "_"), 
-                               function(x) x[1]))
-  a00$Category<-(substr(x = a00$Category, start = 2, stop = nchar(a00$Category)))
-
   aa<-a00
-  names(aa)[2]<-"no"
-  
-  a00$Category<-merge(x = aa, y = cat0, by = "no")[,4]
+
+  a00<-merge(x = aa, y = cat0, by = "no")
   
   #SUM
-  a<-aggregate(x = a00$xx, 
-               by = list("Year" = a00$Year, "Category" = a00$Category), 
-               FUN = sum)
+  a<-aggregate(x = a00[,c("na", "x")], 
+               by = list("Year" = a00$Year, "Category" = a00$catname), 
+               FUN = sum, na.rm = T)
   
   a<-rbind.data.frame(a, 
-                      data.frame(Year = aggregate(x = a00$xx, by = list("Year" = a00$Year), FUN = sum)[,1], 
+                      data.frame(Year = aggregate(x = a00$na, by = list("Year" = a00$Year), FUN = sum, na.rm = T)[,1], 
                                  Category = "Total",
-                                 x = aggregate(x = a00$xx, by = list("Year" = a00$Year), FUN = sum)[,2]))
+                                 na = aggregate(x = a00$na, by = list("Year" = a00$Year), FUN = sum, na.rm = T)[,2], 
+                                 x = nrow(temp.orig)*ncol(temp.orig)))
   
-  a$x.perc<-a$x/total.no.v
+  a$x.perc<-a$na/a$x*100
+  a$bins<-round_any(a$x.perc, 10)
   
   xnames<-as.numeric(paste0(a$Year))
   xnames[!(xnames %in% seq(from = min((as.numeric(xnames))),
                            to = max(as.numeric(xnames)),
                            by = 10))]<-""
   
-  g<-ggplot(data = a, aes(x = factor(Year), y = x, color = Category)) +
+  g<-ggplot(data = a, aes(x = factor(Year), y = na, color = Category)) +
     geom_line(aes(group = Category)) +
     geom_point() +
     theme(
@@ -1409,9 +1456,9 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
   #################Percent Missing V
-  # title00<- "_PerecentMissingVPerYear_Line"
+  # title00<- "_PctMissingV_Line"
   # 
-  # g<-ggplot(data = a, aes(x = factor(Year), y = x.perc*100, color = Category)) +
+  # g<-ggplot(data = a, aes(x = factor(Year), y = x.perc, color = Category)) +
   #   geom_line(aes(group = Category)) +
   #   geom_point() +
   #   theme(
@@ -1424,7 +1471,7 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   #     panel.background = element_blank()
   #   )  +
   #   scale_x_discrete(labels= xnames) +
-  #   guides(fill=FALSE) + 
+  #   guides(fill=FALSE) +
   #   ggtitle(paste0(place, " ", title00))
   # 
   # figures.list[[length(figures.list)+1]]<-g
@@ -1432,222 +1479,44 @@ ImplicitQuantityOutput<-function(temp, baseyr, calcQEI = F, PercentMissingThresh
   
   
   # How many V columns have X percentage data missing 
-  # title00<- "_PercentMissingV-Bar"
-  # 
-  # a0<-data.frame(temp.orig[,grepl(
-  #   pattern = paste0("V[0-9]+_"),
-  #   x = names(temp.orig)) &
-  #     !(grepl(
-  #       pattern = paste0("V[0-9]+_", NumberOfSpecies),
-  #       x = names(temp.orig)))])
-  # 
-  # total.no.v<-ncol(a0)*nrow(a0)
-  # 
-  # a00<-a0
-  # 
-  # a00[!is.na(a00)]<-1
-  # 
-  # a000<-nrow(a0)-colSums(a00, na.rm = T)#nmber missing
-  # 
-  # a<-data.frame(x = a000, Category = names(a000)) 
-  # 
-  # # a00$Category<-(substr(x = a00$Category, start = 2, stop = nchar(a00$Category)))
-  # a$no<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = "_"), 
-  #                                   function(x) x[1]))
-  # a$no<-(substr(x = a$no, start = 2, stop = nchar(a$no)))
-  # 
-  # a$Category<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = "[0-9]"), 
-  #                                 function(x) x[length(x)]))
-  # 
-  # aa<-a
-  # # names(aa)[2]<-"no"
-  # 
-  # cat00<-merge(x = cat0, y = data.frame(t(table(aa$no))), by.x = "no", by.y = "Var2")
-  # # cat0$Var1<-NULL
-  # a<-merge(x = aa, y = cat0, by = "no")
-  # a<-a[,c("x", "catname")]
-  # 
-  # a<-rbind.data.frame(a,
-  #                     data.frame(x = sum(a$x), 
-  #                                catname = "Total"))
-  # 
-  # a$x.perc<-(a$x/nrow(temp.orig))*100
-  # a$bins<-round_any(a$x.perc, 10)
-  # 
-  # a<-data.frame(table(a[,names(a) %in% c("bins", "Category")]))
-  # 
-  # cat000<-merge(y = cat00, x = a, by.y = "catname", by.x = "Category")
-  # cat000$Var1<-NULL
-  # cat00<-rbind.data.frame(cat000,
-  #                         data.frame(Category = "Total",
-  #                                    bins = aggregate(x = cat000$Freq.x,
-  #                                                     by = list(bins = cat000$bins), FUN = sum)[,1],
-  #                                    Freq.x = aggregate(x = cat000$Freq.x,
-  #                                                       by = list(bins = cat000$bins), FUN = sum)[,2],
-  #                                    no = 0,
-  #                                    Freq.y = sum(cat000$Freq.x)))
-  # 
-  # cat00$label<-paste0(cat00$Category, " (n=",  cat00$Freq.y,")")
-  # 
-  # cat000<-unique(cat00[,names(cat00) %in% c("Category", "label")])
-  # 
-  # a<-merge(x = a, y = cat000, by = "Category")
-  # 
-  # xnames<-paste0(sort(as.numeric(paste(unique(a$bins)))), "%")
-  # 
-  # g<-ggplot(data = a, aes(x = factor(bins), y = Freq, fill = label)) +
-  #   geom_bar(stat="identity", position=position_dodge()) +
-  #   theme(
-  #     panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-  #     panel.grid.minor.y = element_blank(),
-  #     panel.grid.major.x = element_blank(),
-  #     panel.grid.minor.x = element_blank(),
-  #     axis.line = element_line( color=NOAALightBlue, size = .1 ),
-  #     axis.ticks = element_blank(), # remove ticks
-  #     panel.background = element_blank()
-  #   )  +
-  #   scale_x_discrete(labels = xnames) +
-  #   ggtitle(paste0(place, " ", title00))
-  # 
-  # figures.list[[length(figures.list)+1]]<-g
-  # names(figures.list)[length(figures.list)]<-paste0(title0, title00)
+  title00<- "_VPctMissing-Bar"
   
-  
-  # ########## How many Q columns have X percentage data missing
-  # title00<- "_PercentMissingQ-Bar"
-  # 
-  # a0<-data.frame(temp.orig[,grepl(
-  #   pattern = paste0("Q[0-9]+_"),
-  #   x = names(temp.orig)) &
-  #     !(grepl(
-  #       pattern = paste0("Q[0-9]+_", NumberOfSpecies),
-  #       x = names(temp.orig)))])
-  # 
-  # total.no.v<-ncol(a0)*nrow(a0)
-  # 
-  # a00<-a0
-  # 
-  # a00[!is.na(a00)]<-1
-  # 
-  # a000<-nrow(a0)-colSums(a00, na.rm = T)#nmber missing
-  # 
-  # a<-data.frame(x = a000, Category = names(a000)) 
-  # 
-  # aa<-data.frame(substr(x = a$Category, start = 2, stop = 2))
-  # names(aa)<-"no"
-  # cat00<-merge(x = cat0, y = data.frame(t(table(aa$no))), by.x = "no", by.y = "Var2")
-  # # cat0$Var1<-NULL
-  # a$Category<-merge(x = aa, y = cat0, by = "no")[,2]
-  # 
-  # a<-rbind.data.frame(a,
-  #                     data.frame(Category = "Total",
-  #                                x = sum(a$xx)))
-  # 
-  # a$x.perc<-(a$x/nrow(temp.orig))*100
-  # a$bins<-round_any(a$x.perc, 10)
-  # 
-  # a<-data.frame(table(a[,names(a) %in% c("bins", "Category")]))
-  # 
-  # cat000<-merge(y = cat00, x = a, by.y = "catname", by.x = "Category")
-  # cat000$Var1<-NULL
-  # cat00<-rbind.data.frame(cat000,
-  #                         data.frame(Category = "Total",
-  #                                    bins = aggregate(x = cat000$Freq.x,
-  #                                                     by = list(bins = cat000$bins), FUN = sum)[,1],
-  #                                    Freq.x = aggregate(x = cat000$Freq.x,
-  #                                                       by = list(bins = cat000$bins), FUN = sum)[,2],
-  #                                    no = 0,
-  #                                    Freq.y = sum(cat000$Freq.x)))
-  # 
-  # cat00$label<-paste0(cat00$Category, " (n=",  cat00$Freq.y,")")
-  # 
-  # cat000<-unique(cat00[,names(cat00) %in% c("Category", "label")])
-  # 
-  # a<-merge(x = a, y = cat000, by = "Category")
-  # 
-  # xnames<-paste0(sort(as.numeric(paste(unique(a$bins)))), "%")
-  # 
-  # g<-ggplot(data = a, aes(x = factor(bins), y = Freq, fill = label)) +
-  #   geom_bar(stat="identity", position=position_dodge()) +
-  #   theme(
-  #     panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-  #     panel.grid.minor.y = element_blank(),
-  #     panel.grid.major.x = element_blank(),
-  #     panel.grid.minor.x = element_blank(),
-  #     axis.line = element_line( color=NOAALightBlue, size = .1 ),
-  #     axis.ticks = element_blank(), # remove ticks
-  #     panel.background = element_blank()
-  #   )  +
-  #   scale_x_discrete(labels = xnames) +
-  #   # guides(fill=FALSE) + 
-  #   ggtitle(paste0(place, " ", title00))
-  # 
-  # figures.list[[length(figures.list)+1]]<-g
-  # names(figures.list)[length(figures.list)]<-paste0(title0, title00)
-  
-  
-  #### Quantity Index Compare
-  # For comparison, let's recreate those graphs to make sure we are getting the same output:
-  title00<-"_QuantityIndexCompare"
+  a00<-data.frame(table(a[,names(a) %in% c("bins", "Category")]))
 
-  temp0<-temp
-  temp0$Year<-rownames(temp0)
-  
-  tempA<-data.frame(temp0[,names(temp0) %in% c("Year", paste0("QI", NameBaseTotal))])
-  names(tempA)<-c("Index", "Year")
-  tempA$group<-"QI_Total"
-  tempA$col<-NOAALightBlue
-  
-  tempB<-data.frame(temp0[,names(temp0) %in% c("Year", paste0("QEI", NameBaseTotal))])
-  names(tempB)<-c("Index", "Year")
-  tempB$group<-"QEI_Total"
-  tempB$col<-NOAADarkBlue
-  
-  temp0<-rbind.data.frame(tempA, tempB)
-  rownames(temp0)<-NULL
-  temp0$col<-as.factor(temp0$col)
-  
-  g<-plot2line(temp0, Year = temp0$Year, Index=temp0$Index, 
-               col = temp0$col, group = temp0$group, 
-               NOAALightBlue, NOAADarkBlue, NOAADarkGrey)
+  cat00<-merge(y = cat0[,c("catname", "numberofspp")],
+                x = a,
+                by.y = "catname", by.x = "Category")
+
+  cat00$label<-paste0(cat00$Category, " (n=",  cat00$numberofspp,")")
+
+  cat000<-data.frame(table(cat00[,names(cat00) %in% c("label", "bins")]))
+
+  xnames<-paste0(sort(as.numeric(paste(unique(a$bins)))), "%")
+
+  g<-ggplot(data = cat000, aes(x = factor(bins), y = Freq, fill = label)) +
+    geom_bar(stat="identity", position=position_dodge()) +
+    theme(
+      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
+      panel.grid.minor.y = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      axis.line = element_line( color=NOAALightBlue, size = .1 ),
+      axis.ticks = element_blank(), # remove ticks
+      panel.background = element_blank()
+    )  +
+    scale_x_discrete(labels = xnames) +
+    ggtitle(paste0(place, " ", title00))
 
   figures.list[[length(figures.list)+1]]<-g
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
-  #### Quantity Compare
-  title00<-"_QuantityCompare"
-  temp0<-temp
-  temp0$Year<-rownames(temp0)
-  
-  tempA<-data.frame(temp0[,names(temp0) %in% c("Year", paste0("Q", NameBaseTotal))])
-  names(tempA)<-c("Quantity", "Year")
-  tempA$group<-"Q_Total"
-  tempA$col<-NOAALightBlue
-  
-  tempB<-data.frame(temp0[,names(temp0) %in% c("Year", paste0("QE", NameBaseTotal))])
-  names(tempB)<-c("Quantity", "Year")
-  tempB$group<-"QE_Total"
-  tempB$col<-NOAADarkBlue
-  
-  temp0<-rbind.data.frame(tempA, tempB)
-  rownames(temp0)<-NULL
-  temp0$col<-as.factor(temp0$col)
-  
-  #A function I made to plot this pretty in ggplot2
-  g<-plot2line(temp0, Year = temp0$Year, Index=temp0$Quantity, 
-               col = temp0$col, group = temp0$group, 
-               NOAALightBlue, NOAADarkBlue, NOAADarkGrey)
-  
-  figures.list[[length(figures.list)+1]]<-g
-  names(figures.list)[length(figures.list)]<-paste0(title0, title00)
-  
-  
+
   return(list(temp, warnings.list, figures.list))
 }
 
 
 #### The nameing conventions of the column names. 
-ImplicitQuantityInput<-function(temp, baseyr, calcQEI = F){
+ImplicitQuantityInput<-function(temp, baseyr){
   
   ####HOUSEKEEPING
   NameBaseTotal<-substr(x = names(temp)[grep(x = names(temp), pattern = "0Total")][1], 
@@ -1850,7 +1719,7 @@ ImplicitQuantityInput<-function(temp, baseyr, calcQEI = F){
   
 }
 
-TFP_ChangeRate_Method1<-function(temp.output, temp.input, baseyr, calcQEI = T, PercentMissingThreshold){
+TFP_ChangeRate_Method1<-function(temp.output, temp.input, baseyr, pctmiss){
   
   NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
                                                 strsplit(x = names(temp)[1], 
@@ -1858,7 +1727,7 @@ TFP_ChangeRate_Method1<-function(temp.output, temp.input, baseyr, calcQEI = T, P
                                               split = "[a-zA-Z]")[[1]][1]))[1]
 
   #OUTPUT
-  temp00<-ImplicitQuantityOutput(temp.output, baseyr, calcQEI = T, PercentMissingThreshold)
+  temp00<-ImplicitQuantityOutput(temp.output, baseyr, pctmiss)
   temp<-temp00[[1]]
   warnings.list0<-temp00[[2]]
   figures.list0<-temp00[[3]]
@@ -1870,7 +1739,7 @@ TFP_ChangeRate_Method1<-function(temp.output, temp.input, baseyr, calcQEI = T, P
   
   
   #input
-  temp<-ImplicitQuantityInput(temp.input, baseyr, calcQEI)
+  temp<-ImplicitQuantityInput(temp.input, baseyr)
   names(temp)<-paste0(gsub(pattern = "Q", replacement = "X", 
                            x = substr(x = names(temp), start = 1, stop = 1)), 
                       substr(x = names(temp), start = 2, stop = nchar(names(temp))))
@@ -1894,10 +1763,10 @@ TFP_ChangeRate_Method1<-function(temp.output, temp.input, baseyr, calcQEI = T, P
 }
 
 
-TFP_ChangeRate_Method2<-function(temp.output, temp.input, baseyr, calcQEI = T, PercentMissingThreshold){
+TFP_ChangeRate_Method2<-function(temp.output, temp.input, baseyr, pctmiss){
   
   #OUTPUT
-  temp00<-ImplicitQuantityOutput(temp.output, baseyr, calcQEI = T, PercentMissingThreshold)
+  temp00<-ImplicitQuantityOutput(temp.output, baseyr, pctmiss)
   temp<-temp00[[1]]
   warnings.list0<-temp00[[2]]
   figures.list0<-temp00[[3]]
@@ -1909,7 +1778,7 @@ TFP_ChangeRate_Method2<-function(temp.output, temp.input, baseyr, calcQEI = T, P
   
   
   #input
-  temp<-ImplicitQuantityInput(temp.input, baseyr, calcQEI)
+  temp<-ImplicitQuantityInput(temp.input, baseyr)
   names(temp)<-paste0(gsub(pattern = "Q", replacement = "X", 
                            x = substr(x = names(temp), start = 1, stop = 1)), 
                       substr(x = names(temp), start = 2, stop = nchar(names(temp))))
@@ -1979,21 +1848,72 @@ funct_counter<-function(counter0) {
   return(counter)
 }
 
-plot1line<-function(temp, PI, 
-                    NOAALightBlue, NOAADarkBlue, NOAADarkGrey){
+
+xunits<-function(temp00, combine=T) {
   
-  xnames<-rownames(temp)
-  xnames[!(xnames %in% seq(from = min((as.numeric(xnames))), 
-      to = max(as.numeric(xnames)), 
-      by = ifelse(length(xnames)<20, 2, 10)))]<-""
+  temp00<-sum(as.numeric(temp00))
+  sigfig<-format(temp00, digits = 3, scientific = TRUE)
+  sigfig0<-as.numeric(substr(x = sigfig, start = (nchar(sigfig)-1), stop = nchar(sigfig)))
   
+  if (sigfig0<=5) {
+    # if (sigfig0<4) {
+    unit<-""
+    x<-format(x = temp00, big.mark = ",", digits = 0, scientific = F)
+    # } else if (sigfig0>=4 & sigfig0<6) {
+    #   unit<-" thousand"
+    # x<-round(temp00/1e3, digits = 1)
+    # } else if (sigfig0==5) {
+    #   unit<-" thousand"
+    #   x<-round(temp00/1e3, digits = 0)
+  } else if (sigfig0>=6 & sigfig0<9) {
+    unit<-" million"
+    x<-round(temp00/1e6, digits = 1)
+  } else if (sigfig0>=9 & sigfig0<12) {
+    unit<-" billion"
+    x<-round(temp00/1e9, digits = 1)
+  } else if (sigfig0>=12) {
+    unit<-" trillion"
+    x<-round(temp00/1e12, digits = 1)
+  }
   
+  out<-ifelse(combine==T, paste0(x, unit), list(x, unit))
   
-  g<-ggplot(data = temp, aes(x = rownames(temp), y = PI, group=1)) +
-    geom_line(data = temp, aes(x = rownames(temp), y = PI), 
-              color=NOAALightBlue, size=2, linetype = "solid") +
-    geom_point() + #pch = 15, color = NOAADarkBlue, size = 4) + 
+  return(out)
+}
+
+
+
+plotnlines<-function(dat, title00, place){
+  
+  xnames<-as.numeric(paste0(dat$Year))
+  xnames[!(xnames %in% seq(from = min((as.numeric(xnames))),
+                           to = max(as.numeric(xnames)),
+                           by = 10))]<-""
+  
+  dat$val<-as.numeric(as.character(dat$val))
+  dat$val[(is.infinite(dat$val))]<-NA
+  divideby<-paste0("(", strsplit(x = xunits(mean(dat$val, na.rm = T)), split = " ")[[1]][2], "s)")
+  if (divideby %in% "(trillions)") {
+    divideby0<-1e12
+  } else if (divideby %in% "(billions)") {
+    divideby0<-1e9
+  } else if (divideby %in% "(millions)") {
+    divideby0<-1e6
+  } else if (divideby %in% "(thousands)") {
+    divideby0<-1e3
+  } else if (divideby %in% "(NAs)") {
+    divideby0<-1
+    divideby<-""
+  }
+  
+  dat$val<-dat$val/divideby0
+  # ynames<-as.numeric(paste0(val))
+  
+  g<-ggplot(data = dat, aes(x = factor(Year), y = val, color = cat)) +
+    geom_line(aes(group = cat)) +
+    geom_point() +
     theme(
+      # legend.position = c(0.9, 0.2), 
       panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
       panel.grid.minor.y = element_blank(),
       panel.grid.major.x = element_blank(),
@@ -2002,46 +1922,16 @@ plot1line<-function(temp, PI,
       axis.ticks = element_blank(), # remove ticks
       panel.background = element_blank()
     )  + 
-    guides(fill=FALSE) +
+    ylab(paste0(gsub(pattern = "_", replacement = "", 
+                    x = strsplit(x = title00, split = "-")[[1]][1]), 
+               " ", divideby)) +
     scale_x_discrete(labels= xnames) +
-    xlab("") + 
-    ylab("") 
+    # scale_y_discrete(labels= ynames) +
+    guides(fill=FALSE) + 
+    ggtitle(paste0(place))
   
   return(g)
 }
-
-plot2line<-function(temp0, Year, Index, col, group, 
-                    NOAALightBlue, NOAADarkBlue, NOAADarkGrey){
-  
-  g<-ggplot(data = temp0, 
-            aes(x = Year, y = Index, group=col), color = temp0$col) +
-    geom_line(data = temp0, 
-              aes(x = Year, y = Index, col = group),
-              # color = temp0$col,
-              size=2, linetype = "solid") +
-    scale_fill_manual("Index", values = unique(temp0$col)) +
-    # scale_fill_discrete(name = "Index", labels = unique(temp0$group)) + 
-    geom_point() + #pch = 15, color = NOAADarkGrey, size = 4) + 
-    theme(legend.position = c(0.9, 0.2), 
-          # legend.title = element_text("Index"),
-          panel.grid.major.y = element_line(color=NOAALightBlue, size = .1 ),
-          panel.grid.minor.y = element_blank(),
-          panel.grid.major.x = element_blank(),
-          panel.grid.minor.x = element_blank(),
-          axis.line = element_line( color=NOAALightBlue, size = .1 ),
-          axis.ticks = element_blank(), # remove ticks
-          panel.background = element_blank()
-    )  + 
-    guides(fill = guide_legend( reverse = T,
-                                label.position = "left",
-                                title = ""), reverse = F) +
-    xlab("") + 
-    ylab("") 
-  
-  return(g)
-  
-}
-
 
 #########***########
 ##########LOAD DATA##############

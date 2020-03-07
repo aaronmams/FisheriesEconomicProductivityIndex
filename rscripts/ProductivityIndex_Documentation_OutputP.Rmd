@@ -1,5 +1,5 @@
 ---
-title: "Productivity Index - Output"
+title: "Productivity Index - Output - By Price"
 author: "Emily Markowitz (Emily.Markowitz@noaa.gov) and Sun-Ling Wang"
 date: "Feb. 27, 2020"
 output: 
@@ -143,8 +143,8 @@ We can do the structuring work in a function
 
 This funciton standardizes the length of the category or species numbers e.g.,(numbers of 33, 440, and 1 are converted to 033, 440, and 001)
 
-```{r, echo = echoTF(FALSE, code)}
-# print(numbers0)
+```{r, echo = echoTF(TRUE, code)}
+print(numbers0)
 ```
 
 ###Lets get started
@@ -185,16 +185,13 @@ VColumns<-grep(pattern = paste0("V", ii,"_"),
   
 NameBasecategory<-substr(start = 2, 
                              stop = nchar(names(temp)[VColumns[(grepl(
-                               pattern = paste0("V", ii,"_", 
-                                                numbers0(x = c(0, length(VColumns)-1))[1]), 
+                               pattern = paste0("V", ii,"_", NumberOfSpecies), 
                                x = names(temp)[VColumns]))]]), 
                              x = names(temp)[VColumns[(grepl(
-                               pattern = paste0("V", ii,"_", 
-                                                numbers0(x = c(0, length(VColumns)-1))[1]), 
+                               pattern = paste0("V", ii,"_", NumberOfSpecies), 
                                x = names(temp)[VColumns]))]])  
   
-VColumns<-VColumns[!(grepl(pattern = paste0("V", ii,"_", 
-                                              numbers0(x = c(0, length(VColumns)-1))[1]), 
+VColumns<-VColumns[!(grepl(pattern = paste0("V", ii,"_", NumberOfSpecies), 
                              x = names(temp)[VColumns]))]
 ```
 
@@ -266,18 +263,18 @@ temp0 %>%
 ```
 
 
-###Price for each species ($P_{s,t,i}$; e.g., Salmon and Flounder)
+###Price for each species ($P_{t,i,s}$; e.g., Salmon and Flounder)
 We first measure output price for each species in each of the categories (e.g., Finfish & Others and Shellfish) using detailed landings time series data on value ($) and pounds (lbs). 
 
 Price for a species (s) of category (i) in year (t) = 
 
-$$P_{s,t,i} = V_{s,t,i}/Q_{s,t,i}$$
+$$P_{t,i,s} = V_{t,i,s}/Q_{t,i,s}$$
 
 where: 
 
- - $P_{s,t,i}$ is the price per individual species (s), category (i), for each year (t)
+ - $P_{t,i,s}$ is the price per individual species (s), category (i), for each year (t)
  
- - $Q_{s,t,i}$ is the quantity (lb) per individual species (s), category (i), for each year (t)
+ - $Q_{t,i,s}$ is the quantity (lb) per individual species (s), category (i), for each year (t)
  
  - $V_{t,i}$ is the value ($) per category (i), for each year (t)
 
@@ -320,7 +317,7 @@ There may be instances where price cannot (or should not) be calculated because 
 
 #### 1. If there are instances for a species where there are too few pairs of $V$ and/or $Q$ are completely missing from the timeseries or where a percent of $V$ is missing from the timeseries, we will remove the offending price columns entierly, so they don't influence the downstream price change or price index calculations.  
 
-Let's say here that if `r pctmiss*100 `% of the data is missing in a given $V_{s,t,i}$, don't calculate that species $P_{s,t,i}$
+Let's say here that if `r pctmiss*100 `% of the data is missing in a given $V_{t,i,s}$, don't calculate that species $P_{t,i,s}$
 
 ```{r, echo = echoTF(TRUE, code)}
 #Find which columns in this table are price Columns
@@ -424,15 +421,15 @@ temp0 %>%
 
 ###Value of species $VV_{t,i}$ where P was able to be calculated
 
-$R_{t,i}$, as defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{t,i}$ available (called $VV_{t,i}$) for the category using only values for species that were used to calculate $P_{t,i}$ (called  $V_{s,t,i, available}$). 
+$R_{t,i}$, as defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{t,i}$ available (called $VV_{t,i}$) for the category using only values for species that were used to calculate $P_{t,i}$ (called  $V_{t,i,s, available}$). 
 
-$$VV_{t,i} = \sum_{s=1}^{n}(V_{s,t,i, available})$$
+$$VV_{t,i} = \sum_{s=1}^{n}(V_{t,i,s, available})$$
 
 where: 
 
  - $VV_{t,i}$ is the new total of $V_{t,i}$ (called $VV_{t,i}$) for the category using only values for species that were used to calculate $P_{t,i}$
 
- - $V_{s,t,i, available}$ are the $V_{s,t,i}$ where P were able to be calculated
+ - $V_{t,i,s, available}$ are the $V_{t,i,s}$ where P were able to be calculated
 
 
 ```{r, echo = echoTF(TRUE, code)}
@@ -447,18 +444,18 @@ temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-###Revenue Share for each species ($R_{s,t,i}$; e.g., Salmon and Flounder) 
+###Revenue Share for each species ($R_{t,i,s}$; e.g., Salmon and Flounder) 
 
-$$R_{s,t,i} = V_{s,t,i}/VV_{t,i}$$
+$$R_{t,i,s} = V_{t,i,s}/VV_{t,i}$$
 
 where: 
 
- - $R_{s,t,i}$ is the revenue share per individual species (s), category (i), for each year (t)
+ - $R_{t,i,s}$ is the revenue share per individual species (s), category (i), for each year (t)
  
- - $V_{s,t,i}$ is the value ($) per individual species (s), category (i), for each year (t)
+ - $V_{t,i,s}$ is the value ($) per individual species (s), category (i), for each year (t)
 
 
-Here we divide $V_{s,t,i}$ by $VV_{t,i}$ because $VV_{t,i}$ only includes species used to calculate $V_{s,t,i}$ as per the above price calculations. 
+Here we divide $V_{t,i,s}$ by $VV_{t,i}$ because $VV_{t,i}$ only includes species used to calculate $V_{t,i,s}$ as per the above price calculations. 
 
 ```{r, echo = echoTF(TRUE, code)}
 tempR<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
@@ -497,7 +494,7 @@ Is there a warning?
 
 ```{r, echo = echoTF(FALSE, code)}
 if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
-  warnings.list[length(warnings.list)+1]<-paste0("Rows of R_{s,t,i} for ",NameBasecategory," did not sum to 1")
+  warnings.list[length(warnings.list)+1]<-paste0("Rows of R_{t,i,s} for ",NameBasecategory," did not sum to 1")
     a<-warnings.list[length(warnings.list)][[1]]
 } else {
     a<-"No warning."
@@ -506,9 +503,9 @@ if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
 
 *`r a `*
 
-###Revenue Share-Weighted Price Changes for each species ($PCW_{s,t,i}$; e.g., Salmon and Flounder)
+###Revenue Share-Weighted Price Changes for each species ($PCW_{t,i,s}$; e.g., Salmon and Flounder)
 
-$$PCW_{t,i,s} = \frac{R_{s,t,i} + R_{s,t-1,i}}{2} * ln(\frac{P_{s,t,i}}{P_{s,t-1,i}}) = \frac{R_{s,t,i} + R_{s,t-1,i}}{2} * [ln(P_{s,t,i}) - ln(P_{s,t-1,i})] $$
+$$PCW_{t,i,s} = \frac{R_{t,i,s} + R_{s,t-1,i}}{2} * ln(\frac{P_{t,i,s}}{P_{s,t-1,i}}) = \frac{R_{t,i,s} + R_{s,t-1,i}}{2} * [ln(P_{t,i,s}) - ln(P_{s,t-1,i})] $$
 
 Where: 
 
@@ -517,9 +514,9 @@ Where:
 
 Such that: 
 
- - category's (i) Price Change for each species (s) = $\frac{R_{s,t,i} + R_{s,t-1,i}}{2}$
+ - category's (i) Price Change for each species (s) = $\frac{R_{t,i,s} + R_{s,t-1,i}}{2}$
 
- - category's (i) Revenue Share for each species (s) = $ln(\frac{P_{s,t,i}}{P_{s,t-1,i}} = [ln(P_{s,t,i}) - ln(P_{s,t-1,i})]$
+ - category's (i) Revenue Share for each species (s) = $ln(\frac{P_{t,i,s}}{P_{s,t-1,i}} = [ln(P_{t,i,s}) - ln(P_{s,t-1,i})]$
 
 
 `r ifelse(showresults == TRUE, "We use this *PriceChange* function:", "")` 
@@ -715,17 +712,17 @@ Is there a warning?
 
 Now lets redo that whole analysis up to this point (via function) for the two species of the shellfish group, as we will need them for the next steps of this analysis. 
 
-`r ifelse(showresults == TRUE, "We use this *ImplicitQuantityOutput* function to calculate the Implicit Quanity Output at Species and category Level:", "")` 
+`r ifelse(showresults == TRUE, "We use this *ImplicitQuantityOutput.p* function to calculate the Implicit Quanity Output at Species and category Level:", "")` 
 
 ```{r, echo = echoTF(TRUE, code), include = includeTF(TRUE, showresults)}
-print(ImplicitQuantityOutput.species.cat)
+print(ImplicitQuantityOutput.speciescat.p)
 ```
 
 
 ```{r, echo = echoTF(TRUE, code)}
 ii<-2 #The category index value
 
-tempS<-ImplicitQuantityOutput.species.cat(temp, ii, baseyr, maxyr, minyr, 
+tempS<-ImplicitQuantityOutput.speciescat.p(temp, ii, baseyr, maxyr, minyr, 
                          pctmiss = pctmiss, 
                          warnings.list = warnings.list)
 temp<-cbind.data.frame(temp, tempS[[1]])
@@ -851,7 +848,7 @@ Such that:
 #Find which columns in this table are price and revenue share columns
 tempPCW<-cbind.data.frame("PCW1_0Finfish" = 
                             PriceChange(R0 = temp$R1_0Finfish, P0 = temp$PI1_0Finfish), 
-                          "PCW1_0Shellfish" = 
+                          "PCW2_0Shellfish" = 
                             PriceChange(R0 = temp$R2_0Shellfish, P0 = temp$PI2_0Shellfish))
 ```
 
@@ -1184,10 +1181,10 @@ Now that we know the method, we can simplify most of it into a function and do t
 
 ### Function
 
-`r ifelse(showresults == TRUE, "We use this *ImplicitQuantityOutput* function to calculate the Implicit Quanity Output at Fishery Level:", "")` 
+`r ifelse(showresults == TRUE, "We use this *ImplicitQuantityOutput.p* function to calculate the Implicit Quanity Output at Fishery Level:", "")` 
 
 ```{r, echo = echoTF(TRUE, code), include = includeTF(TRUE, showresults)}
-print(ImplicitQuantityOutput)
+print(ImplicitQuantityOutput.p)
 ```
 
 ### A. Import and Edit data
@@ -1218,7 +1215,7 @@ baseyr<-baseyr
  
 ### C. Run the function
 ```{r, echo = echoTF(TRUE, code), warning = FALSE}
-temp00<-ImplicitQuantityOutput(orgional.data, baseyr, pctmiss)
+temp00<-ImplicitQuantityOutput.p(orgional.data, baseyr, pctmiss)
 temp<-temp00[[1]]
 warnings.list0<-temp00[[2]]
 figures.list0<-temp00[[3]]
@@ -1226,7 +1223,7 @@ figures.list0<-temp00[[3]]
 
 ### D. Obtain the implicit quantity estimates
 ```{r, echo = echoTF(FALSE, code), warning = FALSE}
-write.csv(x = temp, file = paste0(dir.docu, "Example_Output.csv"))
+write.csv(x = temp, file = paste0(dir.docu, "Example_Output_p.csv"))
 
 temp0<-temp[, grepl(pattern = "0Total", x = names(temp))]
 
@@ -1254,13 +1251,13 @@ figures.list0$`_PI-Line`
 For comparison, let's recreate those graphs to make sure we are getting the same output:
 
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_QuantityIndexCompare`
+figures.list0$`_QIvQEI-Line`
 ```
 
 #### Graph 3: Quantity Compare
 
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_QuantityCompare`
+figures.list0$`_QvQE-Line`
 ```
 
 -------
@@ -1300,7 +1297,7 @@ pctmiss = 0.60
 
 ### C. Run the function
 ```{r, echo = echoTF(TRUE, code)}
-temp00<-ImplicitQuantityOutput(temp, baseyr, pctmiss)
+temp00<-ImplicitQuantityOutput.p(temp, baseyr, pctmiss)
 temp<-temp00[[1]]
 warnings.list0<-temp00[[2]]
 figures.list0<-temp00[[3]]
@@ -1339,12 +1336,13 @@ figures.list0$`_PI-Line`
 For comparison, let's recreate those graphs to make sure we are getting the same output:
 
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_QuantityIndexCompare`
+figures.list0$`_QIvQEI-Line`
 ```
 
 #### Graph 3: Quantity Compare
 
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_QuantityCompare`
+figures.list0$`_QvQE-Line`
 ```
+
 

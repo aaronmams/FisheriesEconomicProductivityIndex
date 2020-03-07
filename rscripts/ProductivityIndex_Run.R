@@ -34,7 +34,8 @@ ProdI.Data<-paste0(dir.scripts, "ProductivityIndex_Data",date0,".R")
 ProdI.DataDL<-paste0(dir.scripts, "ProductivityIndex_CensusDownloadClean",date0,".R")
 ProdI.Funct<-paste0(dir.scripts, "ProductivityIndex_Functions",date0,".R")
 ProdI.Report<-paste0(dir.scripts, "ProductivityIndex_Report",date0,".rmd")
-ProdI.Docu.Out<-paste0(dir.scripts, "ProductivityIndex_Documentation_Output",date0,".rmd")
+ProdI.Docu.Out.P<-paste0(dir.scripts, "ProductivityIndex_Documentation_OutputP",date0,".rmd")
+ProdI.Docu.Out.Q<-paste0(dir.scripts, "ProductivityIndex_Documentation_OutputQ",date0,".rmd")
 ProdI.Docu.In<-paste0(dir.scripts, "ProductivityIndex_Documentation_Input",date0,".rmd")
 
 ######SAVE WORKING FILES########
@@ -98,9 +99,9 @@ counter<-0
 
 OutputAnalysis<-function(landings.data, category0, baseyr, 
          state.codes, titleadd,
-         counter, dir.rawdata, dir.reports, pctmiss, dir.figures, dir.outputtables) {
+         counter, dir.rawdata, dir.reports, pctmiss, dir.figures, dir.outputtables, analysisby = "P") {
   
-  dir.analyses1<-paste0(dir.analyses, "/",titleadd, "_", 
+  dir.analyses1<-paste0(dir.analyses, "/",titleadd, "_", analysisby, "_", 
                         gsub(pattern = "\\.", replacement = "", x = category0),"/")
   dir.create(dir.analyses1) 
   dir.reports<-paste0(dir.analyses1, "/reports/")
@@ -133,7 +134,7 @@ for (r in 1:length(reg.order)){
   counter<-funct_counter(counter)
   
   
-  title000<-paste0("_","byr",baseyr, 
+  title000<-paste0("_","byr",baseyr, "_", analysisby, 
                    "_",gsub(pattern = "\\.", replacement = "", x = category0), 
                    "_pctmiss", gsub(pattern = "\\.", replacement = "", x = pctmiss))
   title0<-paste0(counter, "_", gsub(pattern = "\\(", replacement = "", x = 
@@ -150,8 +151,8 @@ for (r in 1:length(reg.order)){
   
   temp00<-EditCommData(dat = landings.data[idx,], category0)
   temp.orig<-temp00[[1]] ### Data
-  spp.temp<-temp00[[2]] ### By the way, which species are included in each category?
-  tsn.temp<-temp00[[3]]  ### By the way, which species are included in each category by code number?
+  spp.editeddata<-temp00[[2]] ### By the way, which species are included in each category?
+  tsn.editeddata<-temp00[[3]]  ### By the way, which species are included in each category by code number?
   
   NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
                                                 strsplit(x = names(temp.orig)[1], 
@@ -161,12 +162,20 @@ for (r in 1:length(reg.order)){
   ### B. Enter base year
 
   ### C. Run the function
-  temp00<-ImplicitQuantityOutput(temp = temp.orig, baseyr, pctmiss, 
+  if (analysisby == "P") {
+  temp00<-ImplicitQuantityOutput.p(temp = temp.orig, baseyr, pctmiss, 
                                  title0 = title0, place = place)
+  } else if (analysisby == "Q") {
+  temp00<-ImplicitQuantityOutput.q(temp = temp.orig, baseyr, pctmiss, 
+                                     title0 = title0, place = place)    
+  }
+  
   temp<-temp00[[1]] #Data Output
   warnings.list0<-temp00[[2]] # Warnings
   figures.list0<-temp00[[3]] #Figures
   figures.list<-c(figures.list, figures.list0)
+  spptable0<-temp00[[4]] #Species overview info
+  spp.output<-temp00[[5]] #List of Species
   
   ### D. Obtain the implicit quantity estimates
   
@@ -199,48 +208,48 @@ for (r in 1:length(reg.order)){
   write.csv(x = finaltable.list[[r]], file = paste0(dir.outputtables, title0,"_Final.csv"))
   
   #Species Table
-  spptable0<-data.frame(Analysis  = title0,
-                  Place = place,
-                  Catagory = rep_len(x = NA, length.out = length(spp.temp)), 
-                  TotCount = rep_len(x = NA, length.out = length(spp.temp)), 
-                  MissCount = rep_len(x = NA, length.out = length(spp.temp)), 
-                  UsedCount = rep_len(x = NA, length.out = length(spp.temp)))
-  
-  for (i in 1:length(spp.temp)) {
-    
-    #Find the name of the ith species group (in terms of how the data is organized)
-    cat<-names(spp.temp)[i]
-    XColumns<-grep(pattern = paste0(NumberOfSpecies, cat),
-                   x = names(temp))
-        #Test
-    XColumns<-c(XColumns, 1) #in case there is only one column for the next step
-    cat0<-as.character(lapply(X = strsplit(x = names(temp[,XColumns])[1], 
-                                              split = paste0("_", NumberOfSpecies)), 
-                                 function(x) x[2]))
-    #Find the number of this ith species group (in terms of how the data is organized)
-    ii<-as.character(lapply(X = strsplit(x = names(temp[,XColumns])[1], 
-                                         split = paste0("_", NumberOfSpecies)), 
-                            function(x) x[1]))
-    ii<-gsub(pattern = "[a-zA-Z]", replacement = "", x = ii)
-
-    #check your work
-    # VColumns<-grep(pattern = paste0("V", ii,"_"),
-    #                x = substr(x = names(temp),
-    #                           start = 1,
-    #                           stop = (2+nchar(ii))))
-    
-    RColumns<-grep(pattern = paste0("R", ii,"_"),
-                   x = substr(x = names(temp),
-                              start = 1,
-                              stop = (2+nchar(ii))))
-    RColumns<-RColumns[-grep(pattern = paste0(NumberOfSpecies, cat),
-                             x = names(temp)[RColumns])]
-    
-    spptable0$Catagory[i]<- cat
-    spptable0$TotCount[i]<-length(spp.temp[names(spp.temp) %in% cat][[1]])
-    spptable0$UsedCount[i]<-ifelse(is.na(length(RColumns)), 0, length(RColumns))
-    spptable0$MissCount[i]<-spptable0$TotCount[i] - spptable0$UsedCount[i]
-  }
+  # spptable0<-data.frame(Analysis  = title0,
+  #                 Place = place,
+  #                 Catagory = rep_len(x = NA, length.out = length(spp.editeddata)), 
+  #                 TotCount = rep_len(x = NA, length.out = length(spp.editeddata)), 
+  #                 RmCount = rep_len(x = NA, length.out = length(spp.editeddata)), 
+  #                 UsedCount = rep_len(x = NA, length.out = length(spp.editeddata)))
+  # 
+  # for (i in 1:length(spp.editeddata)) {
+  #   
+  #   #Find the name of the ith species group (in terms of how the data is organized)
+  #   cat<-names(spp.editeddata)[i]
+  #   XColumns<-grep(pattern = paste0(NumberOfSpecies, cat),
+  #                  x = names(temp))
+  #       #Test
+  #   XColumns<-c(XColumns, 1) #in case there is only one column for the next step
+  #   cat0<-as.character(lapply(X = strsplit(x = names(temp[,XColumns])[1], 
+  #                                             split = paste0("_", NumberOfSpecies)), 
+  #                                function(x) x[2]))
+  #   #Find the number of this ith species group (in terms of how the data is organized)
+  #   ii<-as.character(lapply(X = strsplit(x = names(temp[,XColumns])[1], 
+  #                                        split = paste0("_", NumberOfSpecies)), 
+  #                           function(x) x[1]))
+  #   ii<-gsub(pattern = "[a-zA-Z]", replacement = "", x = ii)
+  # 
+  #   #check your work
+  #   # VColumns<-grep(pattern = paste0("V", ii,"_"),
+  #   #                x = substr(x = names(temp),
+  #   #                           start = 1,
+  #   #                           stop = (2+nchar(ii))))
+  #   
+  #   RColumns<-grep(pattern = paste0("R", ii,"_"),
+  #                  x = substr(x = names(temp),
+  #                             start = 1,
+  #                             stop = (2+nchar(ii))))
+  #   RColumns<-RColumns[-grep(pattern = paste0(NumberOfSpecies, cat),
+  #                            x = names(temp)[RColumns])]
+  #   
+  #   spptable0$Catagory[i]<- cat
+  #   spptable0$TotCount[i]<-length(spp.editeddata[names(spp.editeddata) %in% cat][[1]])
+  #   spptable0$UsedCount[i]<-ifelse(is.na(length(RColumns)), 0, length(RColumns))
+  #   spptable0$RmCount[i]<-spptable0$TotCount[i] - spptable0$UsedCount[i]
+  # }
   
   spptable<-rbind.data.frame(spptable, spptable0)
   write.csv(x = temp0, file = paste0(dir.outputtables, title0,"_Species.csv"))
@@ -255,7 +264,7 @@ for (r in 1:length(reg.order)){
   
   print("Create spreadsheets")
   
-  save(editeddata.list, rawtable.list, finaltable.list, tottable.list, spptable, 
+  save(editeddata.list, rawtable.list, finaltable.list, tottable.list, spptable, spp.output,
        file = paste0(dir.outputtables, "AllOutputs.rdata"))
   
   write.csv(x = spptable, file = paste0(dir.outputtables, "000_All", title000,"_Species.csv"))
@@ -345,41 +354,22 @@ for (r in 1:length(reg.order)){
   
 }
 
-########*** No. 1############
-# OutputAnalysis(landings.data, category0 = "category.taxsimp", baseyr = 2010, 
-#                          state.codes, 
-#                          counter, dir.rawdata, dir.reports, pctmiss = 1.00, dir.figures, dir.outputtables) 
+########RUN############
 
-########*** No. 2############
-# OutputAnalysis(landings.data, category0 = "category.taxsimp", baseyr = 2007, 
-#                state.codes, 
-#                counter, dir.rawdata, dir.reports, pctmiss = 0.50, dir.figures, dir.outputtables) 
-
-
-########*** No. 3############
-# OutputAnalysis(landings.data, category0 = "category.orig", baseyr = 2010, 
-#                state.codes, 
-#                counter, dir.rawdata, dir.reports, pctmiss = 1.00, dir.figures, dir.outputtables) 
-
-########*** No. 4############
-# OutputAnalysis(landings.data, category0 = "category.orig", baseyr = 2007, 
-#                state.codes, 
-#                counter, dir.rawdata, dir.reports, pctmiss = 0.50, dir.figures, dir.outputtables) 
-
-
-########*** No. 5############
+########*** Price Driven Analysis - category.orig############
+analysisby = "P"
 category0 = "category.orig"
 
 #Data for the whole Time Series
 OutputAnalysis(landings.data, category0, baseyr = 2007, 
                state.codes, titleadd = "WholeTimeseries",
-               counter, dir.rawdata, pctmiss = 0.60) 
+               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby) 
 
 #Data just from the last 20 years
 OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,], 
                category0, baseyr = 2007, 
                state.codes, titleadd = "1997ToPresent",
-               counter, dir.rawdata, pctmiss = 0.60) 
+               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby) 
 
 # #Data just since 2008
 # OutputAnalysis(landings.data[landings.data$Year>=2007,], category0, baseyr = 2007, 
@@ -391,19 +381,20 @@ OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,],
 #                state.codes, titleadd = "WholeTimeseries1",
 #                counter, dir.rawdata, pctmiss = 1.00) 
 
-########*** No. 6############
+########*** Price Driven Analysis - category.tax############
+analysisby = "P"
 category0 = "category.tax"
 
 #Data for the whole Time Series
 OutputAnalysis(landings.data, category0, baseyr = 2007, 
                state.codes, titleadd = "WholeTimeseries",
-               counter, dir.rawdata, pctmiss = 0.60) 
+               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby) 
 
 #Data just from the last 20 years
 OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,], 
                category0, baseyr = 2007, 
                state.codes, titleadd = "1997ToPresent",
-               counter, dir.rawdata, pctmiss = 0.60) 
+               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby) 
 
 # #Data just since 2008
 # OutputAnalysis(landings.data[landings.data$Year>=2007,], category0, baseyr = 2007, 
@@ -415,27 +406,100 @@ OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,],
 #                state.codes, titleadd = "WholeTimeseries1",
 #                counter, dir.rawdata, pctmiss = 1.00) 
 
+########*** Quantity Driven Analysis - category.orig############
+analysisby = "Q"
+category0 = "category.orig"
+
+#Data for the whole Time Series
+OutputAnalysis(landings.data, category0, baseyr = 2007, 
+               state.codes, titleadd = "WholeTimeseries",
+               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby) 
+
+#Data just from the last 20 years
+OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,], 
+               category0, baseyr = 2007, 
+               state.codes, titleadd = "1997ToPresent",
+               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby) 
+
+# #Data just since 2008
+# OutputAnalysis(landings.data[landings.data$Year>=2007,], category0, baseyr = 2007, 
+#                state.codes, titleadd = "2007ToPresent",
+#                counter, dir.rawdata, pctmiss = 0.60) 
+# 
+# #Data for the whole timeseries with no pctmiss
+# OutputAnalysis(landings.data, category0, baseyr = 2007, 
+#                state.codes, titleadd = "WholeTimeseries1",
+#                counter, dir.rawdata, pctmiss = 1.00) 
+
+########*** Quantity Driven Analysis - category.tax############
+analysisby = "Q"
+category0 = "category.tax"
+
+#Data for the whole Time Series
+OutputAnalysis(landings.data, category0, baseyr = 2007, 
+               state.codes, titleadd = "WholeTimeseries",
+               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby) 
+
+#Data just from the last 20 years
+OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,], 
+               category0, baseyr = 2007, 
+               state.codes, titleadd = "1997ToPresent",
+               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby) 
+
+# #Data just since 2008
+# OutputAnalysis(landings.data[landings.data$Year>=2007,], category0, baseyr = 2007, 
+#                state.codes, titleadd = "2007ToPresent",
+#                counter, dir.rawdata, pctmiss = 0.60) 
+# 
+# #Data for the whole timeseries with no pctmiss
+# OutputAnalysis(landings.data, category0, baseyr = 2007, 
+#                state.codes, titleadd = "WholeTimeseries1",
+#                counter, dir.rawdata, pctmiss = 1.00) 
 
 ########DOCUMENTATION#################
+
+#OUTPUT
+#By Price
 code<-TRUE
 showresults<-TRUE
 
-rmarkdown::render(ProdI.Docu.Out,
+rmarkdown::render(ProdI.Docu.Out.P,
                   output_dir = paste0(dir.docu),
-                  output_file = paste0("ProductivityIndex_Documentation_Out_",date0,".pdf"))
+                  output_file = paste0("ProductivityIndex_Documentation_Out_Price_",date0,".pdf"))
 
-file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_",date0,".pdf"),
-               to = paste0(dir.output, "ProductivityIndex_Documentation_Output.pdf"))
+file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_Price_",date0,".pdf"),
+               to = paste0(dir.output, "ProductivityIndex_Documentation_Out_Price.pdf"))
 
 code<-FALSE
 showresults<-FALSE
 
-rmarkdown::render(ProdI.Docu.Out,
+rmarkdown::render(ProdI.Docu.Out.P,
                   output_dir = paste0(dir.docu),
-                  output_file = paste0("ProductivityIndex_Documentation_Out_",date0,"_NoCode.pdf"))
+                  output_file = paste0("ProductivityIndex_Documentation_Out_Price_",date0,"_NoCode.pdf"))
 
-file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_",date0,"_NoCode.pdf"),
-                 to = paste0(dir.output, "ProductivityIndex_Documentation_Output_NoCode.pdf"))
+file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_Price_",date0,"_NoCode.pdf"),
+                 to = paste0(dir.output, "ProductivityIndex_Documentation_Out_Price_NoCode.pdf"))
+
+#By Quantity
+code<-TRUE
+showresults<-TRUE
+
+rmarkdown::render(ProdI.Docu.Out.Q,
+                  output_dir = paste0(dir.docu),
+                  output_file = paste0("ProductivityIndex_Documentation_Out_Quant_",date0,".pdf"))
+
+file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_Quant_",date0,".pdf"),
+                 to = paste0(dir.output, "ProductivityIndex_Documentation_Out_Quant.pdf"))
+
+code<-FALSE
+showresults<-FALSE
+
+rmarkdown::render(ProdI.Docu.Out.Q,
+                  output_dir = paste0(dir.docu),
+                  output_file = paste0("ProductivityIndex_Documentation_Out_Quant_",date0,"_NoCode.pdf"))
+
+file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_Quant_",date0,"_NoCode.pdf"),
+                 to = paste0(dir.output, "ProductivityIndex_Documentation_Out_Quant_NoCode.pdf"))
 
 #INPUT
 rmarkdown::render(ProdI.Docu.In,

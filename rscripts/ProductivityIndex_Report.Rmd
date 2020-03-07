@@ -2,9 +2,7 @@
 title: ""
 author: ""
 date: ""
-output: 
-  word_document
-    df_print: kable
+output: word_document
 ---
   
 ```{r, echo = FALSE, warning = FALSE}
@@ -24,8 +22,11 @@ spptable0[,-1] %>%
 ```
 
 #### Species in Each category by Common Name
+
+"pre" is for species in the origional data
+"pst" are the species that were used in the final anlaysis
 ```{r, echo = FALSE}
-spp.temp
+spp.output
 ```
 
 

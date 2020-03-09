@@ -251,7 +251,7 @@ EditCommData<-function(dat, category0) {
   temp.v<-data.frame(t(temp.v))
   
   temp.v$temp<-rowSums(temp.v, na.rm = T)
-  names(temp.v)[names(temp.v) %in% "temp"]<-paste0("V",numbers0(x = c(0, length(cat0)))[1],"_", 
+  names(temp.v)[names(temp.v) %in% "temp"]<-paste0("VE",numbers0(x = c(0, length(cat0)))[1],"_", 
                                                    paste(rep_len(x = 0, 
                                                                  length.out = nchar(numbers0(x = as.numeric(factor(temp$species)))[1])), collapse = ""), 
                                                    "Total")
@@ -261,7 +261,7 @@ EditCommData<-function(dat, category0) {
     } else {
       temp.v$temp<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = paste0("V", cat[i], "_")) ], na.rm = T)
     }
-    names(temp.v)[names(temp.v) %in% "temp"]<-paste0("V", cat[i], "_", 
+    names(temp.v)[names(temp.v) %in% "temp"]<-paste0("VE", cat[i], "_", 
                                                      paste(rep_len(x = 0, 
                                                                    length.out = nchar(numbers0(x = as.numeric(factor(temp$species)))[1])), collapse = ""), 
                                                      gsub(pattern = " ", replacement = "", x = cat0[i]))
@@ -320,35 +320,34 @@ PriceIndex <- function(temp, BaseColName, baseyr, var = "PC") {
 }
 
 ReplaceFirst<-function(colnames, temp) {
-  for (c in 1:length(colnames)) {
+  for (c0 in 1:length(colnames)) {
     
     #If the first value of the timeseries of this column (c) is 0/NaN/NA
     #Change the first value (and subsequent 0/NaN/NA values) to the first available non-0/NaN/NA value
-    if (temp[1,colnames[c]] %in% c(0, NA, NaN)) {
-      findfirstvalue<-temp[which(!(temp[,colnames[c]]  %in% c(0, NA, NaN))), 
-                           colnames[c]][1]
-      temp[1,colnames[c]]<-findfirstvalue
+    if (temp[1,colnames[c0]] %in% c(0, NA, NaN, NULL)) {
+      findfirstvalue<-temp[which(!(temp[,colnames[c0]]  %in% c(0, NA, NaN, NULL))), 
+                           colnames[c0]][1]
+      temp[1,colnames[c0]]<-findfirstvalue
     }
   }
   return(temp)
 }
 
 ReplaceMid<-function(colnames, temp) {
-  for (c in 1:length(colnames)) {
+  for (c0 in 1:length(colnames)) {
     #If a middle value of the timeseries of this column (c) is 0/NaN/NA
     #Change the currently 0/NaN/NA value to the previous available non-0/NaN/NA value
-    if (sum(temp[,colnames[c]] %in% c(0, NA, NaN))>0) {
-      troublenumber<-which(temp[,colnames[c]] %in% c(0, NA, NaN))
+    if (sum(temp[,colnames[c0]] %in% c(0, NA, NaN, NULL))>0) {
+      troublenumber<-which(temp[,colnames[c0]] %in% c(0, NA, NaN, NULL))
       for (r in 1:length(troublenumber)){
-        findlastvalue<-temp[troublenumber[r]-1, colnames[c]][1]
-        temp[troublenumber[r],colnames[c]]<-findlastvalue
+        findlastvalue<-temp[troublenumber[r]-1, colnames[c0]][1]
+        temp[troublenumber[r],colnames[c0]]<-findlastvalue
       }
     }
   }
   return(temp)
 }
 
-### Function to calculate the Implicit Quanity Output at Species and category Level
 ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pctmiss, warnings.list) {
   
   ########Housekeeping
@@ -360,40 +359,45 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
                                                          split = "_")[[1]][2], 
                                               split = "[a-zA-Z]")[[1]][1]))[1]
   
-  NameBaseTotal<-substr(x = names(temp)[grep(x = names(temp), pattern = paste0(NumberOfSpecies, "Total"))][2],
-                        start = 2, 
-                        stop = nchar(names(temp)[grep(x = names(temp),
-                                                      pattern = paste0(NumberOfSpecies, "Total"))][2]))
   
-  NameBasecategory<-names(temp)[grepl(pattern = NumberOfSpecies, 
-                                      x = names(temp)) &
-                                  grepl(pattern = paste0("V", ii), x = names(temp))]
+  NameBaseTotal<-substr(x = sort(names(temp)[grep(x = names(temp), 
+                                                  pattern = paste0(NumberOfSpecies, "Total"))], decreasing = T)[1],
+                        start = 3, stop = nchar(sort(names(temp)[grep(x = names(temp), 
+                                                                      pattern = paste0(NumberOfSpecies, "Total"))],
+                                                     decreasing = T)[1]))
   
-  NameBasecategory<-substr(start = 2,
-                           stop = nchar(NameBasecategory),
-                           x = NameBasecategory)
+  QColumns0<-QColumns<-grep(pattern = paste0("Q", ii,"_"), 
+                            x = substr(x = names(temp), 
+                                       start = 1, 
+                                       stop = (2+nchar(ii))))
   
+  VColumns0<-VColumns<-grep(pattern = paste0("V", ii,"_"), 
+                            x = substr(x = names(temp), 
+                                       start = 1, 
+                                       stop = (2+nchar(ii))))
   
-  VColumns<-grep(pattern = paste0("V", ii,"_"),
-                 x = substr(x = names(temp),
-                            start = 1,
-                            stop = (2+nchar(ii))))
+  NameBasecategory<-names(temp)[grepl(pattern = paste0("VE", ii,"_"), 
+                                      x = substr(x = names(temp), 
+                                                 start = 1, 
+                                                 stop = (3+nchar(ii))))]
   
-  VColumns<-VColumns[!(grepl(pattern = NameBasecategory,
-                             x = names(temp)[VColumns]))]
+  NameBasecategory<-substr(x = NameBasecategory, start = 3, stop = nchar(NameBasecategory))
   
   
   ###Remove any related V and Q data where V column has less data than the $pctmiss$
-  VColumns0<-VColumns
-  QColumns0<-QColumns<-which(names(temp) %in% 
-                               paste0("Q", substr(x = names(temp)[VColumns], 
-                                                  start = 2, 
-                                                  stop = nchar(names(temp)[VColumns]))))
+  # VColumns0<-VColumns
+  # QColumns0<-QColumns<-which(names(temp) %in% 
+  #                              paste0("Q", substr(x = names(temp)[VColumns], 
+  #                                                 start = 2, 
+  #                                                 stop = nchar(names(temp)[VColumns]))))
+  
+  ###Remove any V and Q data where V column has less data than the specifed $pctmiss$
   
   for (i in 1:length(VColumns)) {
     
     #if the percent missing is less in V or Q columns for a species than the percentmissingtrheshold, we remove the data before the analysis
-    if (sum(is.na(temp[VColumns[i]]))/nrow(temp) > pctmiss) {
+    if (sum(is.na(temp[VColumns[i]]))/nrow(temp) > pctmiss | #V
+        sum(is.na(temp[QColumns[i]]))/nrow(temp) > pctmiss ) {#Q
       
       names(temp)[VColumns[i]]<-paste0("REMOVED_", names(temp)[VColumns[i]])
       VColumns0<-VColumns0[!(VColumns0 %in% VColumns[i])]
@@ -402,16 +406,20 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
     }
   }
   
-  VColumns<-names(temp)[VColumns0]
-  QColumns<-names(temp)[QColumns0]
+  if (length(VColumns0) == 0 #& length(QColumns0) == 0
+  ) {
+    
+    warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")
+    
+  } else {
+    
+    VColumns<-names(temp)[VColumns0]
+    QColumns<-names(temp)[QColumns0]  
 
   
   ###Caluclate Catagory Sums of $V$ and $Q$
   
   # Because we removed some columns for not meeting a perecent missing threshold and those columns will not be used at all in any part of the analysis, we need to calculate the totals of $V$ and $Q$ for the catagories and the fishery as a whole. 
-  names(temp)[grep(pattern = NameBasecategory, x = names(temp))]<-
-    paste0("REMOVED_", 
-           names(temp)[grep(pattern = NameBasecategory, x = names(temp))])
   
   ####
   #if there are still columns to assess that haven't been "removed"
@@ -421,23 +429,23 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
     
   } else {
     
+    # Because we removed some columns for not meeting a perecent missing threshold of `r pctmiss`% and those columns will not be used at all in any part of the further analysis, we need to re-calculate the totals of $V$ and $Q$ for the catagories and the fishery as a whole. 
+    
     # Q
-  temp.q<-temp[,grepl(pattern = paste0("Q", ii), x = substr(names(temp), start = 1, stop = 2+nchar(ii))) ]
-  temp.q<-data.frame(temp.q)
-  if (ncol(temp.q)>1) {
-    temp.q<-rowSums(temp.q, na.rm = T)
-  }
-  temp[ncol(temp)+1]<-temp.q
-  names(temp)[ncol(temp)]<-paste0("QE",NameBasecategory)
-  
-  # V
-  temp.v<-temp[,grepl(pattern = paste0("V", ii), x = substr(names(temp), start = 1, stop = 2+nchar(ii))) ]
-  temp.v<-data.frame(temp.v)
-  if (ncol(temp.v)>1) {
-    temp.v<-rowSums(temp.v, na.rm = T)
-  }
-  temp[ncol(temp)+1]<-temp.v
-  names(temp)[ncol(temp)]<-paste0("V",NameBasecategory)
+    temp.q<-data.frame(temp[,QColumns])
+    if (ncol(temp.q)>1) {
+      temp.q<-rowSums(temp.q, na.rm = T)
+    }
+    temp[ncol(temp)+1]<-temp.q
+    names(temp)[ncol(temp)]<-paste0("Q",NameBasecategory)
+    
+    # V
+    temp.v<-data.frame(temp[,VColumns])
+    if (ncol(temp.v)>1) {
+      temp.v<-rowSums(temp.v, na.rm = T)
+    }
+    temp[ncol(temp)+1]<-temp.v
+    names(temp)[ncol(temp)]<-paste0("V",NameBasecategory)
   
   
 
@@ -483,7 +491,6 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
     #Remove the column from the analysis. 
     #We will not be removing the column from the data, but simply remove it from the varaible "PColumns"
     if (sum(temp[,PColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > pctmiss |
-        # sum(temp[,QColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > pctmiss|
         sum(temp[,VColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > pctmiss) {
       cc<-c(cc, c)#Collect offending columns
     }
@@ -496,7 +503,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   
   }
   
-  if (length(PColumns) == 0) {
+  if (length(PColumns) < 2) {
     
     warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")
     
@@ -504,30 +511,13 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
     
   
   # 2.1. If the first value of P is 0 in a timeseries, we let the next available non-zero value of P in the timeseries inform the past.
-  
-  for (c in 1:length(PColumns)) {
-    
-    #If the first value of the timeseries of this column (c) is 0/NaN/NA
-    #Change the first value (and subsequent 0/NaN/NA values) to the first available non-0/NaN/NA value
-    if (temp[1,PColumns[c]] %in% c(0, NA, NaN)) {
-      findfirstvalue<-temp[which(!(temp[,PColumns[c]]  %in% c(0, NA, NaN))), PColumns[c]][1]
-      temp[1,PColumns[c]]<-findfirstvalue
-    }
-  }
+    temp<-ReplaceFirst(colnames = PColumns, temp) 
   
   # 2.2. If there is a value in the middle of P's timeseries that is 0, we let the most recent past available non-zero of P in the timeseries inform the future.
-  for (c in 1:length(PColumns)) {
     
     #If a middle value of the timeseries of this column (c) is 0/NaN/NA
     #Change the currently 0/NaN/NA value to the previous available non-0/NaN/NA value
-    if (sum(temp[,PColumns[c]] %in% c(0, NA, NaN))>0) {
-      troublenumber<-which(temp[,PColumns[c]] %in% c(0, NA, NaN))
-      for (r in 1:length(troublenumber)){
-        findlastvalue<-temp[troublenumber[r]-1, PColumns[c]][1]
-        temp[troublenumber[r],PColumns[c]]<-findlastvalue
-      }
-    }
-  }
+    temp<-ReplaceMid(colnames = PColumns, temp) 
   
   ###Fill in values of $V_{i,t,s}$ where P was able to be calculated
   # To ensure that the price index does not rise or fall to quickly with changes (that are really because of NA values) we fill in the missing instances of $V_{i,t,s}$. 
@@ -540,6 +530,9 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   #### 2. If there is a value in the middle of $V_{i,t,s}$'s timeseries that is 0/NA, we let the most recent past available non-zero of $V_{i,t,s}$ in the timeseries inform the future. 
   temp<-ReplaceMid(colnames = VVColumns, temp) 
 
+  
+  
+  
   ###Value of species where P was able to be calculated
   # $R_{i,t}$, defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{i,t}$ (called $VV_{i,t}$) for the category using only values for species that were used to calculate $P_{i,t}$ (called  $V_{s,i,t, available}$). 
   # $$VV_{i,t} = \sum_{s=1}^{n}(V_{s,i,t, available})$$
@@ -547,10 +540,16 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   #   - $VV_{i,t}$ is the new total of $V_{i,t}$ (called $VV_{i,t}$) for the category using only values for species that were used to calculate $P_{i,t}$
   #   - $V_{s,i,t, available}$ are the $V_{s,i,t}$ where P were able to be calculated
 
-  VVColumns<-paste0("V", substr(x = PColumns, start = 2, stop = nchar(PColumns)))
+  # VVColumns<-paste0("V", substr(x = PColumns, start = 2, stop = nchar(PColumns)))
+  # 
+  # temp[ncol(temp)+1]<-rowSums(data.frame(temp[,names(temp) %in% VVColumns]), na.rm = T)
+  # names(temp)[ncol(temp)]<-paste0("VV",NameBasecategory)
   
-  temp[ncol(temp)+1]<-rowSums(data.frame(temp[,names(temp) %in% VVColumns]), na.rm = T)
-  names(temp)[ncol(temp)]<-paste0("VV",NameBasecategory)
+  temp0<-data.frame(temp[,names(temp) %in% VVColumns], 
+                    rowSums(temp[,names(temp) %in% VVColumns], na.rm = T))#)
+  names(temp0)[ncol(temp0)]<-paste0("VV",NameBasecategory)
+  temp0<-data.frame(temp0)
+  temp[ncol(temp)+1]<-temp0[ncol(temp0)]
   
   ###Revenue Share for each species ($R_{s,i,t}$; e.g., Salmon and Flounder) 
   
@@ -560,17 +559,17 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   #   - $V_{s,i,t}$ is the value ($) per individual species (s), category (i), for each year (t)
   
   tempR<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
-  for (c in 1:length(PColumns)) {
+  for (c in 1:length(QColumns)) {
     
     #for renaming the columns
     NameBase<-substr(start = 2, 
-                     stop = nchar(PColumns[c]), 
-                     x = PColumns[c]) 
+                     stop = nchar(QColumns[c]), 
+                     x = QColumns[c]) 
     
-    VV<-temp[,names(temp) %in% paste0("VV", NameBasecategory)]  # sum of V where P was calculated
+    VV<-(temp[,names(temp) %in% paste0("VV", NameBasecategory)])  # sum of V where P was calculated
     V0<-temp[,names(temp) %in% paste0("V", NameBase)] #V of species; to make sure its the same column
     tempR[,c]<-V0/VV
-    names(tempR)[c]<-paste0("R", NameBase) #name the column
+    names(tempR)[c]<-paste0("R", NameBase ) #name the column
   }
   
   tempR<-data.frame(tempR)
@@ -588,17 +587,19 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   temp <- temp[, !duplicated(colnames(temp))]
   
   
-  ###Price Changes for each species ($PC_{s,i,t}$ aka $\Delta ln(P_{s,i,t})$; e.g., Salmon and Flounder)
   
-  # $$PCW_{i,t,s} = \frac{R_{s,i,t} + R_{s,i,t-1}}{2} * ln(\frac{P_{s,i,t}}{P_{s,i,t-1}}) = \frac{R_{s,i,t} + R_{s,i,t-1}}{2} * [ln(P_{s,i,t}) - ln(P_{s,i,t-1})] $$
-  # Where: 
-    # - $PCW_{i,t,s}$ = Revenue share-weighted price change for a species (s)
-  # Such that: 
-    # - category's (i) Price Change for each species (s) = $\frac{R_{s,i,t} + R_{s,i,t-1}}{2}$
-    # - category's (i) Revenue Share for each species (s) = $ln(\frac{P_{s,i,t}}{P_{s,i,t-1}} = [ln(P_{s,i,t}) - ln(P_{s,i,t-1})]$
-                                                               
+  ###Revenue Share-Weighted Price Changes for each species ($PCW_{t,i,s}$; e.g., Salmon and Flounder)
+  
+  #    $$PCW_{t,i,s} = \frac{R_{t,i,s} + R_{s,t-1,i}}{2} * ln(\frac{P_{t,i,s}}{P_{s,t-1,i}}) = \frac{R_{t,i,s} + R_{s,t-1,i}}{2} * [ln(P_{t,i,s}) - ln(P_{s,t-1,i})] $$
+  #      Where: 
+  #      - $PCW_{t,i,s}$ = Revenue share-weighted quantity change for a species (s)
+  #    Such that: 
+  #      - category's (i) Price Change for each species (s) = $\frac{R_{t,i,s} + R_{s,t-1,i}}{2}$
+  #      - category's (i) Revenue Share for each species (s) = $ln(\frac{P_{t,i,s}}{Q_{s,t-1,i}} = [ln(P_{t,i,s}) - ln(P_{s,t-1,i})]$
+  #    We use this *PriceChange* function. 
+  
   #Find which columns in this table are price and revenue share columns
-  tempPC<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+  tempPCW<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
   for (c in 1:length(PColumns)){
     #For nameing columns
     NameBase<-substr(start = 2,
@@ -608,19 +609,37 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
     # Calculate
     P0<-temp[, names(temp) %in% paste0("P", NameBase)]
     R0<-temp[, names(temp) %in% paste0("R", NameBase)] #to make sure its the same column
-    tempPC[,c]<-PriceChange(R0, P0)
-    names(tempPC)[c]<-paste0("PCW", NameBase ) #name the column
+    tempPCW[,c]<-PriceChange(R0, P0)
+    names(tempPCW)[c]<-paste0("PCW", NameBase ) #name the column
   }
   
-  temp<-cbind.data.frame(temp, tempPC)
+  temp<-cbind.data.frame(temp, tempPCW)
   
-  ###Price Changes for the catagory ($PC_{i,t}$; e.g., Finfish)
-  # $$PC_{i,t} = ln(\frac{P_{i,t}}{P_{i,t-1}}) = \sum_{s=1}^n(PCW_{i,t,s}) $$ 
-  #   Where: 
-  #   - $PC_{i,t}$ = Revenue share-weighted price change for a catagory (i)
   
-  temp[ncol(temp)+1]<-rowSums(tempPC, na.rm = T)
+  
+  
+  
+  
+  ###Quantity Changes for the category ($QC_{t,i}$; e.g., Finfish)
+  
+  # $$QC_{t,i} = ln(\frac{Q_{t,i}}{Q_{t-1,i}}) = \sum_{s=1}^n(QCW_{t,i,s}) $$ 
+  # Where: 
+  # - $QC_{t,i}$ = Quantity change for a category (i)
+  
+  temp[ncol(temp)+1]<-rowSums(tempPCW, na.rm = T)
   names(temp)[ncol(temp)]<-paste0("PC", NameBasecategory)
+  
+  
+  
+  
+  
+  
+  #remove duplicates
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  
   
   ###4. Price Changes for each species ($PC_{s,i,t}$ aka $\Delta ln(P_{s,i,t})$; e.g., Salmon and Flounder)
   
@@ -664,7 +683,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
     # $$PI_{t} = PI_{t}/PI_{t = baseyear}$$
     # In this example, we'll decide that the base year is `r baseyr`, for whatever reason. Notice that the $PI_{i,t=baseyr} = 1$ 
   
-  tempPI<-PriceIndex(temp, BaseColName = NameBasecategory, baseyr)
+  tempPI<-PriceIndex(temp, BaseColName = NameBasecategory, baseyr, var = "PC")
   temp[ncol(temp)+1]<-(tempPI)
   names(temp)[ncol(temp)]<-paste0("PI", NameBasecategory)
   
@@ -709,7 +728,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
                                  as.character(temp0[,paste0("Q", NameBasecategory)]))) != 0) {
     warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}"
   }
-  
+  }
 }
   return(list(temp, warnings.list))
 }
@@ -723,20 +742,21 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   warnings.list<-list()
   figures.list<-list()
   
+  ########Housekeeping
+  # Here I am just going to collect some housekeeping items
+  temp<-data.frame(temp)
+  
   NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
-                                              strsplit(x = names(temp)[3], 
-                                                       split = "_")[[1]][2], 
-                                            split = "[a-zA-Z]")[[1]][1]))[1]
+                                                strsplit(x = names(temp)[2], 
+                                                         split = "_")[[1]][2], 
+                                              split = "[a-zA-Z]")[[1]][1]))[1]
   
-  #####HOUSEKEEPING
-  NameBaseTotal<-substr(x = names(temp)[grep(x = names(temp), pattern = paste0(NumberOfSpecies, "Total"))][2],
-                        start = 2, stop = nchar(names(temp)[grep(x = names(temp),
-                                                                 pattern = paste0(NumberOfSpecies, "Total"))][2]))
   
-  ######START ANALYSIS
+  
+  
   category<-unique(as.character(lapply(X = strsplit(x = as.character(names(temp)), 
-                                             split = paste0("_")), 
-                                function(x) x[1])))
+                                                    split = paste0("_")), 
+                                       function(x) x[1])))
   category<-unique(substr(x = category, start = 2, stop = nchar(category)))
   category<-category[!grepl(pattern = "[a-zA-Z]", x = category)]
   category<-category[!(category %in% numbers0(c(0, (category)[1]))[1])]
@@ -748,51 +768,66 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   maxyr<-max(rownames(temp))
   minyr<-min(rownames(temp))
   
-  category<-category00<-sort(category)
+  category<-category00<-sort((category))
   category.rm<-c()
+  
+  
+  NameBaseTotal<-paste0(paste(rep_len(x = 0, length.out = nchar(category[1])), collapse = ""), 
+                        "_", NumberOfSpecies, "Total")
+  
   
   for (ii in 1:length(category)){
 
-    VColumns<-grep(pattern = paste0("V", category[ii],"_"),
-                   x = substr(x = names(temp),
-                              start = 1,
-                              stop = (2+nchar(category[ii]))))
+    QColumns0<-QColumns<-grep(pattern = paste0("Q", category[ii],"_"), 
+                              x = substr(x = names(temp), 
+                                         start = 1, 
+                                         stop = (2+nchar(category[ii]))))
     
-    NameBasecategory<-names(temp)[grepl(pattern = NumberOfSpecies, 
-                                        x = names(temp)) &
-                                    grepl(pattern = paste0("V", category[ii]), x = names(temp))]
+    VColumns0<-VColumns<-grep(pattern = paste0("V", category[ii],"_"), 
+                              x = substr(x = names(temp), 
+                                         start = 1, 
+                                         stop = (2+nchar(category[ii]))))
     
-    NameBasecategory<-substr(start = 2,
-                             stop = nchar(NameBasecategory),
-                             x = NameBasecategory)
+    NameBasecategory<-names(temp)[grepl(pattern = paste0("VE", category[ii],"_"), 
+                                        x = substr(x = names(temp), 
+                                                   start = 1, 
+                                                   stop = (3+nchar(category[ii]))))]
     
-    VColumns<-VColumns[!(grepl(pattern = NameBasecategory,
-                               x = names(temp)[VColumns]))]
+    NameBasecategory<-substr(x = NameBasecategory, start = 3, stop = nchar(NameBasecategory))
     
-    #if there are still columns to assess that haven't been "removed"
-    # if (length(VColumns) != 0) {
-    ###Append species and category level calculations
-    temp00<-ImplicitQuantityOutput.speciescat.p(temp, ii=category[ii],
-                                               baseyr, maxyr, minyr, 
-                                               pctmiss, warnings.list)
-
     
-    #If data for a catagory is no longer available after precentmissingthreshold etc, remove it from the category lineup
-    if (sum(names(temp00[1][[1]]) %in% paste0("PI", NameBasecategory)) == 0) {
+    if (length(VColumns0) < 2) {
+      
+      warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")
       category.rm<-c(category.rm, ii)
-    } else {
-     temp0<-cbind.data.frame(temp0, temp00[[1]])
-    }
+      
+    }  else  {
+      
+      #if there are still columns to assess that haven't been "removed"
+      ###Append species and category level calculations
+      temp00<-ImplicitQuantityOutput.speciescat.q(temp, ii=category[ii],
+                                                  baseyr, maxyr, minyr, 
+                                                  pctmiss, warnings.list)
     
-    ###Remove duplicate columns
-    temp0<-temp0[, !(grepl(pattern = "\\.[0-9]+", x = names(temp0)))]    
-    
-    warnings.list<-ImplicitQuantityOutput.speciescat.p(temp, ii=category[ii],
-                                     baseyr, maxyr, minyr, 
-                                     pctmiss, warnings.list)[[2]]
-    
+      #If data for a catagory is no longer available after precentmissingthreshold etc, remove it from the category lineup
+      if (sum(names(temp00[1][[1]]) %in% paste0("PI", NameBasecategory)) == 0) {
+        category.rm<-c(category.rm, ii)
+      } else {
+        temp1<-temp00[[1]]
+        #remove duplicates
+        temp1<-temp1[, !(grepl(pattern = "\\.[0-9]+", x = names(temp1)))]
+        temp1 <- temp1[, !duplicated(colnames(temp1))]
+        temp0<-cbind.data.frame(temp0, temp1)
+      }
+      
+      ###Remove duplicate columns
+      temp0<-temp0[, !(grepl(pattern = "\\.[0-9]+", x = names(temp0)))]    
+      
+      warnings.list<-ImplicitQuantityOutput.speciescat.q(temp, ii=category[ii],
+                                                         baseyr, maxyr, minyr, 
+                                                         pctmiss, warnings.list)[[2]] 
 
-
+}
   }
   
   if(!(is.null(category.rm))) {
@@ -801,6 +836,14 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   
   temp<-temp0#[,2:ncol(temp0)]
   
+  
+  
+  #remove duplicates
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  
     
     ###8. Value for all fisheries for species where P was able to be calculated
     # $R_{i,t}$, defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{i,t}$ (called $VV_{t}$) for the category using only values for species that were used to calculate $P_{i,t}$. 
@@ -808,9 +851,29 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
     # where: 
     # - $VV_{t}$ is the new total of $V_{i,t}$ for the entire fishery using only values for species that were used to calculate $P_{i,t}$
     
-    temp[,ncol(temp)+1]<-rowSums(temp[,grep(pattern = "VV", x = names(temp))], na.rm = T)
-    names(temp)[ncol(temp)]<-paste0("VV",NameBaseTotal)
+  #Total VV
+  temp0<-data.frame(temp[,grep(pattern = paste0("VV", "[0-9]+_", NumberOfSpecies), 
+                               x = names(temp))], 
+                    rowSums(temp[,grep(pattern = "VV", x = names(temp))], na.rm = T))
+  names(temp0)[ncol(temp0)]<-paste0("VV",NameBaseTotal)
+  temp0<-data.frame(temp0)
+  temp[ncol(temp)+1]<-temp0[ncol(temp0)]
+  
+  
+  #Total V
+  # names(temp)[names(temp) %in% paste0("V", NameBaseTotal)]<-paste0("REMOVED_V", NameBaseTotal)
+  
+  temp0<-temp[grep(x = names(temp), 
+                   pattern = paste0("V[0-9]+_", NumberOfSpecies))]
+  temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("VV")))]
+  temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("REMOVED_")))]
+  
+  temp[ncol(temp)+1]<-rowSums(temp0, na.rm = T)
+  names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal)
     
+  
+  
+  
     ###Revenue Share for the entire commercial fishery ($R_t$)
     # $$R_{i,t} = V_{i,t}/V_{t}$$
     # where: 
@@ -818,102 +881,95 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
     # - $V_{i,t}$ is the value ($) per individual species (s), category (i), for each year (t)
     #Here, we don't use $VV_{t}$ beacause we want to expand the proportion to include all of the species caught, regardless if they were used in the price calculations. 
     
-    names(temp)[names(temp) %in% paste0("V", NameBaseTotal)]<-paste0("REMOVED_V", NameBaseTotal)
+  tempR<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+  
+  for (i in 1:length(category)) {
     
-    temp0<-temp[grep(x = names(temp), 
-                     pattern = paste0("V[1-9]+_", NumberOfSpecies))]
-    temp0<-temp0[,-(grep(x = names(temp0), pattern = c("VV")))]
-    temp0<-temp0[,-(grep(x = names(temp0), pattern = c("REMOVED_")))]
+    CatCol<-names(temp)[grep(pattern = paste0("V", category[i],"_", NumberOfSpecies), 
+                             x = substr(x = names(temp), 
+                                        start = 1, 
+                                        stop = nchar(paste0("V", category[i],"_", NumberOfSpecies))))]
+    NameBasecategory<-substr(x = CatCol, start = 2, stop = nchar(CatCol))
     
-    temp[ncol(temp)+1]<-rowSums(temp0, na.rm = T)
-    names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal)
-    
-    #remove duplicates
-    temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
-    temp <- temp[, !duplicated(colnames(temp))]
-    temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
-    temp <- temp[, !duplicated(colnames(temp))]
-    
-    
-    tempR<-data.frame(rep_len(x = NA, length.out = nrow(temp)))
-    
-    for (ii in 1:length(category)){
-      
-      NameBasecategory<-paste0(category[ii], "_", NumberOfSpecies)
-      NameBasecategory<-paste0(NameBasecategory, 
-                               strsplit(x = names(temp)[grep(pattern = NameBasecategory, 
-                                                             x = names(temp))][1], split = NumberOfSpecies)[[1]][2])
-      
-      # names(temp)[names(temp) %in% paste0("V", NameBaseTotal)]<-paste0("REMOVED_V", NameBaseTotal)
-      # 
-      # temp0<-temp[grep(x = names(temp),
-      #                  pattern = paste0("V[1-9]+_", NumberOfSpecies))]
-      # temp0<-temp0[,-(grep(x = names(temp0), pattern = c("VV")))]
-      # temp0<-temp0[,-(grep(x = names(temp0), pattern = c("REMOVED_")))]
-      # 
-      # temp[ncol(temp)+1]<-rowSums(temp0, na.rm = T)
-      # names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal)
-      
-      #remove duplicates
-      temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
-      temp <- temp[, !duplicated(colnames(temp))]
-      temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
-      temp <- temp[, !duplicated(colnames(temp))]
-      
-    
-    tempR[,ii]<-data.frame(temp[,names(temp) %in% paste0("V", NameBasecategory)]/
-                             temp[,names(temp) %in% paste0("V", NameBaseTotal)])
-    names(tempR)[ii]<-paste0("R", NameBasecategory)
-
-    temp[,ncol(temp)+1]<-tempR[,ii]
-    names(temp)[ncol(temp)]<-paste0("R", NameBasecategory)
-    
-    #remove duplicates
-    temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
-    temp <- temp[, !duplicated(colnames(temp))]
-    temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
-    temp <- temp[, !duplicated(colnames(temp))]
+    tempR[,i]<-temp[,paste0("V", NameBasecategory)]/temp[,paste0("V", NameBaseTotal)]
+    names(tempR)[i]<-paste0("R", NameBasecategory)
+  }
+  temp<-cbind.data.frame(temp, tempR)
+  
+  # Is there a warning?
+  if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
+    warnings.list[length(warnings.list)+1]<-paste0("Warning: Rows of R_{t,i} for ",NameBaseTotal," did not sum to 1")
+  }
+  
+  
+  
+  
+  
+  #remove duplicates
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
     
     
     ###8. Price Changes for the entire commercial fishery ($PC_t$)
     # Measure output price changes ($PC_t$) for total output ($Q_t$) using $R_{i,t}$ and $P_{i,t}$ estimates. 
     
     # $$PC_{t} = ln(\frac{P_{t}}{P_{t-1}}) =  \sum_{i=1}^n([\frac{R_{i,t} + R_{i,t-1}}{2}] * [ln(P_{i,t}) - ln(P_{i,t-1})]) $$
-    tempPC[,ii]<-PriceChange(R0 = temp[, names(temp) %in% 
-                                          paste0("R", NameBasecategory) & 
-                                         !grepl(pattern = "REMOVED_", x = names(temp))], 
-                             P0 = temp[, names(temp) %in% 
-                                          paste0("PI", NameBasecategory) & 
-                                         !grepl(pattern = "REMOVED_", x = names(temp))])
+  
+  #Find which columns in this table are price and revenue share columns
+  tempPCW<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+  for (i in 1:length(category)) {
     
-    names(tempPC)[ii]<-paste0("PC", NameBasecategory)
+    CatCol<-names(temp)[grep(pattern = paste0("VE", category[i], "_", NumberOfSpecies), 
+                             x = substr(x = names(temp), 
+                                        start = 1, 
+                                        stop = nchar(paste0("VE", category[i], "_", NumberOfSpecies))))]
     
-    #Calculate Quantity Change
-    tempQC[,ii]<-PriceChange(R0 = temp[, names(temp) %in% 
-                                          paste0("R", NameBasecategory) & 
-                                         !grepl(pattern = "REMOVED_", x = names(temp))], 
-                             P0 = temp[, names(temp) %in% 
-                                          paste0("Q", NameBasecategory) & 
-                                         !grepl(pattern = "REMOVED_", x = names(temp))])
+    NameBasecategory<-substr(x = CatCol, start = 3, stop = nchar(CatCol))
     
-    names(tempQC)[ii]<-paste0("QC", NameBasecategory)
+    
+    R0 = temp[, names(temp) %in% paste0("R", NameBasecategory)]
+    
+    P0 = temp[, names(temp) %in% paste0("PI", NameBasecategory)]
+    
+    tempPCW[,ii]<-PriceChange(R0, P0)
+    
+    names(tempPCW)[ii]<-paste0("PCW", NameBasecategory)
     
   }
   
-  temp<-cbind.data.frame(temp, tempPC)
-  temp[,ncol(temp)+1]<-rowSums(tempPC, na.rm = T)
+  temp<-cbind.data.frame(temp, tempPCW)
+  
+  
+  
+  ###Quantity Changes for the entire fishery ($QC_{t}$)
+  # $$PC_{t} = ln(\frac{PI_{t,i}}{PI_{t-1,i}}) = \sum_{s=1}^n(PCW_{t,i}) $$ 
+  #   Where: 
+  #   - $PC_{t}$ = Quantity change for the entire fishery
+  
+  temp[,ncol(temp)+1]<-rowSums(tempPCW, na.rm = T)
   names(temp)[ncol(temp)]<-paste0("PC", NameBaseTotal)
 
-  #Note if there is an Error
-  if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
-    warnings.list[length(warnings.list)+1]<-paste0("Warning: Rows of R_{i,t} for ",NameBaseTotal," did not sum to 1")
-  }
   
-  ###14.  Solve Output portion of the equation for the Output Changes: 
-  # $$QC = \sum_{i=1}^n((\frac{R_{it} + R_{it-1}}{2}) * ln(\frac{Q_{it}}{Q_{it-1}}))$$
-  temp<-cbind.data.frame(temp, tempQC)
-  temp[,ncol(temp)+1]<-rowSums(tempQC, na.rm = T)
-  names(temp)[ncol(temp)]<-paste0("QC", NameBaseTotal)
+  
+  #remove duplicates
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  
+
+  
+  # ###14.  Solve Output portion of the equation for the Output Changes: 
+  # # $$QC = \sum_{i=1}^n((\frac{R_{it} + R_{it-1}}{2}) * ln(\frac{Q_{it}}{Q_{it-1}}))$$
+  # temp<-cbind.data.frame(temp, tempQC)
+  # temp[,ncol(temp)+1]<-rowSums(tempQC, na.rm = T)
+  # names(temp)[ncol(temp)]<-paste0("QC", NameBaseTotal)
+  
+  
+  
+  
   
   ###Price Index for the entire commercial fishery ($PI_t$)
   # We calculate the price index first by comparing by multiplying the previous years $PI_{t-1}$ by that year's price change $PC_{t}$, where the PI of the first year $PI_{t=firstyear} = 1$
@@ -925,29 +981,65 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   # Then, to change the price (calulated later) into base year dollars, we use the following equation: 
   # $$PI_{t} = PI_{t}/PI_{t = baseyear}$$
   # In this example, we'll decide that the base year is `r baseyr`, for whatever reason. Notice that the $PI_{i,t=baseyr} = 1$ 
-  tempPI<-PriceIndex(temp, BaseColName = NameBaseTotal, baseyr)
+  tempPI<-PriceIndex(temp, BaseColName = NameBaseTotal, baseyr, var = "PC")
   temp[ncol(temp)+1]<-(tempPI)
   names(temp)[ncol(temp)]<-paste0("PI", NameBaseTotal)
   
+  
+  
+  
+  #remove duplicates
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  
+  
+  
   ### 11. Total Implicit Quantity/Output for the entire commercial fishery ($Q_t = Y_t$)
   # To get quantity estimates for total output using total value of landings divided by price index as follow: $Y=V/I$
-  
   temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("V", NameBaseTotal)]/
     temp[, names(temp) %in% paste0("PI", NameBaseTotal)]
   names(temp)[ncol(temp)]<-paste0("Q", NameBaseTotal)
   
+  
+  
+  
+  
   ### 12. Total Implicit Quantity/Output Index
-    temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("Q", NameBaseTotal)]/
-      temp[rownames(temp) %in% baseyr, names(temp) %in% paste0("Q", NameBaseTotal)]
-    names(temp)[ncol(temp)]<-paste0("QI", NameBaseTotal)
+    Q<-names(temp)[names(temp) %in% paste0("Q", NameBaseTotal)]
+    temp[,ncol(temp)+1]<-temp[,Q]/temp[,Q][rownames(temp) %in% baseyr]
+    names(temp)[ncol(temp)]<-paste0("QI", NameBaseTotal)  
+    
     
     
     ### 13. Sum Total Implicit Quantity/Output Index
-    temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("QE", NameBaseTotal)]/
-      temp[rownames(temp) %in% baseyr, names(temp) %in% paste0("QE", NameBaseTotal)]
-    names(temp)[ncol(temp)]<-paste0("QEI", NameBaseTotal)
+    QE<-names(temp)[names(temp) %in% paste0("QE", NameBaseTotal)]
+    temp[,ncol(temp)+1]<-temp[,QE]/temp[,QE][rownames(temp) %in% baseyr]
+    names(temp)[ncol(temp)]<-paste0("QEI", NameBaseTotal)  
   
   
+    
+    # ###14.  Solve Output portion of the equation for the Output Changes: 
+    # $$QC = \sum_{i=1}^n((\frac{R_{it} + R_{it-1}}{2}) * ln(\frac{Q_{it}}{Q_{it-1}}))$$
+    tempQCW<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+    for (i in 1:length(category)) {
+      CatCol<-names(temp)[grep(pattern = paste0("VE", category[i], "_", NumberOfSpecies), 
+                               x = substr(x = names(temp), 
+                                          start = 1, 
+                                          stop = nchar(paste0("VE", category[i], "_", NumberOfSpecies))))]
+      NameBasecategory<-substr(x = CatCol, start = 3, stop = nchar(CatCol))
+      R0 = temp[, names(temp) %in% paste0("R", NameBasecategory)]
+      Q0 = temp[, names(temp) %in% paste0("Q", NameBasecategory)]
+      tempQCW[,ii]<-PriceChange(R0, Q0)
+      names(tempQCW)[ii]<-paste0("QCW", NameBasecategory)
+    }
+    temp<-cbind.data.frame(temp, tempQCW)
+    
+    temp[,ncol(temp)+1]<-rowSums(tempQCW, na.rm = T)
+    names(temp)[ncol(temp)]<-paste0("QC", NameBaseTotal)  
+    
+    
   #Remove Duplicate Columns
   temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
   temp <- temp[, !duplicated(colnames(temp))]
@@ -989,41 +1081,42 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   ####3. When back calculated, growth rate ?
   
   # $$ln(Q_t/Q_{t-1}) = \sum( ( \frac{R_{i, t} + R_{i, t-1}}{2})  * ln(\frac{Q_{i,t}}{Q_{i,t-1}}))$$  
-  
-  #Remove Duplicate Columns
-  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
-  temp <- temp[, !duplicated(colnames(temp))]
-
+  #Part 1
+  #Part 1
   names0<-c(paste0("Q",NameBaseTotal))
-  for (ii in 1:length(category)) {
+  for (i in 1:length(category)) {
     names0<-c(names0, 
-              names(temp)[grep(pattern = paste0("Q", category[ii], "_", NumberOfSpecies), names(temp))],
-              names(temp)[grep(pattern = paste0("R", category[ii], "_", NumberOfSpecies), names(temp))])
+              names(temp)[grep(pattern = paste0("Q", category[i], "_", NumberOfSpecies), names(temp))],
+              names(temp)[grep(pattern = paste0("R", category[i], "_", NumberOfSpecies), names(temp))])
   }
   
-  temp0<-temp[,unique(names0)]
+  temp0<-temp[,names0]
   
   temp0[,(ncol(temp0)+1)]<-c(NA, ln(temp0[-nrow(temp0),paste0("Q",NameBaseTotal)]/
                                       temp0[-1,paste0("Q",NameBaseTotal)]))
   names(temp0)[ncol(temp0)]<-"part1"
   
-  temp00<-data.frame(rep_len(x = NA, length.out = nrow(temp)))
-  for (ii in 1:length(category)) { 
-    R0<-temp0[,grep(pattern = paste0("R", category[ii]), x = names(temp0)) ]
-    Q0<-temp0[,grep(pattern = paste0("Q", category[ii]), x = names(temp0)) ]
+  #Part 2
+  temp00<-data.frame()
+  for (i in 1:length(category)) {
+    R0<-temp0[,grepl(pattern = paste0("R", category[i]), x = names(temp0))]
+    Q0<-temp0[,grepl(pattern = paste0("Q", category[i]), x = names(temp0))]
     
     for (r in 2:(nrow(temp))){
-      temp00[r,ii]<-(((R0[r] + R0[r-1])/2) * ln(Q0[r] / Q0[r-1]) )
+      temp00[r,i]<-(((R0[r] + R0[r-1])/2) * ln(Q0[r] / Q0[r-1]) )
     }
+    names(temp00)[i]<-paste0("ln", category[i])
   }
   
-  temp0[,(ncol(temp0)+1)]<-c(NA, rowSums(temp00, na.rm = T)[2:length(rowSums(temp00, na.rm = T))])
-  names(temp0)[ncol(temp0)]<-"part2"
+  temp0[,(ncol(temp0)+1)]<-rowSums(temp00)
+  names(temp0)[ncol(temp0)]<-"part2"  
   
-  if (length(setdiff(as.character(temp0[,"part1"]), 
-                     as.character(temp0[,"part2"]))) != 0) {
+  
+  if (length(setdiff(as.character(temp0$part1), 
+                     as.character(temp0$part2))) != 0) {
     warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( R_{i, t} - R_{i, t-1} ) / 2 )  x ln( (Q_{i,t}) / (Q_{i,t-1} ) )"
   }
+  
   
   
   
@@ -1041,12 +1134,12 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   a<-data.frame(a)
   if(ncol(a) != 0){
     for (iii in 1:ncol(a)) {
-    aa<-c(aa, ifelse(sum(a[,iii] %in% c(NA, NaN, 0)) == nrow(a), iii, NA))
+      aa<-c(aa, ifelse(sum(a[,iii] %in% c(NA, NaN, 0)) == nrow(a), iii, NA))
+    }
+    vv<-(aa[!(is.na(aa))])
+  } else {
+    pp<-0
   }
-  vv<-(aa[!(is.na(aa))])
-} else {
-  pp<-0
-}
   #quantity
   a<-temp
   a<-a[,grep(pattern = "Q[1-9]+_[1-9]+", x = names(a))]
@@ -1059,9 +1152,9 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   a<-data.frame(a)
   if(ncol(a) != 0){
     for (iii in 1:ncol(a)) {
-    aa<-c(aa, ifelse(sum(a[,iii] %in% c(NA, NaN, 0)) == nrow(a), iii, NA))
-  }
-  qq<-(aa[!(is.na(aa))])
+      aa<-c(aa, ifelse(sum(a[,iii] %in% c(NA, NaN, 0)) == nrow(a), iii, NA))
+    }
+    qq<-(aa[!(is.na(aa))])
   } else {
     pp<-0
   }
@@ -1096,10 +1189,14 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   
   
   ###########################################GRAPHS
-
+  #remove duplicates
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
   
   #####Calculated Q by Species
-  title00<- "_QBySpecies"
+  title00<- "_Q-Species"
   
   a0<-data.frame(temp[,grepl(
     pattern = paste0("Q[0-9]+_", NumberOfSpecies), 
@@ -1187,8 +1284,8 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   a0<-data.frame(temp[,grepl(
     pattern = paste0("V[0-9]+_", NumberOfSpecies), 
     x = names(temp))])
-  a0<-a0[,-grep(pattern = "REMOVED_", x = names(a0))]
-  a0<-a0[,-grep(pattern = "VV[0-9]+_", x = names(a0))]
+  a0<-a0[,!grepl(pattern = "REMOVED_", x = names(a0))]
+  a0<-a0[,!grepl(pattern = "VV[0-9]+_", x = names(a0))]
   
   a0$Year<-rownames(a0)
   
@@ -1211,8 +1308,8 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   a0<-data.frame(temp[,grepl(
     pattern = paste0("V[0-9]+_", NumberOfSpecies), 
     x = names(temp))])
-  a0<-a0[,-grep(pattern = "REMOVED_", x = names(a0))]
-  # a0<-a0[,-grep(pattern = "VV[0-9]+_", x = names(a0))]
+  a0<-a0[,!grepl(pattern = "REMOVED_", x = names(a0))]
+  # a0<-a0[,!grepl(pattern = "VV[0-9]+_", x = names(a0))]
   
   a0$Year<-rownames(a0)
   
@@ -1226,20 +1323,16 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   
   g<-plotnlines(dat = temp0, title00, place) 
   
-  figures.list[[length(figures.list)+1]]<-g
-  names(figures.list)[length(figures.list)]<-paste0(title0, title00)
+  # figures.list[[length(figures.list)+1]]<-g
+  # names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
   
   ########VE
   title00<- "_VE-Line"
   
   a0<-data.frame(temp[,grepl(
-    pattern = paste0("V[0-9]+_", NumberOfSpecies), 
+    pattern = paste0("VE[0-9]+_", NumberOfSpecies), 
     x = names(temp))])
-  
-  a0<-a0[,grep(pattern = "REMOVED_", x = names(a0))]
-  names(a0)<-gsub(pattern = "REMOVED_", replacement = "", x = names(a0))
-  names(a0)<-paste0("VE", substr(x = names(a0), start = 3, stop = nchar(names(a0))))
   
   a0$Year<-rownames(a0)
   
@@ -1251,15 +1344,15 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   
   temp0$cat<-paste0(as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
                                                      split = paste0("_", NumberOfSpecies)), function(x) x[1])), 
-                "_",
-                as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
-                                                 split = paste0("_", NumberOfSpecies)), function(x) x[2])))
+                    "_",
+                    as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
+                                                     split = paste0("_", NumberOfSpecies)), function(x) x[2])))
   
   
   g<-plotnlines(dat = temp0, title00, place) 
   
-  figures.list[[length(figures.list)+1]]<-g
-  names(figures.list)[length(figures.list)]<-paste0(title0, title00)
+  # figures.list[[length(figures.list)+1]]<-g
+  # names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
   #### Quantity Index Compare
   # For comparison, let's recreate those graphs to make sure we are getting the same output:
@@ -1366,18 +1459,17 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   
   total.no.v<-ncol(a0)*nrow(a0)
   
-  cat0<-data.frame(names0 = (names(temp.orig)[grepl(pattern = paste0("V[0-9]+_", NumberOfSpecies), 
+  cat0<-data.frame(names0 = (names(temp.orig)[grepl(pattern = paste0("VE[0-9]+_", NumberOfSpecies), 
                                                     x = names(temp.orig))]))
   
   cat0$no<-as.character(lapply(X = strsplit(x = as.character(cat0$names0), split = "_"), 
-                                       function(x) x[1]))
-  
+                               function(x) x[1]))
   cat0$numberofspp<-NA
   for (i in 1:nrow(cat0)) {
     cat0$numberofspp[i]<-length(grep(pattern = cat0$no[i], 
-                                    x = substr(x = names(a0), 
-                                               start = 1, 
-                                               stop = max(nchar(cat0$no))) ))
+                                     x = substr(x = names(a0), 
+                                                start = 1, 
+                                                stop = max(nchar(cat0$no))) ))
   }
   
   
@@ -1387,8 +1479,6 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
                                     function(x) x[2]))
   cat0$label<-paste0(cat0$catname, " (n=",  cat0$numberofspp,")")
   
-  # cat0$catname<-(names(temp00[[2]]))[merge(x = merge(names(temp00[[2]])]
-  # cat0$names0<-NULL
   a<-temp.orig
   a$Year<-rownames(a)
   a<-a[,!grepl(pattern = NumberOfSpecies, x = names(a))]
@@ -1397,11 +1487,11 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   a00$na<-0
   a00$na[(is.na(a00$val)) | a00$val %in% 0]<-1
   a00$no<-gsub(pattern = "[a-zA-Z]", replacement = "", x = as.character(lapply(X = strsplit(x = as.character(a00$spp), split = "_"), 
-                               function(x) x[1])) ) #catagory number
+                                                                               function(x) x[1])) ) #catagory number
   a00$x<-1
   
   aa<-a00
-
+  
   a00<-merge(x = aa, y = cat0, by = "no")
   
   #SUM
@@ -1515,18 +1605,18 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
                                                 function(x) x[2])))
     for (i in 1:length(category)) {
       #Orgionally
-      spp.pre<-unique(cat2[grep(pattern = paste0("V", i), x = cat1)], cat2[grep(pattern = paste0("Q", i), x = cat1)])
+      spp.pre<-unique(cat2[grep(pattern = paste0("V", category[i]), x = cat1)], cat2[grep(pattern = paste0("Q", category[i]), x = cat1)])
       cat.pre<-spp.pre[grep(pattern = NumberOfSpecies, x = spp.pre)]
-      cat.pre<-gsub(pattern = "[0-9]", replacement = "", x = cat.pre)
-      spp.pre<-spp.pre[-grep(pattern = NumberOfSpecies, x = spp.pre)]
+      cat.pre<-unique(gsub(pattern = "[0-9]", replacement = "", x = cat.pre))
+      spp.pre<-spp.pre[!grepl(pattern = NumberOfSpecies, x = spp.pre)]
       spp.pre<-gsub(pattern = "[0-9]", replacement = "", x = spp.pre)      
       spp.pre<-sort(x = as.character(spp.pre), decreasing = F)
       
       #In Analysis
-      spp.pst<-cat2[grep(pattern = paste0("R", i), x = cat1)]
+      spp.pst<-cat2[grep(pattern = paste0("R", category[i]), x = cat1)]
       cat.pst<-spp.pst[grep(pattern = NumberOfSpecies, x = spp.pst)]
       cat.pst<-gsub(pattern = "[0-9]", replacement = "", x = cat.pst)
-      spp.pst<-spp.pst[-grep(pattern = NumberOfSpecies, x = spp.pst)]
+      spp.pst<-spp.pst[!grepl(pattern = NumberOfSpecies, x = spp.pst)]
       spp.pst<-gsub(pattern = "[0-9]", replacement = "", x = spp.pst)
       spp.pst<-sort(x = as.character(spp.pst), decreasing = F)
     
@@ -1559,9 +1649,9 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
   
   
   NameBaseTotal<-substr(x = sort(names(temp)[grep(x = names(temp), 
-                                                  pattern = "0Total")], decreasing = T)[1],
-                        start = 2, stop = nchar(sort(names(temp)[grep(x = names(temp), 
-                                                                      pattern = "0Total")],
+                                                  pattern = paste0(NumberOfSpecies, "Total"))], decreasing = T)[1],
+                        start = 3, stop = nchar(sort(names(temp)[grep(x = names(temp), 
+                                                                      pattern = paste0(NumberOfSpecies, "Total"))],
                                                      decreasing = T)[1]))
   
   QColumns0<-QColumns<-grep(pattern = paste0("Q", ii,"_"), 
@@ -1569,42 +1659,37 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
                                        start = 1, 
                                        stop = (2+nchar(ii))))
   
-  QColumns<-QColumns[!(grepl(pattern = paste0("Q", ii,"_", NumberOfSpecies), 
-                             x = names(temp)[QColumns]))]
+  VColumns0<-VColumns<-grep(pattern = paste0("V", ii,"_"), 
+                            x = substr(x = names(temp), 
+                                       start = 1, 
+                                       stop = (2+nchar(ii))))
   
-  VColumns<-grep(pattern = paste0("V", ii,"_"), 
-                 x = substr(x = names(temp), 
-                            start = 1, 
-                            stop = (2+nchar(ii))))
+  NameBasecategory<-names(temp)[grepl(pattern = paste0("VE", ii,"_"), 
+                                      x = substr(x = names(temp), 
+                                                 start = 1, 
+                                                 stop = (3+nchar(ii))))]
   
-  NameBasecategory<-substr(start = 2, 
-                           stop = nchar(names(temp)[VColumns[(grepl(
-                             pattern = paste0("V", ii,"_", NumberOfSpecies), 
-                             x = names(temp)[VColumns]))]]), 
-                           x = names(temp)[VColumns[(grepl(
-                             pattern = paste0("V", ii,"_", NumberOfSpecies), 
-                             x = names(temp)[VColumns]))]])  
+  NameBasecategory<-substr(x = NameBasecategory, start = 3, stop = nchar(NameBasecategory))
   
-  VColumns0<-VColumns<-VColumns[!(grepl(pattern = paste0("V", ii,"_", NumberOfSpecies), 
-                                        x = names(temp)[VColumns]))]
+  
   
   
   
   ###Remove any V and Q data where V column has less data than the specifed $pctmiss$
   
-  intersectcol<-base::intersect(x = substr(x = names(temp[,VColumns]), start = 2, stop = nchar(names(temp[,VColumns]))), 
-                                y = substr(x = names(temp[,QColumns]), start = 2, stop = nchar(names(temp[,QColumns]))))
-  unioncol<-base::union(x = substr(x = names(temp[,VColumns]), start = 2, stop = nchar(names(temp[,VColumns]))), 
-                        y = substr(x = names(temp[,QColumns]), start = 2, stop = nchar(names(temp[,QColumns]))))
-  
-  differentcol<-base::setdiff(unioncol, intersectcol)
-  
-  if (length(differentcol) != 0) {
-    for (i in 1:length(differentcol)) {
-      names(temp)[grep(pattern = differentcol[i], x = names(temp))]<-
-        paste0("REMOVED_", names(temp)[grep(pattern = differentcol[i], x = names(temp))])
-    }
-  }
+  # intersectcol<-base::intersect(x = substr(x = names(temp[,VColumns]), start = 2, stop = nchar(names(temp[,VColumns]))), 
+  #                               y = substr(x = names(temp[,QColumns]), start = 2, stop = nchar(names(temp[,QColumns]))))
+  # unioncol<-base::union(x = substr(x = names(temp[,VColumns]), start = 2, stop = nchar(names(temp[,VColumns]))), 
+  #                       y = substr(x = names(temp[,QColumns]), start = 2, stop = nchar(names(temp[,QColumns]))))
+  # 
+  # differentcol<-base::setdiff(unioncol, intersectcol)
+  # 
+  # if (length(differentcol) != 0) {
+  #   for (i in 1:length(differentcol)) {
+  #     names(temp)[grep(pattern = differentcol[i], x = names(temp))]<-
+  #       paste0("REMOVED_", names(temp)[grep(pattern = differentcol[i], x = names(temp))])
+  #   }
+  # }
   
   
   for (i in 1:length(VColumns)) {
@@ -1620,59 +1705,51 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
     }
   }
   
-  VColumns<-names(temp)[VColumns0]
-  QColumns<-names(temp)[QColumns0]
-  
-  
+  if (length(VColumns0) == 0 #& length(QColumns0) == 0
+      ) {
+
+    warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")
+    
+  } else {
+    
+    VColumns<-names(temp)[VColumns0]
+    QColumns<-names(temp)[QColumns0]  
+    
   ###Caluclate Category Sums of $V$ and $Q$
   
   # Because we removed some columns for not meeting a perecent missing threshold of `r pctmiss`% and those columns will not be used at all in any part of the further analysis, we need to re-calculate the totals of $V$ and $Q$ for the catagories and the fishery as a whole. 
   
-  names(temp)[grep(pattern = NameBasecategory, x = names(temp))]<-
-    paste0("REMOVED_", 
-           names(temp)[grep(pattern = NameBasecategory, x = names(temp))])
-  
   # Q
-  temp.q<-temp[,grepl(pattern = paste0("Q", ii), x = substr(names(temp), start = 1, stop = 2)) ]
-  temp.q<-data.frame(temp.q)
+  temp.q<-data.frame(temp[,QColumns])
   if (ncol(temp.q)>1) {
     temp.q<-rowSums(temp.q, na.rm = T)
   }
   temp[ncol(temp)+1]<-temp.q
-  names(temp)[ncol(temp)]<-paste0("QE",NameBasecategory)
+  names(temp)[ncol(temp)]<-paste0("Q",NameBasecategory)
   
   # V
-  temp.v<-temp[,grepl(pattern = paste0("V", ii), x = substr(names(temp), start = 1, stop = 2)) ]
-  temp.v<-data.frame(temp.v)
+  temp.v<-data.frame(temp[,VColumns])
   if (ncol(temp.v)>1) {
     temp.v<-rowSums(temp.v, na.rm = T)
   }
   temp[ncol(temp)+1]<-temp.v
   names(temp)[ncol(temp)]<-paste0("V",NameBasecategory)
-  
-    
+
     
   # There may be instances where there are no or too few Q data for that species in a year or ever. The next goal will be to calculate the quantity change, so we need to have a value in there that won't show change. If we left a 0 in the spot, then the price change from 0 to the next year would be huge and misrepresented on the index. To avoid this, we have to deal with four senarios: 
-
 #### 1. If there are instances for a species where there are too few pairs of $Q$ are completely missing from the timeseries or where a percent of $Q$ is missing from the timeseries, we will remove the offending price columns entierly, so they don't influence the downstream price change or price index calculations.  
-  
   # Let's say here that if `r pctmiss*100 `% of the data is missing in a given $Q_{t,i,s}$, don't use that to calculate that species $Q_{t,i}$
-    
   #Find which columns in this table are price Columns
   
   cc<-c() #Empty
   for (c in 1:length(QColumns)) {
-    
     #If price could never be caluclated at any point in the timeseries (is 0/NaN/NA) for a column (c) 
     #Remove the column from the analysis. 
     #We will not be removing the column from the data, but simply remove it from the varaible "QColumns"
-    if (#sum(temp[,PColumns[c]] %in% c(0, NA, NaN)) %in% nrow(temp) |
-      sum(temp[,QColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > pctmiss) {
+    if (sum(temp[,QColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > pctmiss) {
       cc<-c(cc, c)#Collect offending columns
     }
-    
   }
-  
   if (length(cc)>0){
     QColumns<-QColumns[-cc]
   }
@@ -1680,7 +1757,7 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
   
   #CHECK IF ANALYSIS FAILED:
   
-  if (length(QColumns) == 0) {
+  if (length(QColumns) < 2) {
     
     warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")
     
@@ -1717,7 +1794,9 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
     #   - $V_{t,i,s, available}$ are the $V_{t,i,s}$ where $Q_{t,i,s}$ were able to be calculated
     
     temp0<-data.frame(temp[,names(temp) %in% VVColumns], 
-                      rowSums(temp[,names(temp) %in% VVColumns], na.rm = T))
+                      # ifelse(length(VVColumns) == 1, 
+                             # temp[,names(temp) %in% VVColumns], 
+                             rowSums(temp[,names(temp) %in% VVColumns], na.rm = T))#)
     names(temp0)[ncol(temp0)]<-paste0("VV",NameBasecategory)
     temp0<-data.frame(temp0)
     temp[ncol(temp)+1]<-temp0[ncol(temp0)]
@@ -1739,9 +1818,9 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
                        stop = nchar(QColumns[c]), 
                        x = QColumns[c]) 
       
-      V<-(temp[,names(temp) %in% paste0("VV", NameBasecategory)])  # sum of V where P was calculated
+      VV<-(temp[,names(temp) %in% paste0("VV", NameBasecategory)])  # sum of V where P was calculated
       V0<-temp[,names(temp) %in% paste0("V", NameBase)] #V of species; to make sure its the same column
-      tempR[,c]<-V0/V
+      tempR[,c]<-V0/VV
       names(tempR)[c]<-paste0("R", NameBase ) #name the column
     }
     
@@ -1775,7 +1854,7 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
  #    We use this *PriceChange* function. For all intensive purposes, replace $P$ with $Q$:
 
     #Find which columns in this table are price and revenue share columns
-    tempQC<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+    tempQCW<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
     for (c in 1:length(QColumns)){
       #For nameing columns
       NameBase<-substr(start = 2,
@@ -1785,11 +1864,11 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
       # Calculate
       Q0<-temp[, names(temp) %in% paste0("Q", NameBase)]
       R0<-temp[, names(temp) %in% paste0("R", NameBase)] #to make sure its the same column
-      tempQC[,c]<-PriceChange(R0, Q0)
-      names(tempQC)[c]<-paste0("QCW", NameBase ) #name the column
+      tempQCW[,c]<-PriceChange(R0, Q0)
+      names(tempQCW)[c]<-paste0("QCW", NameBase ) #name the column
     }
     
-    temp<-cbind.data.frame(temp, tempQC)
+    temp<-cbind.data.frame(temp, tempQCW)
     
     
     
@@ -1802,7 +1881,7 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
     # Where: 
     # - $QC_{t,i}$ = Quantity change for a category (i)
     
-    temp[ncol(temp)+1]<-rowSums(tempQC, na.rm = T)
+    temp[ncol(temp)+1]<-rowSums(tempQCW, na.rm = T)
     names(temp)[ncol(temp)]<-paste0("QC", NameBasecategory)
     
 
@@ -1852,6 +1931,8 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
 
     
   }
+  }
+  
   return(list(temp, warnings.list))
 }
 
@@ -1869,26 +1950,20 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   temp<-data.frame(temp)
   
   NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
-                                                strsplit(x = names(temp)[1], 
+                                                strsplit(x = names(temp)[2], 
                                                          split = "_")[[1]][2], 
                                               split = "[a-zA-Z]")[[1]][1]))[1]
   
   
-  NameBaseTotal<-substr(x = sort(names(temp)[grep(x = names(temp), 
-                                                  pattern = "0Total")], decreasing = T)[1],
-                        start = 2, stop = nchar(sort(names(temp)[grep(x = names(temp), 
-                                                                      pattern = "0Total")],
-                                                     decreasing = T)[1]))
   
   
-  ######START ANALYSIS
   category<-unique(as.character(lapply(X = strsplit(x = as.character(names(temp)), 
                                                     split = paste0("_")), 
                                        function(x) x[1])))
   category<-unique(substr(x = category, start = 2, stop = nchar(category)))
   category<-category[!grepl(pattern = "[a-zA-Z]", x = category)]
   category<-category[!(category %in% numbers0(c(0, (category)[1]))[1])]
-  
+
   temp0<-data.frame(rep_len(x = NA, length.out = nrow(temp)))
   tempPC<-data.frame(rep_len(x = NA, length.out = nrow(temp0)))
   tempQC<-data.frame(rep_len(x = NA, length.out = nrow(temp0)))
@@ -1896,38 +1971,40 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   maxyr<-max(rownames(temp))
   minyr<-min(rownames(temp))
   
-  category<-category00<-sort(category)
+  category<-category00<-sort((category))
   category.rm<-c()
   
-  for (ii in 1:length(category)){
+  
+  NameBaseTotal<-paste0(paste(rep_len(x = 0, length.out = nchar(category[1])), collapse = ""), 
+                        "_", NumberOfSpecies, "Total")
+  
+  for (ii in 1:length(category)) {
     
-    QColumns0<-QColumns<-grep(pattern = paste0("Q", ii,"_"), 
+    QColumns0<-QColumns<-grep(pattern = paste0("Q", category[ii],"_"), 
                               x = substr(x = names(temp), 
                                          start = 1, 
-                                         stop = (2+nchar(ii))))
+                                         stop = (2+nchar(category[ii]))))
     
-    QColumns<-QColumns[!(grepl(pattern = paste0("Q", ii,"_", 
-                                                numbers0(x = c(0, length(QColumns)-1))[1]), 
-                               x = names(temp)[QColumns]))]
+    VColumns0<-VColumns<-grep(pattern = paste0("V", category[ii],"_"), 
+                              x = substr(x = names(temp), 
+                                         start = 1, 
+                                         stop = (2+nchar(category[ii]))))
     
-    VColumns<-grep(pattern = paste0("V", ii,"_"), 
-                   x = substr(x = names(temp), 
-                              start = 1, 
-                              stop = (2+nchar(ii))))
+    NameBasecategory<-names(temp)[grepl(pattern = paste0("VE", category[ii],"_"), 
+                                        x = substr(x = names(temp), 
+                                                   start = 1, 
+                                                   stop = (3+nchar(category[ii]))))]
+    
+    NameBasecategory<-substr(x = NameBasecategory, start = 3, stop = nchar(NameBasecategory))
     
     
-    
-    NameBasecategory<-substr(start = 2, 
-                             stop = nchar(names(temp)[VColumns[(grepl(
-                               pattern = paste0("V", ii,"_", NumberOfSpecies), 
-                               x = names(temp)[VColumns]))]]), 
-                             x = names(temp)[VColumns[(grepl(
-                               pattern = paste0("V", ii,"_", NumberOfSpecies), 
-                               x = names(temp)[VColumns]))]])  
-    
-    VColumns0<-VColumns<-VColumns[!(grepl(pattern = paste0("V", ii,"_", NumberOfSpecies), 
-                                          x = names(temp)[VColumns]))]
-    
+    if (length(VColumns0) < 2) {
+      
+      warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")
+      category.rm<-c(category.rm, ii)
+      
+    }  else  {
+      
     #if there are still columns to assess that haven't been "removed"
     # if (length(VColumns) != 0) {
     ###Append species and category level calculations
@@ -1940,7 +2017,11 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
     if (sum(names(temp00[1][[1]]) %in% paste0("QI", NameBasecategory)) == 0) {
       category.rm<-c(category.rm, ii)
     } else {
-      temp0<-cbind.data.frame(temp0, temp00[[1]])
+      temp1<-temp00[[1]]
+      #remove duplicates
+      temp1<-temp1[, !(grepl(pattern = "\\.[0-9]+", x = names(temp1)))]
+      temp1 <- temp1[, !duplicated(colnames(temp1))]
+      temp0<-cbind.data.frame(temp0, temp1)
     }
     
     ###Remove duplicate columns
@@ -1948,9 +2029,9 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
     
     warnings.list<-ImplicitQuantityOutput.speciescat.q(temp, ii=category[ii],
                                                                     baseyr, maxyr, minyr, 
-                                                                    pctmiss, warnings.list)[[2]]
-    
-    
+                                                                    pctmiss, warnings.list)[[2]]    
+    }
+
     
   }
   
@@ -1962,6 +2043,11 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
 
   
+  #remove duplicates
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
   
     
   ###Value for all fisheries for species where Q was able to be calculated
@@ -1971,7 +2057,8 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   #   - $VV_{t}$ is the new total of $V_{t,i}$ for the entire fishery using only values for species that were used to calculate $P_{t,i}$
     
   #Total VV
-  temp0<-data.frame(temp[,grep(pattern = "VV", x = names(temp))], 
+  temp0<-data.frame(temp[,grep(pattern = paste0("VV", "[0-9]+_", NumberOfSpecies), 
+                               x = names(temp))], 
                     rowSums(temp[,grep(pattern = "VV", x = names(temp))], na.rm = T))
   names(temp0)[ncol(temp0)]<-paste0("VV",NameBaseTotal)
   temp0<-data.frame(temp0)
@@ -1979,12 +2066,12 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
   
   #Total V
-  names(temp)[names(temp) %in% paste0("V", NameBaseTotal)]<-paste0("REMOVED_V", NameBaseTotal)
+  # names(temp)[names(temp) %in% paste0("V", NameBaseTotal)]<-paste0("REMOVED_V", NameBaseTotal)
   
   temp0<-temp[grep(x = names(temp), 
-                   pattern = paste0("V[1-9]+_", NumberOfSpecies))]
-  temp0<-temp0[,-(grep(x = names(temp0), pattern = c("VV")))]
-  temp0<-temp0[,-(grep(x = names(temp0), pattern = c("REMOVED_")))]
+                   pattern = paste0("V[0-9]+_", NumberOfSpecies))]
+  temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("VV")))]
+  temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("REMOVED_")))]
   
   temp[ncol(temp)+1]<-rowSums(temp0, na.rm = T)
   names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal)
@@ -1998,20 +2085,20 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   #   - $R_{t,i}$ is the revenue share per individual species (s), category (i), for each year (t)
   #   - $V_{t,i}$ is the value ($) per individual species (s), category (i), for each year (t)
   # Here, we don't use $VV_{t}$ beacause we want to expand the proportion to include all of the species caught, regardless if they were used in the quantity calculations. 
+  tempR<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
   
   for (i in 1:length(category)) {
     
-    CatCol<-names(temp)[grep(pattern = paste0("V", i,"_", NumberOfSpecies), 
+    CatCol<-names(temp)[grep(pattern = paste0("V", category[i],"_", NumberOfSpecies), 
                              x = substr(x = names(temp), 
                                         start = 1, 
-                                        stop = nchar(paste0("V", i,"_", NumberOfSpecies))))]
+                                        stop = nchar(paste0("V", category[i],"_", NumberOfSpecies))))]
     NameBasecategory<-substr(x = CatCol, start = 2, stop = nchar(CatCol))
     
-    temp[,ncol(temp)+1]<-temp[,paste0("V", NameBasecategory)]/temp[,paste0("V", NameBaseTotal)]
-    names(temp)[ncol(temp)]<-paste0("R", NameBasecategory)
+    tempR[,i]<-temp[,paste0("V", NameBasecategory)]/temp[,paste0("V", NameBaseTotal)]
+    names(tempR)[i]<-paste0("R", NameBasecategory)
   }
-  tempR<-temp[,(ncol(temp)-1):ncol(temp)]
-  
+  temp<-cbind.data.frame(temp, tempR)
   
   # Is there a warning?
   if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
@@ -2046,23 +2133,23 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
                                                                
                                                                
   #Find which columns in this table are price and revenue share columns
-  tempQC<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+  tempQCW<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
   for (i in 1:length(category)) {
     
-    CatCol<-names(temp)[grep(pattern = paste0("V", i,"_", NumberOfSpecies), 
+    CatCol<-names(temp)[grep(pattern = paste0("VE", category[i], "_", NumberOfSpecies), 
                              x = substr(x = names(temp), 
                                         start = 1, 
-                                        stop = nchar(paste0("V", i,"_", NumberOfSpecies))))]
-    NameBasecategory<-substr(x = CatCol, start = 2, stop = nchar(CatCol))
+                                        stop = nchar(paste0("VE", category[i], "_", NumberOfSpecies))))]
+    NameBasecategory<-substr(x = CatCol, start = 3, stop = nchar(CatCol))
     
     # Calculate
     Q0<-temp[, names(temp) %in% paste0("QI", NameBasecategory)]
     R0<-temp[, names(temp) %in% paste0("R", NameBasecategory)] #to make sure its the same column
-    tempQC[,i]<-PriceChange(R0, Q0)
-    names(tempQC)[i]<-paste0("QCW", NameBasecategory ) #name the column
+    tempQCW[,i]<-PriceChange(R0, Q0)
+    names(tempQCW)[i]<-paste0("QCW", NameBasecategory ) #name the column
   }
   
-  temp<-cbind.data.frame(temp, tempQC)
+  temp<-cbind.data.frame(temp, tempQCW)
   
   
   
@@ -2072,11 +2159,15 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   #   Where: 
   #   - $QC_{t}$ = Quantity change for the entire fishery
   
-  temp[ncol(temp)+1]<-rowSums(tempQC, na.rm = T)
+  temp[ncol(temp)+1]<-rowSums(tempQCW, na.rm = T)
   names(temp)[ncol(temp)]<-paste0("QC", NameBaseTotal)
   
   
-  
+  #remove duplicates
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
   
   
   ###Quantity Index for the entier fishery ($QI_{t}$)
@@ -2110,8 +2201,8 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   #   - $QE_t$ is the sum of Q before these calculations; the simple sum
   #   - $QEI_t$ is the index of the sum of Q before these equations
 
-  QE<-names(temp)[grepl(pattern = NameBaseTotal, x = names(temp))]
-  QE<-QE[substr(x = QE, start = 1, stop = 2) %in% "QE"]
+  QE<-names(temp)[names(temp) %in% paste0("QE", NameBaseTotal)]
+  # QE<-QE[substr(x = QE, start = 1, stop = 2) %in% "QE"]
   temp[,ncol(temp)+1]<-temp[,QE]/temp[,QE][rownames(temp) %in% baseyr]
   names(temp)[ncol(temp)]<-paste0("QEI", NameBaseTotal)  
   
@@ -2127,35 +2218,41 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
   #Part 1
   names0<-c(paste0("QI",NameBaseTotal))
-  for (i in 1:ii) {
+  for (i in 1:length(category)) {
   names0<-c(names0, 
-  names(temp)[grep(pattern = paste0("QI", i, "_", NumberOfSpecies), names(temp))],
-  names(temp)[grep(pattern = paste0("R", i, "_", NumberOfSpecies), names(temp))])
+  names(temp)[grep(pattern = paste0("QI", category[i], "_", NumberOfSpecies), names(temp))],
+  names(temp)[grep(pattern = paste0("R", category[i], "_", NumberOfSpecies), names(temp))])
   }
   
   temp0<-temp[,names0]
   
   temp0[,(ncol(temp0)+1)]<-c(NA, ln(temp0[-nrow(temp0),paste0("QI",NameBaseTotal)]/
-  temp0[-1,paste0("QI",NameBaseTotal)]))
+                                      temp0[-1,paste0("QI",NameBaseTotal)]))
   names(temp0)[ncol(temp0)]<-"part1"
   
   #Part 2
   temp00<-data.frame()
-  for (i in 1:(ii)) {
-  R0<-temp0[,grep(pattern = paste0("R", i), x = names(temp0))]
-  Q0<-temp0[,grep(pattern = paste0("QI", i), x = names(temp0))]
+  for (i in 1:length(category)) {
+    R0<-temp0[,grepl(pattern = paste0("R", category[i]), x = names(temp0))]
+    Q0<-temp0[,grepl(pattern = paste0("QI", category[i]), x = names(temp0))]
   
   for (r in 2:(nrow(temp))){
   temp00[r,i]<-(((R0[r] + R0[r-1])/2) * ln(Q0[r] / Q0[r-1]) )
   }
+    names(temp00)[i]<-paste0("ln", category[i])
   }
   
   temp0[,(ncol(temp0)+1)]<-rowSums(temp00)
   names(temp0)[ncol(temp0)]<-"part2"  
   
 
+  if (length(setdiff(as.character(temp0$part1), 
+                     as.character(temp0$part2))) != 0) {
+    warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( R_{i, t} - R_{i, t-1} ) / 2 )  x ln( (Q_{i,t}) / (Q_{i,t-1} ) )"
+  }
   
-    
+  
+
   ####4. Missing Data
   
   #value
@@ -2200,11 +2297,16 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   warnings.list[length(warnings.list)+1]<-paste0("FYI: ", ifelse(length(vv)==1, 0, length(vv)-1) ,
                                                  " of species V columns are completely empty, ", 
                                                  ifelse(length(qq)==1, 0, length(qq)-1) ,
-                                                 " of species Q columns are completely empty. ")
+                                                 " of species Q columns are completely empty.")
   
   
   
   ###########################################GRAPHS
+  #remove duplicates
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
   
   
   #####Calculated Q by Species
@@ -2265,8 +2367,8 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
   g<-plotnlines(dat = temp0, title00, place) 
   
-  figures.list[[length(figures.list)+1]]<-g
-  names(figures.list)[length(figures.list)]<-paste0(title0, title00)
+  # figures.list[[length(figures.list)+1]]<-g
+  # names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
   
   ########VV
@@ -2280,7 +2382,8 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
   a <- gather(a0, Category, val, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
   
-  a$cat<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
+  a$cat<-as.character(lapply(X = strsplit(x = as.character(a$Category), 
+                                          split = paste0("_", NumberOfSpecies)), function(x) x[2]))
   
   temp0<-a
   
@@ -2296,14 +2399,16 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   a0<-data.frame(temp[,grepl(
     pattern = paste0("V[0-9]+_", NumberOfSpecies), 
     x = names(temp))])
-  a0<-a0[,-grep(pattern = "REMOVED_", x = names(a0))]
-  a0<-a0[,-grep(pattern = "VV[0-9]+_", x = names(a0))]
+  a0<-a0[,!grepl(pattern = "REMOVED_", x = names(a0))]
+  a0<-a0[,!grepl(pattern = "VV[0-9]+_", x = names(a0))]
   
   a0$Year<-rownames(a0)
   
   a <- gather(a0, Category, val, names(a0)[grepl(pattern = NumberOfSpecies, x = names(a0))], factor_key=TRUE)
   
-  a$cat<-as.character(lapply(X = strsplit(x = as.character(a$Category), split = paste0("_", NumberOfSpecies)), function(x) x[2]))
+  a$cat<-as.character(lapply(X = strsplit(x = as.character(a$Category), 
+                                          split = paste0("_", NumberOfSpecies)), 
+                             function(x) x[2]))
   
   temp0<-a
   
@@ -2320,7 +2425,7 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   a0<-data.frame(temp[,grepl(
     pattern = paste0("V[0-9]+_", NumberOfSpecies), 
     x = names(temp))])
-  a0<-a0[,-grep(pattern = "REMOVED_", x = names(a0))]
+  a0<-a0[,!grepl(pattern = "REMOVED_", x = names(a0))]
 
   a0$Year<-rownames(a0)
   
@@ -2334,20 +2439,16 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
   g<-plotnlines(dat = temp0, title00, place) 
   
-  figures.list[[length(figures.list)+1]]<-g
-  names(figures.list)[length(figures.list)]<-paste0(title0, title00)
+  # figures.list[[length(figures.list)+1]]<-g
+  # names(figures.list)[length(figures.list)]<-paste0(title0, title00)
   
   
   ########VE
   title00<- "_VE-Line"
   
   a0<-data.frame(temp[,grepl(
-    pattern = paste0("V[0-9]+_", NumberOfSpecies), 
+    pattern = paste0("VE[0-9]+_", NumberOfSpecies), 
     x = names(temp))])
-  
-  a0<-a0[,grep(pattern = "REMOVED_", x = names(a0))]
-  names(a0)<-gsub(pattern = "REMOVED_", replacement = "", x = names(a0))
-  names(a0)<-paste0("VE", substr(x = names(a0), start = 3, stop = nchar(names(a0))))
   
   a0$Year<-rownames(a0)
   
@@ -2395,31 +2496,7 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
   figures.list[[length(figures.list)+1]]<-g
   names(figures.list)[length(figures.list)]<-paste0(title0, title00)
-  
-  # #### Quantity Compare
-  # title00<-"_QvQE-Line"
-  # temp0<-temp
-  # temp0$Year<-rownames(temp0)
-  # 
-  # temp0<-data.frame(temp0[,names(temp0) %in% c("Year", 
-  #                                              paste0("Q", NameBaseTotal), 
-  #                                              paste0("QE", NameBaseTotal))])
-  # temp0$Year<-rownames(temp)
-  # 
-  # temp0<-gather(temp0, cat, val, 
-  #               names(temp0)[1]:names(temp0)[length(names(temp0))-1], 
-  #               factor_key = T)  
-  # 
-  # temp0$cat<-paste0(as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
-  #                                                    split = paste0("_", NumberOfSpecies)), function(x) x[1])), 
-  #                   "_",
-  #                   as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
-  #                                                    split = paste0("_", NumberOfSpecies)), function(x) x[2])))
-  # 
-  # g<-plotnlines(dat = temp0, title00, place) 
-  # 
-  # figures.list[[length(figures.list)+1]]<-g
-  # names(figures.list)[length(figures.list)]<-paste0(title0, title00)
+
   
   
   #### Revenue Share
@@ -2474,12 +2551,11 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
   total.no.v<-ncol(a0)*nrow(a0)
   
-  cat0<-data.frame(names0 = (names(temp.orig)[grepl(pattern = paste0("V[0-9]+_", NumberOfSpecies), 
+  cat0<-data.frame(names0 = (names(temp.orig)[grepl(pattern = paste0("VE[0-9]+_", NumberOfSpecies), 
                                                     x = names(temp.orig))]))
   
   cat0$no<-as.character(lapply(X = strsplit(x = as.character(cat0$names0), split = "_"), 
                                function(x) x[1]))
-  
   cat0$numberofspp<-NA
   for (i in 1:nrow(cat0)) {
     cat0$numberofspp[i]<-length(grep(pattern = cat0$no[i], 
@@ -2605,6 +2681,10 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
   
   ###OVERVIEW
+  
+  
+  
+  
   #Species
   spp.output<-list()
   spptable0<-data.frame(Analysis  = title0,
@@ -2619,20 +2699,21 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   cat2<-(as.character(lapply(X = strsplit(x = as.character(names(temp)), 
                                           split = paste0("_")), 
                              function(x) x[2])))
+  
   for (i in 1:length(category)) {
     #Orgionally
-    spp.pre<-unique(cat2[grep(pattern = paste0("V", i), x = cat1)], cat2[grep(pattern = paste0("Q", i), x = cat1)])
+    spp.pre<-unique(cat2[grep(pattern = paste0("V", category[i]), x = cat1)], cat2[grep(pattern = paste0("Q", category[i]), x = cat1)])
     cat.pre<-spp.pre[grep(pattern = NumberOfSpecies, x = spp.pre)]
-    cat.pre<-gsub(pattern = "[0-9]", replacement = "", x = cat.pre)
-    spp.pre<-spp.pre[-grep(pattern = NumberOfSpecies, x = spp.pre)]
+    cat.pre<-unique(gsub(pattern = "[0-9]", replacement = "", x = cat.pre))
+    spp.pre<-spp.pre[!grepl(pattern = NumberOfSpecies, x = spp.pre)]
     spp.pre<-gsub(pattern = "[0-9]", replacement = "", x = spp.pre)      
     spp.pre<-sort(x = as.character(spp.pre), decreasing = F)
     
     #In Analysis
-    spp.pst<-cat2[grep(pattern = paste0("R", i), x = cat1)]
+    spp.pst<-cat2[grep(pattern = paste0("R", category[i]), x = cat1)]
     cat.pst<-spp.pst[grep(pattern = NumberOfSpecies, x = spp.pst)]
     cat.pst<-gsub(pattern = "[0-9]", replacement = "", x = cat.pst)
-    spp.pst<-spp.pst[-grep(pattern = NumberOfSpecies, x = spp.pst)]
+    spp.pst<-spp.pst[!grepl(pattern = NumberOfSpecies, x = spp.pst)]
     spp.pst<-gsub(pattern = "[0-9]", replacement = "", x = spp.pst)
     spp.pst<-sort(x = as.character(spp.pst), decreasing = F)
     
@@ -2648,6 +2729,7 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
   
   
+  
   return(list(temp, warnings.list, figures.list, spptable0, spp.output))
 }
 
@@ -2659,11 +2741,11 @@ ImplicitQuantityInput<-function(temp, baseyr){
                                                                  pattern = "0Total")][1]))
   
   # Find which columns in this table are quantity Columns - we will need this for later
-  QColumns<-grep(pattern = paste0("Q[0-9]+"), 
+  QColumns<!grepl(pattern = paste0("Q[0-9]+"), 
                  x = names(temp))
   
   # Find which columns in this table are price Columns - we will need this for later
-  PColumns<-grep(pattern = paste0("P[0-9]+"), 
+  PColumns<!grepl(pattern = paste0("P[0-9]+"), 
                  x = names(temp))
   
   # Find which columns in this table are value Columns - we will need this for later

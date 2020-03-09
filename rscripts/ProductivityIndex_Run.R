@@ -127,6 +127,7 @@ for (r in 1:length(reg.order)){
   if (r != 1) { #only because I am tired of getting the warning messages
     remove(place, title0, temp00, temp0, temp, title000, title0)
   }
+  
   ### A. Import and Edit data
   #subset data
   place<-reg.order[r]
@@ -167,7 +168,7 @@ for (r in 1:length(reg.order)){
                                  title0 = title0, place = place)
   } else if (analysisby == "Q") {
   temp00<-ImplicitQuantityOutput.q(temp = temp.orig, baseyr, pctmiss, 
-                                     title0 = title0, place = place)    
+                                     title0 = title0, place = place)
   }
   
   temp<-temp00[[1]] #Data Output

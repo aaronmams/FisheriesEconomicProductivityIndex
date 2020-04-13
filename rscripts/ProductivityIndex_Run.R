@@ -98,8 +98,8 @@ counter<-0
 # plotlist<-list()
 
 OutputAnalysis<-function(landings.data, category0, baseyr, 
-         state.codes, titleadd,
-         counter, dir.rawdata, dir.reports, pctmiss, dir.figures, dir.outputtables, analysisby = "P") {
+                         state.codes, titleadd,
+                         counter, dir.rawdata, dir.reports, pctmiss, dir.figures, dir.outputtables, analysisby = "P") {
   
   dir.analyses1<-paste0(dir.analyses, "/",titleadd, "_", analysisby, "_", 
                         gsub(pattern = "\\.", replacement = "", x = category0),"/")
@@ -111,156 +111,156 @@ OutputAnalysis<-function(landings.data, category0, baseyr,
   dir.outputtables<-paste0(dir.analyses1, "/outputtables/")
   dir.create(paste0(dir.analyses1, "/outputtables/")) 
   
-reg.order<-c("National", "North Pacific", "Pacific", "Western Pacific (Hawai`i)", "New England", "Mid-Atlantic", "South Atlantic", "Gulf of Mexico") 
-reg.order0<-c("US", "NP", "Pac", "WP", "NE", "MA", "SA", "GOM")
-
-#Save Stuff
-editeddata.list<-list()
-rawtable.list<-list()
-tottable.list<-list()
-finaltable.list<-list()
-spptable<-data.frame()
-figures.list<-list()
+  reg.order<-c("National", "North Pacific", "Pacific", "Western Pacific (Hawai`i)", "New England", "Mid-Atlantic", "South Atlantic", "Gulf of Mexico") 
+  reg.order0<-c("US", "NP", "Pac", "WP", "NE", "MA", "SA", "GOM")
   
-for (r in 1:length(reg.order)){
+  #Save Stuff
+  editeddata.list<-list()
+  rawtable.list<-list()
+  tottable.list<-list()
+  finaltable.list<-list()
+  spptable<-data.frame()
+  figures.list<-list()
   
-  if (r != 1) { #only because I am tired of getting the warning messages
-    remove(place, title0, temp00, temp0, temp, title000, title0)
+  for (r in 1:length(reg.order)){
+    
+    if (r != 1) { #only because I am tired of getting the warning messages
+      remove(place, title0, temp00, temp0, temp, title000, title0)
+    }
+    
+    ### A. Import and Edit data
+    #subset data
+    place<-reg.order[r]
+    print(place)
+    counter<-funct_counter(counter)
+    
+    
+    title000<-paste0("_","byr",baseyr, "_", analysisby, 
+                     "_",gsub(pattern = "\\.", replacement = "", x = category0), 
+                     "_pctmiss", gsub(pattern = "\\.", replacement = "", x = pctmiss))
+    title0<-paste0(counter, "_", gsub(pattern = "\\(", replacement = "", x = 
+                                        gsub(pattern = ")", replacement = "", x = 
+                                               gsub(pattern = "`", replacement = "", x = 
+                                                      gsub(reg.order0[r], pattern = " ", replacement = "")))), 
+                   title000, "_", titleadd)
+    
+    
+    idx<-c(1:nrow(landings.data))
+    if (reg.order[r] != "National") {
+      idx<-which(landings.data$State %in% state.codes$NAME[state.codes$Region %in% place])
+    }
+    
+    temp00<-EditCommData(dat = landings.data[idx,], category0)
+    temp.orig<-temp00[[1]] ### Data
+    spp.editeddata<-temp00[[2]] ### By the way, which species are included in each category?
+    tsn.editeddata<-temp00[[3]]  ### By the way, which species are included in each category by code number?
+    
+    NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
+                                                  strsplit(x = names(temp.orig)[1], 
+                                                           split = "_")[[1]][2], 
+                                                split = "[a-zA-Z]")[[1]][1]))[1]
+    
+    ### B. Enter base year
+    
+    ### C. Run the function
+    if (analysisby == "P") {
+      temp00<-ImplicitQuantityOutput.p(temp = temp.orig, baseyr, pctmiss, 
+                                       title0 = title0, place = place)
+    } else if (analysisby == "Q") {
+      temp00<-ImplicitQuantityOutput.q(temp = temp.orig, baseyr, pctmiss, 
+                                       title0 = title0, place = place)
+    }
+    
+    temp<-temp00[[1]] #Data Output
+    warnings.list0<-temp00[[2]] # Warnings
+    figures.list0<-temp00[[3]] #Figures
+    figures.list<-c(figures.list, figures.list0)
+    spptable0<-temp00[[4]] #Species overview info
+    spp.output<-temp00[[5]] #List of Species
+    
+    ### D. Obtain the implicit quantity estimates
+    
+    #EditedData
+    editeddata.list[[r]]<-temp.orig
+    names(editeddata.list)[r]<-place
+    write.csv(x = editeddata.list[[r]], file = paste0(dir.outputtables, title0,"_EditedData.csv"))
+    
+    #Raw
+    write.csv(x = temp, file = paste0(dir.outputtables, title0,"_AllData.csv"))
+    rawtable.list[[r]]<-temp
+    names(rawtable.list)[r]<-place
+    
+    #Review
+    temp0<-temp[, grepl(pattern = paste0("_", NumberOfSpecies), x = names(temp))]
+    names(temp0)<-gsub(pattern = "0", replacement = "", x = names(temp0))
+    temp0<-temp0[,-grep(pattern = "REMOVED_", x = names(temp0))]
+    
+    tottable.list[[r]]<-temp0
+    names(tottable.list)[r]<-place
+    write.csv(x = tottable.list[[r]], file = paste0(dir.outputtables, title0,"_Review.csv"))
+    
+    #Final
+    temp0<-temp[, grepl(pattern = paste0("0_", NumberOfSpecies, "Total"), x = names(temp))]
+    names(temp0)<-gsub(pattern = "0", replacement = "", x = names(temp0))
+    temp0<-temp0[,-grep(pattern = "REMOVED_", x = names(temp0))]
+    
+    finaltable.list[[r]]<-temp0
+    names(finaltable.list)[r]<-place
+    write.csv(x = finaltable.list[[r]], file = paste0(dir.outputtables, title0,"_Final.csv"))
+    
+    #Species Table
+    # spptable0<-data.frame(Analysis  = title0,
+    #                 Place = place,
+    #                 Catagory = rep_len(x = NA, length.out = length(spp.editeddata)), 
+    #                 TotCount = rep_len(x = NA, length.out = length(spp.editeddata)), 
+    #                 RmCount = rep_len(x = NA, length.out = length(spp.editeddata)), 
+    #                 UsedCount = rep_len(x = NA, length.out = length(spp.editeddata)))
+    # 
+    # for (i in 1:length(spp.editeddata)) {
+    #   
+    #   #Find the name of the ith species group (in terms of how the data is organized)
+    #   cat<-names(spp.editeddata)[i]
+    #   XColumns<-grep(pattern = paste0(NumberOfSpecies, cat),
+    #                  x = names(temp))
+    #       #Test
+    #   XColumns<-c(XColumns, 1) #in case there is only one column for the next step
+    #   cat0<-as.character(lapply(X = strsplit(x = names(temp[,XColumns])[1], 
+    #                                             split = paste0("_", NumberOfSpecies)), 
+    #                                function(x) x[2]))
+    #   #Find the number of this ith species group (in terms of how the data is organized)
+    #   ii<-as.character(lapply(X = strsplit(x = names(temp[,XColumns])[1], 
+    #                                        split = paste0("_", NumberOfSpecies)), 
+    #                           function(x) x[1]))
+    #   ii<-gsub(pattern = "[a-zA-Z]", replacement = "", x = ii)
+    # 
+    #   #check your work
+    #   # VColumns<-grep(pattern = paste0("V", ii,"_"),
+    #   #                x = substr(x = names(temp),
+    #   #                           start = 1,
+    #   #                           stop = (2+nchar(ii))))
+    #   
+    #   RColumns<-grep(pattern = paste0("R", ii,"_"),
+    #                  x = substr(x = names(temp),
+    #                             start = 1,
+    #                             stop = (2+nchar(ii))))
+    #   RColumns<-RColumns[-grep(pattern = paste0(NumberOfSpecies, cat),
+    #                            x = names(temp)[RColumns])]
+    #   
+    #   spptable0$Catagory[i]<- cat
+    #   spptable0$TotCount[i]<-length(spp.editeddata[names(spp.editeddata) %in% cat][[1]])
+    #   spptable0$UsedCount[i]<-ifelse(is.na(length(RColumns)), 0, length(RColumns))
+    #   spptable0$RmCount[i]<-spptable0$TotCount[i] - spptable0$UsedCount[i]
+    # }
+    
+    spptable<-rbind.data.frame(spptable, spptable0)
+    write.csv(x = temp0, file = paste0(dir.outputtables, title0,"_Species.csv"))
+    
+    #Report
+    rmarkdown::render(ProdI.Report, 
+                      output_dir = paste0(dir.reports), 
+                      output_file = paste0(title0,".docx"))
+    
   }
-  
-  ### A. Import and Edit data
-  #subset data
-  place<-reg.order[r]
-  print(place)
-  counter<-funct_counter(counter)
-  
-  
-  title000<-paste0("_","byr",baseyr, "_", analysisby, 
-                   "_",gsub(pattern = "\\.", replacement = "", x = category0), 
-                   "_pctmiss", gsub(pattern = "\\.", replacement = "", x = pctmiss))
-  title0<-paste0(counter, "_", gsub(pattern = "\\(", replacement = "", x = 
-                                                                        gsub(pattern = ")", replacement = "", x = 
-                                                                               gsub(pattern = "`", replacement = "", x = 
-                                                                                      gsub(reg.order0[r], pattern = " ", replacement = "")))), 
-                 title000, "_", titleadd)
-  
-  
-  idx<-c(1:nrow(landings.data))
-  if (reg.order[r] != "National") {
-    idx<-which(landings.data$State %in% state.codes$NAME[state.codes$Region %in% place])
-  }
-  
-  temp00<-EditCommData(dat = landings.data[idx,], category0)
-  temp.orig<-temp00[[1]] ### Data
-  spp.editeddata<-temp00[[2]] ### By the way, which species are included in each category?
-  tsn.editeddata<-temp00[[3]]  ### By the way, which species are included in each category by code number?
-  
-  NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
-                                                strsplit(x = names(temp.orig)[1], 
-                                                         split = "_")[[1]][2], 
-                                              split = "[a-zA-Z]")[[1]][1]))[1]
-  
-  ### B. Enter base year
-
-  ### C. Run the function
-  if (analysisby == "P") {
-  temp00<-ImplicitQuantityOutput.p(temp = temp.orig, baseyr, pctmiss, 
-                                 title0 = title0, place = place)
-  } else if (analysisby == "Q") {
-  temp00<-ImplicitQuantityOutput.q(temp = temp.orig, baseyr, pctmiss, 
-                                     title0 = title0, place = place)
-  }
-  
-  temp<-temp00[[1]] #Data Output
-  warnings.list0<-temp00[[2]] # Warnings
-  figures.list0<-temp00[[3]] #Figures
-  figures.list<-c(figures.list, figures.list0)
-  spptable0<-temp00[[4]] #Species overview info
-  spp.output<-temp00[[5]] #List of Species
-  
-  ### D. Obtain the implicit quantity estimates
-  
-  #EditedData
-  editeddata.list[[r]]<-temp.orig
-  names(editeddata.list)[r]<-place
-  write.csv(x = editeddata.list[[r]], file = paste0(dir.outputtables, title0,"_EditedData.csv"))
-  
-  #Raw
-  write.csv(x = temp, file = paste0(dir.outputtables, title0,"_AllData.csv"))
-  rawtable.list[[r]]<-temp
-  names(rawtable.list)[r]<-place
-  
-  #Review
-  temp0<-temp[, grepl(pattern = paste0("_", NumberOfSpecies), x = names(temp))]
-  names(temp0)<-gsub(pattern = "0", replacement = "", x = names(temp0))
-  temp0<-temp0[,-grep(pattern = "REMOVED_", x = names(temp0))]
-
-  tottable.list[[r]]<-temp0
-  names(tottable.list)[r]<-place
-  write.csv(x = tottable.list[[r]], file = paste0(dir.outputtables, title0,"_Review.csv"))
-  
-  #Final
-  temp0<-temp[, grepl(pattern = paste0("0_", NumberOfSpecies, "Total"), x = names(temp))]
-  names(temp0)<-gsub(pattern = "0", replacement = "", x = names(temp0))
-  temp0<-temp0[,-grep(pattern = "REMOVED_", x = names(temp0))]
-  
-  finaltable.list[[r]]<-temp0
-  names(finaltable.list)[r]<-place
-  write.csv(x = finaltable.list[[r]], file = paste0(dir.outputtables, title0,"_Final.csv"))
-  
-  #Species Table
-  # spptable0<-data.frame(Analysis  = title0,
-  #                 Place = place,
-  #                 Catagory = rep_len(x = NA, length.out = length(spp.editeddata)), 
-  #                 TotCount = rep_len(x = NA, length.out = length(spp.editeddata)), 
-  #                 RmCount = rep_len(x = NA, length.out = length(spp.editeddata)), 
-  #                 UsedCount = rep_len(x = NA, length.out = length(spp.editeddata)))
-  # 
-  # for (i in 1:length(spp.editeddata)) {
-  #   
-  #   #Find the name of the ith species group (in terms of how the data is organized)
-  #   cat<-names(spp.editeddata)[i]
-  #   XColumns<-grep(pattern = paste0(NumberOfSpecies, cat),
-  #                  x = names(temp))
-  #       #Test
-  #   XColumns<-c(XColumns, 1) #in case there is only one column for the next step
-  #   cat0<-as.character(lapply(X = strsplit(x = names(temp[,XColumns])[1], 
-  #                                             split = paste0("_", NumberOfSpecies)), 
-  #                                function(x) x[2]))
-  #   #Find the number of this ith species group (in terms of how the data is organized)
-  #   ii<-as.character(lapply(X = strsplit(x = names(temp[,XColumns])[1], 
-  #                                        split = paste0("_", NumberOfSpecies)), 
-  #                           function(x) x[1]))
-  #   ii<-gsub(pattern = "[a-zA-Z]", replacement = "", x = ii)
-  # 
-  #   #check your work
-  #   # VColumns<-grep(pattern = paste0("V", ii,"_"),
-  #   #                x = substr(x = names(temp),
-  #   #                           start = 1,
-  #   #                           stop = (2+nchar(ii))))
-  #   
-  #   RColumns<-grep(pattern = paste0("R", ii,"_"),
-  #                  x = substr(x = names(temp),
-  #                             start = 1,
-  #                             stop = (2+nchar(ii))))
-  #   RColumns<-RColumns[-grep(pattern = paste0(NumberOfSpecies, cat),
-  #                            x = names(temp)[RColumns])]
-  #   
-  #   spptable0$Catagory[i]<- cat
-  #   spptable0$TotCount[i]<-length(spp.editeddata[names(spp.editeddata) %in% cat][[1]])
-  #   spptable0$UsedCount[i]<-ifelse(is.na(length(RColumns)), 0, length(RColumns))
-  #   spptable0$RmCount[i]<-spptable0$TotCount[i] - spptable0$UsedCount[i]
-  # }
-  
-  spptable<-rbind.data.frame(spptable, spptable0)
-  write.csv(x = temp0, file = paste0(dir.outputtables, title0,"_Species.csv"))
-  
-  #Report
-  rmarkdown::render(ProdI.Report, 
-                    output_dir = paste0(dir.reports), 
-                    output_file = paste0(title0,".docx"))
-
-}
   ########SPREADSHEETS########
   
   print("Create spreadsheets")
@@ -270,7 +270,7 @@ for (r in 1:length(reg.order)){
   
   write.csv(x = spptable, file = paste0(dir.outputtables, "000_All", title000,"_Species.csv"))
   
-
+  
   for (r in 1:length(reg.order)){
     
     #Raw
@@ -298,15 +298,15 @@ for (r in 1:length(reg.order)){
                 col.names = T, row.names = T, append = T)
     
   }
-    
-    ######PLOTS##########
-
+  
+  ######PLOTS##########
+  
   print("Create plots")
   
   #Side by Side graphs
   figs<-unique(paste0(lapply(X = strsplit(x = names(figures.list),
-                                         split = gsub(pattern = "\\.", replacement = "", x = category0)),
-                            function(x) x[2])))
+                                          split = gsub(pattern = "\\.", replacement = "", x = category0)),
+                             function(x) x[2])))
   gridfigures.list<-list()
   
   for (i in 1:length(figs)){
@@ -315,26 +315,26 @@ for (r in 1:length(reg.order)){
     
     dir.create(paste0(dir.figures, "/", a, "/"))
     
-  fig<-figs[i]
-  list0<-figures.list[grep(pattern = fig, x = names(figures.list))]
-  
-  g<-grid.arrange(list0[[1]], 
-                  list0[[2]], 
-                  list0[[3]], 
-                  list0[[4]], 
-                  list0[[5]], 
-                  list0[[6]], 
-                  list0[[7]], 
-                  nrow=3, newpage = FALSE)
-  
-  ggsave(filename = paste0(dir.figures, "/", a, "/", "000_All_baseyr",baseyr, 
-                           "_",gsub(pattern = "\\.", replacement = "", x = category0), fig, ".png"), 
-         plot = g, 
-         width = 11, height = 8.5)
-  
-  gridfigures.list[length(gridfigures.list)+1]<-g
-  names(gridfigures.list)[length(gridfigures.list)]<-paste0("000_All_baseyr",baseyr, 
-                                                            "_",gsub(pattern = "\\.", replacement = "", x = category0), fig)
+    fig<-figs[i]
+    list0<-figures.list[grep(pattern = fig, x = names(figures.list))]
+    
+    g<-grid.arrange(list0[[1]], 
+                    list0[[2]], 
+                    list0[[3]], 
+                    list0[[4]], 
+                    list0[[5]], 
+                    list0[[6]], 
+                    list0[[7]], 
+                    nrow=3, newpage = FALSE)
+    
+    ggsave(filename = paste0(dir.figures, "/", a, "/", "000_All_baseyr",baseyr, 
+                             "_",gsub(pattern = "\\.", replacement = "", x = category0), fig, ".png"), 
+           plot = g, 
+           width = 11, height = 8.5)
+    
+    gridfigures.list[length(gridfigures.list)+1]<-g
+    names(gridfigures.list)[length(gridfigures.list)]<-paste0("000_All_baseyr",baseyr, 
+                                                              "_",gsub(pattern = "\\.", replacement = "", x = category0), fig)
   }
   
   
@@ -343,7 +343,7 @@ for (r in 1:length(reg.order)){
   
   #make single plots
   for (i in 1:length(figures.list)) {
-    
+    print(paste0(names(figures.list)[i]))
     a<-strsplit(x = names(figures.list)[i], split = "_")[[1]][length(strsplit(x = names(figures.list)[i], split = "_")[[1]])]
     
     # dir.create(paste0(dir.figures, "/", a, "/"))
@@ -361,10 +361,10 @@ for (r in 1:length(reg.order)){
 analysisby = "P"
 category0 = "category.orig"
 
-#Data for the whole Time Series
-OutputAnalysis(landings.data, category0, baseyr = 2007, 
+Data for the whole Time Series
+OutputAnalysis(landings.data, category0, baseyr = 2007,
                state.codes, titleadd = "WholeTimeseries",
-               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby) 
+               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby)
 
 #Data just from the last 20 years
 OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,], 
@@ -387,9 +387,9 @@ analysisby = "P"
 category0 = "category.tax"
 
 #Data for the whole Time Series
-OutputAnalysis(landings.data, category0, baseyr = 2007, 
+OutputAnalysis(landings.data, category0, baseyr = 2007,
                state.codes, titleadd = "WholeTimeseries",
-               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby) 
+               counter, dir.rawdata, pctmiss = 0.60, analysisby = analysisby)
 
 #Data just from the last 20 years
 OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,], 
@@ -469,7 +469,7 @@ rmarkdown::render(ProdI.Docu.Out.P,
                   output_file = paste0("ProductivityIndex_Documentation_Out_Price_",date0,".pdf"))
 
 file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_Out_Price_",date0,".pdf"),
-               to = paste0(dir.output, "ProductivityIndex_Documentation_Out_Price.pdf"))
+                 to = paste0(dir.output, "ProductivityIndex_Documentation_Out_Price.pdf"))
 
 code<-FALSE
 showresults<-FALSE
@@ -508,11 +508,11 @@ rmarkdown::render(ProdI.Docu.In,
                   output_file = paste0("ProductivityIndex_Documentation_In_",date0,".pdf"))
 
 file.copy.rename(from = paste0(dir.docu, "ProductivityIndex_Documentation_In_",date0,".pdf"),
-               to = paste0(dir.output, "ProductivityIndex_Documentation_Input.pdf"))
+                 to = paste0(dir.output, "ProductivityIndex_Documentation_Input.pdf"))
 
 ###############METADATA##################
 CreateMetadata(dir.out = paste0(dir.out, "/metadata"), 
                title = paste0("Fisheries Economic Productivity Index Metadata ", Sys.Date()))
 
 file.copy.rename(from = paste0(dir.out, "/metadata/Metadata_", Sys.Date(), ".docx"),
-          to = paste0(dir.output, "/Metadata.docx"))
+                 to = paste0(dir.output, "/Metadata.docx"))

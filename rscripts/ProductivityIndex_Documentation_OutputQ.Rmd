@@ -71,12 +71,12 @@ Variables
 
 ###Data requirements
 
-We need time series data for the value of all species ($V_{t}$; e.g., Total), value of all species in a category (i) ($V_{i=1}$; e.g., Finfish), value of each species in a category (i) ($V_{i=1, s=n}$; e.g., Salmon and Summer Flounder), quanity of all species in a category (i) (in lbs, $Q_{i=1}$; e.g., Finfish and others), and the quantity of each species in a category (i) ($Q_{i=1, s=n}$; e.g., Salmon and Flounder):
+We need time series data for the value of all species ($V_{t}$/Total), value of all species in a category (i) ($V_{i=1}$; e.g., Finfish), value for an individual species in a category (i) ($V_{i=1, s=n}$; e.g., Salmon and Summer Flounder), the quantity of individual species in a category (i) ($Q_{i=1, s=n}$; e.g., Salmon and Flounder):
 
 
 #### Edit Data
 
-Here we summate the category and total V because there may be instances where these values may not be the sum of their parts (though they are here). The caluclation Price Index aims to deal with this potiental issue. 
+Here we summate the total value for each category and total V for all categories because there may be instances where these values may not be the sum of their parts (though they are here). The caluclation Price Index aims to deal with this potiental issue.  
 
 ```{r, echo = echoTF(TRUE, code), warning = FALSE}
 
@@ -114,11 +114,11 @@ For example, in "V1_0Finfish":
 
  - "V"... refers to the variable represented in the column (here V = "Value")
  
- - ..."1"... refers to the category index (here, = Finfish)
+ - ..."1"... refers to the category iteration (here, = Finfish)
  
   - ..."_"... is simply a seperator in the title
  
- - Since this is the total, ..."0".. refers to the index of the species, which is not relevant since this is the sum of the category, hense = 0
+ - ..."0".. refers to the total of the specific category. 
  
  - ..."Finfish" is purely descriptive (here the name of the category), so you can follow along with what is happening!
  
@@ -127,11 +127,11 @@ Similarly for "Q2_2Clam":
 
  - "Q"... refers to the variable represented in the column (here Q = "Quantity")
  
- - ..."2"... refers to the category index (here, = Shellfish)
+ - ..."2"... refers to the category iteration (here, = Shellfish)
  
  - ..."_"... is simply a seperator in the title
  
- - ..."2".. refers to the index of the species, such that this organism happens to be the second species of this category. 
+ - ..."2".. refers to the iteration of the species, such that this organism happens to be the second species of this category. 
  
  - ..."Clams" is purely descriptive (here the name of the species), so you can follow along with what is happening!
 
@@ -140,7 +140,7 @@ Similarly for "Q2_2Clam":
 
 
 ```{r, echo = echoTF(TRUE, code)}
-ii<-1 #The category index value
+ii<-1 #The category iteration value
 category<- c(1,2)
 baseyr<-2010
 pctmiss<-0.50 #If data are missing by the below percentage, remove data
@@ -387,6 +387,43 @@ temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
+
+####Analysis Warnings Checks
+
+Just so we can get a sense of the data, we want to see how many species are significantly increasing or decreasing over time for V and Q. 
+
+We'll use the below function to collect our info: 
+
+```{r, echo = echoTF(FALSE, code)}
+print(lmCheck)
+```
+
+```{r, echo = echoTF(FALSE, code)}
+Columns<-c(paste0("V", substr(x = QColumns, start = 2, stop = nchar(QColumns))), 
+           QColumns)
+
+  lm_check<-data.frame(NameBasecategory, lmCheck(Columns, temp))
+
+warnings.list[length(warnings.list)+1]<-list(lm_check)
+names(warnings.list)[[length(warnings.list)]]<-paste0("FYI ",NameBasecategory," species lm_check")
+
+lm_check %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+How many slopes are significantly increaseing or decreaseing
+
+```{r, echo = echoTF(FALSE, code)}
+lm_sig_slope <- data.frame(table(lm_check[, c("var", "slopecheck")]))
+lm_sig_slope <- lm_sig_slope[order(lm_sig_slope$var),]
+
+warnings.list[length(warnings.list)+1]<-list(lm_sig_slope)
+names(warnings.list)[[length(warnings.list)]]<-paste0("FYI ",NameBasecategory," species lm_sig_slope")
+
+lm_sig_slope %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
 ###Value of species $VV_{t,i}$ where Q available
 
 $R_{t,i}$, as defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{t,i}$ available (called $VV_{t,i}$) for the category using only values for species that were used to calculate $Q_{t,i}$ (called  $V_{t,i,s, available}$). 
@@ -526,7 +563,7 @@ names(temp)[ncol(temp)]<-paste0("QC", NameBasecategory)
 ```
 
 ```{r, echo = echoTF(FALSE, code)}
-temp0<-cbind.data.frame(tempQCW, rowSums(tempQC, na.rm = T))
+temp0<-cbind.data.frame(tempQCW, rowSums(tempQCW, na.rm = T))
 names(temp0)[ncol(temp0)]<-paste0("QC", NameBasecategory)
 temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
@@ -746,7 +783,7 @@ names(temp)[ncol(temp)]<-paste0("QC", NameBaseTotal)
 ```
 
 ```{r, echo = echoTF(FALSE, code)}
-temp0<-cbind.data.frame(tempQCW, rowSums(tempQC, na.rm = T))
+temp0<-cbind.data.frame(tempQCW, rowSums(tempQCW, na.rm = T))
 names(temp0)[ncol(temp0)]<-paste0("QC", NameBaseTotal)
 temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
@@ -1095,4 +1132,91 @@ figures.list0$`_QIvQEI-Line`
 ```{r, echo = echoTF(TRUE, code)}
 figures.list0$`_VvVV-Line`
 ```
+
+-------
+
+## Practice with real data (For National Data)
+
+### A. Import and Edit data
+
+Load and subset Data
+```{r, echo = echoTF(TRUE, code)}
+#Load Data (This data has been edited to include category columns)
+landings.data<-read.csv(file = paste0(dir.data, "landings_edited.csv"))
+landings.data<-landings.data[landings.data$Year < 2018,] #FUS 2018 hasn't been published yet
+landings.data<-landings.data[landings.data$State %in% unique(state.codes$NAME),]
+region<-"National"
+#We'll categorize by this column I already added to the data
+category0 = "category.orig"
+```
+  
+Summary information about the commercial dataset:
+
+`r data.frame(summary(landings.data[,c("Tsn", "Year", "State", "AFS.Name", "Pounds", "Dollars", "category.orig")])) `  
+  
+Edit/Restructure Data
+```{r, echo = echoTF(TRUE, code)}
+temp00<-EditCommData(dat = landings.data, category0)
+temp<-temp00[[1]]
+```
+
+`r data.frame(temp[1:5, 1:5]) ` 
+
+### B. Enter base year
+```{r, echo = echoTF(TRUE, code)}
+baseyr<-2010
+pctmiss = 0.60
+```
+
+### C. Run the function
+```{r, echo = echoTF(TRUE, code)}
+temp00<-ImplicitQuantityOutput.q(temp, baseyr, pctmiss)
+temp<-temp00[[1]]
+warnings.list0<-temp00[[2]]
+figures.list0<-temp00[[3]]
+```
+
+### D. Obtain the implicit quantity estimates
+```{r, echo = echoTF(FALSE, code), warning = FALSE}
+write.csv(x = temp, file = paste0(dir.docu, "Output_Commercial_", region, ".csv"))
+
+temp0<-temp[, grepl(pattern = "0Total", x = names(temp))]
+temp0<-temp0[, !grepl(pattern = "REMOVED_", x = names(temp0))]
+names(temp0)<-gsub(pattern = "0", replacement = "", x = names(temp0))
+temp0$QE_Total<-NULL
+temp0$QEI_Total<-NULL
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+Did all of the analyses work as intended? 
+
+*`r warnings.list0`*
+
+### E. Graph
+
+#### Graph 1: Price Index
+
+For comparison, let's recreate those graphs to make sure we are getting the same output:
+
+```{r, echo = echoTF(TRUE, code)}
+figures.list0$`_PI-Line`
+```
+
+
+#### Graph 2: Quantity Index Compare
+
+For comparison, let's recreate those graphs to make sure we are getting the same output:
+
+```{r, echo = echoTF(TRUE, code)}
+figures.list0$`_QIvQEI-Line`
+```
+
+#### Graph 3: Quantity Compare
+
+```{r, echo = echoTF(TRUE, code)}
+figures.list0$`_QvQE-Line`
+```
+
+
 

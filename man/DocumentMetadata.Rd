@@ -3,6 +3,9 @@
 \name{DocumentMetadata}
 \alias{DocumentMetadata}
 \title{Document Metadata}
+\source{
+
+}
 \usage{
 DocumentMetadata(dir.out, title)
 }

@@ -1,5 +1,5 @@
 ---
-title: "Productivity Index - Output - By Price"
+title: "Productivity Index - Output"
 author: "Emily Markowitz (Emily.Markowitz@noaa.gov) and Sun-Ling Wang"
 date: "Feb. 27, 2020"
 output: 
@@ -77,12 +77,12 @@ Variables
 
 ###Data requirements
 
-We need time series data for the value of all species ($V_{t}$/Total), value of all species in a category (i) ($V_{i=1}$; e.g., Finfish), value for an individual species in a category (i) ($V_{i=1, s=n}$; e.g., Salmon and Summer Flounder), the quantity of individual species in a category (i) ($Q_{i=1, s=n}$; e.g., Salmon and Flounder):
+We need time series data for the value of all species ($V_{t}$; e.g., Total), value of all species in a category (i) ($V_{i=1}$; e.g., Finfish), value of each species in a category (i) ($V_{i=1, s=n}$; e.g., Salmon and Summer Flounder), quanity of all species in a category (i) (in lbs, $Q_{i=1}$; e.g., Finfish and others), and the quantity of each species in a category (i) ($Q_{i=1, s=n}$; e.g., Salmon and Flounder):
 
 
 #### Edit Data
 
-Here we summate the total value for each category and total V for all categories because there may be instances where these values may not be the sum of their parts (though they are here). The caluclation Price Index aims to deal with this potiental issue. 
+Here we summate the category and total V because there may be instances where these values may not be the sum of their parts (though they are here). The caluclation Price Index aims to deal with this potiental issue. 
 
 ```{r, echo = echoTF(TRUE, code), warning = FALSE}
 
@@ -96,9 +96,9 @@ temp.q$QE1_0Finfish<-rowSums(temp.q[,grepl(x = names(temp.q), pattern = "Q1") ],
 temp.q$QE2_0Shellfish<-rowSums(temp.q[,grepl(x = names(temp.q), pattern = "Q2") ], na.rm = T)
 
 temp.v<-temp[,grepl(pattern = "V", x = names(temp))]
-temp.v$VE0_0Total<-rowSums(temp.v, na.rm = T)
-temp.v$VE1_0Finfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V1") ], na.rm = T)
-temp.v$VE2_0Shellfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V2") ], na.rm = T)
+temp.v$V0_0Total<-rowSums(temp.v, na.rm = T)
+temp.v$V1_0Finfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V1") ], na.rm = T)
+temp.v$V2_0Shellfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V2") ], na.rm = T)
 
 temp<-orgional.data<-cbind.data.frame(temp.q, temp.v)
 
@@ -117,11 +117,11 @@ For example, in "V1_0Finfish":
 
  - "V"... refers to the variable represented in the column (here V = "Value")
  
- - ..."1"... refers to the category iteration (here, = Finfish)
+ - ..."1"... refers to the category index (here, = Finfish)
  
   - ..."_"... is simply a seperator in the title
  
- - ..."0".. refers to the total of the specific category. 
+ - Since this is the total, ..."0".. refers to the index of the species, which is not relevant since this is the sum of the category, hense = 0
  
  - ..."Finfish" is purely descriptive (here the name of the category), so you can follow along with what is happening!
  
@@ -130,11 +130,11 @@ Similarly for "Q2_2Clam":
 
  - "Q"... refers to the variable represented in the column (here Q = "Quantity")
  
- - ..."2"... refers to the category iteration (here, = Shellfish)
+ - ..."2"... refers to the category index (here, = Shellfish)
  
  - ..."_"... is simply a seperator in the title
  
- - ..."2".. refers to the iteration of the species, such that this organism happens to be the second species of this category. 
+ - ..."2".. refers to the index of the species, such that this organism happens to be the second species of this category. 
  
  - ..."Clams" is purely descriptive (here the name of the species), so you can follow along with what is happening!
 
@@ -143,16 +143,15 @@ We can do the structuring work in a function
 
 This funciton standardizes the length of the category or species numbers e.g.,(numbers of 33, 440, and 1 are converted to 033, 440, and 001)
 
-```{r, echo = echoTF(TRUE, code)}
-print(numbers0)
+```{r, echo = echoTF(FALSE, code)}
+# print(numbers0)
 ```
 
 ###Lets get started
 
 
 ```{r, echo = echoTF(TRUE, code)}
-category<- c(1,2)
-ii<-1 #The category iteration value
+ii<-1 #The category index value
 baseyr<-2010
 pctmiss<-0.50 #If data are missing by the below percentage, remove data
 ```
@@ -163,94 +162,69 @@ In most of the following examples, we will just focus on the finfish (*i*=1) sid
 
 ```{r, echo = echoTF(TRUE, code)}
 
-place <- "Test"
+place <-  "Test"
 
-  warnings.list<-list()
-  figures.list<-list()
-  
-  ########Housekeeping
-  # Here I am just going to collect some housekeeping items
-  temp<-data.frame(temp)
-  
-  NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
-                                                strsplit(x = names(temp)[2], 
+warnings.list<-list() #save issues we encounter in the code 
+
+NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
+                                                strsplit(x = names(temp)[1], 
                                                          split = "_")[[1]][2], 
                                               split = "[a-zA-Z]")[[1]][1]))[1]
-  
-  
-  
-  
-  category<-unique(as.character(lapply(X = strsplit(x = as.character(names(temp)), 
-                                                    split = paste0("_")), 
-                                       function(x) x[1])))
-  category<-unique(substr(x = category, start = 2, stop = nchar(category)))
-  category<-category[!grepl(pattern = "[a-zA-Z]", x = category)]
-  category<-category[!(category %in% numbers0(c(0, (category)[1]))[1])]
-  
-  temp0<-data.frame(rep_len(x = NA, length.out = nrow(temp)))
-  tempPC<-data.frame(rep_len(x = NA, length.out = nrow(temp0)))
-  tempQC<-data.frame(rep_len(x = NA, length.out = nrow(temp0)))
-  
-  maxyr<-max(rownames(temp))
-  minyr<-min(rownames(temp))
-  
-  NameBaseTotal<-paste0(paste(rep_len(x = 0, length.out = nchar(category[1])), collapse = ""), 
-                        "_", NumberOfSpecies, "Total")
 
-########Category Specific#############
 
-      
-    QColumns0<-QColumns<-grep(pattern = paste0("Q", category[ii],"_"), 
-                              x = substr(x = names(temp), 
-                                         start = 1, 
-                                         stop = (2+nchar(category[ii]))))
+NameBaseTotal<-substr(x = sort(names(temp)[grep(x = names(temp), 
+                                                    pattern = "0Total")], decreasing = T)[1],
+                        start = 2, stop = nchar(sort(names(temp)[grep(x = names(temp), 
+                                                                      pattern = "0Total")],
+                                                     decreasing = T)[1]))
     
-    VColumns0<-VColumns<-grep(pattern = paste0("V", category[ii],"_"), 
-                              x = substr(x = names(temp), 
-                                         start = 1, 
-                                         stop = (2+nchar(category[ii]))))
-    
-    NameBasecategory<-names(temp)[grepl(pattern = paste0("VE", category[ii],"_"), 
-                                        x = substr(x = names(temp), 
-                                                   start = 1, 
-                                                   stop = (3+nchar(category[ii]))))]
-    
-    NameBasecategory<-substr(x = NameBasecategory, start = 3, stop = nchar(NameBasecategory))
+VColumns<-grep(pattern = paste0("V", ii,"_"), 
+                 x = substr(x = names(temp), 
+                            start = 1, 
+                            stop = (2+nchar(ii))))
+  
+NameBasecategory<-substr(start = 2, 
+                             stop = nchar(names(temp)[VColumns[(grepl(
+                               pattern = paste0("V", ii,"_", 
+                                                numbers0(x = c(0, length(VColumns)-1))[1]), 
+                               x = names(temp)[VColumns]))]]), 
+                             x = names(temp)[VColumns[(grepl(
+                               pattern = paste0("V", ii,"_", 
+                                                numbers0(x = c(0, length(VColumns)-1))[1]), 
+                               x = names(temp)[VColumns]))]])  
+  
+VColumns<-VColumns[!(grepl(pattern = paste0("V", ii,"_", 
+                                              numbers0(x = c(0, length(VColumns)-1))[1]), 
+                             x = names(temp)[VColumns]))]
 ```
 
 
 ###Remove any V and Q data where V column has less data than the specifed $pctmiss$
 
 ```{r, echo = echoTF(TRUE, code)}
-  for (i in 1:length(VColumns)) {
-    
-    #if the percent missing is less in V or Q columns for a species than the percentmissingtrheshold, we remove the data before the analysis
-    if (sum(is.na(temp[VColumns[i]]))/nrow(temp) > pctmiss | #V
-        sum(is.na(temp[QColumns[i]]))/nrow(temp) > pctmiss ) {#Q
-      
-      names(temp)[VColumns[i]]<-paste0("REMOVED_", names(temp)[VColumns[i]])
-      VColumns0<-VColumns0[!(VColumns0 %in% VColumns[i])]
-      names(temp)[QColumns[i]]<-paste0("REMOVED_", names(temp)[QColumns[i]])
-      QColumns0<-QColumns0[!(QColumns0 %in% QColumns[i])]
-    }
-  }
-
-  if (length(VColumns0) != 0) {
-    VColumns<-names(temp)[VColumns0]
-    QColumns<-names(temp)[QColumns0]  
-  }
-
+VColumns0<-VColumns
+QColumns0<-QColumns<-which(names(temp) %in% 
+                             paste0("Q", substr(x = names(temp)[VColumns], 
+                                                start = 2, 
+                                                stop = nchar(names(temp)[VColumns]))))
+for (i in 1:length(VColumns)) {
   
-  if (length(VColumns0) == 0) {
+  #if the percent missing is less in V or Q columns for a species than the percentmissingtrheshold, we remove the data before the analysis
+  if (sum(is.na(temp[VColumns[i]]))/nrow(temp) > pctmiss | #V
+      sum(is.na(temp[QColumns[i]]))/nrow(temp) > pctmiss ) {#Q
     
-    warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns of V after data was removed for not meeting the pctmiss")
-    
-  } else {
-  a<-"No warning."
+    names(temp)[VColumns[i]]<-paste0("REMOVED_", names(temp)[VColumns[i]])
+    VColumns0<-VColumns0[!(VColumns0 %in% VColumns[i])]
+    names(temp)[QColumns[i]]<-paste0("REMOVED_", names(temp)[QColumns[i]])
+    QColumns0<-QColumns0[!(QColumns0 %in% QColumns[i])]
+  }
 }
+
+VColumns<-names(temp)[VColumns0]
+QColumns<-names(temp)[QColumns0]
+
 ```
 
-*`r a `*
 
 ```{r, echo = echoTF(FALSE, code)}
 temp[,1:6] %>%
@@ -262,21 +236,27 @@ temp[,1:6] %>%
 Because we removed some columns for not meeting a perecent missing threshold of `r pctmiss`% and those columns will not be used at all in any part of the further analysis, we need to re-calculate the totals of $V$ and $Q$ for the catagories and the fishery as a whole. 
 
 ```{r, echo = echoTF(TRUE, code)}
-    # Q
-    temp.q<-data.frame(temp[,QColumns])
-    if (ncol(temp.q)>1) {
-      temp.q<-rowSums(temp.q, na.rm = T)
-    }
-    temp[ncol(temp)+1]<-temp.q
-    names(temp)[ncol(temp)]<-paste0("Q",NameBasecategory)
-    
-    # V
-    temp.v<-data.frame(temp[,VColumns])
-    if (ncol(temp.v)>1) {
-      temp.v<-rowSums(temp.v, na.rm = T)
-    }
-    temp[ncol(temp)+1]<-temp.v
-    names(temp)[ncol(temp)]<-paste0("V",NameBasecategory)
+names(temp)[grep(pattern = NameBasecategory, x = names(temp))]<-
+  paste0("REMOVED_", 
+         names(temp)[grep(pattern = NameBasecategory, x = names(temp))])
+
+  # Q
+  temp.q<-temp[,grepl(pattern = paste0("Q", ii), x = substr(names(temp), start = 1, stop = 2)) ]
+  temp.q<-data.frame(temp.q)
+  if (ncol(temp.q)>1) {
+    temp.q<-rowSums(temp.q, na.rm = T)
+  }
+  temp[ncol(temp)+1]<-temp.q
+  names(temp)[ncol(temp)]<-paste0("QE",NameBasecategory)
+  
+  # V
+  temp.v<-temp[,grepl(pattern = paste0("V", ii), x = substr(names(temp), start = 1, stop = 2)) ]
+  temp.v<-data.frame(temp.v)
+  if (ncol(temp.v)>1) {
+    temp.v<-rowSums(temp.v, na.rm = T)
+  }
+  temp[ncol(temp)+1]<-temp.v
+  names(temp)[ncol(temp)]<-paste0("V",NameBasecategory)
 ```
 
 ```{r, echo = echoTF(FALSE, code)}
@@ -286,43 +266,44 @@ temp0 %>%
 ```
 
 
-###Price for each species ($P_{t,i,s}$; e.g., Salmon and Flounder)
+###Price for each species ($P_{s,t,i}$; e.g., Salmon and Flounder)
 We first measure output price for each species in each of the categories (e.g., Finfish & Others and Shellfish) using detailed landings time series data on value ($) and pounds (lbs). 
 
 Price for a species (s) of category (i) in year (t) = 
 
-$$P_{t,i,s} = V_{t,i,s}/Q_{t,i,s}$$
+$$P_{s,t,i} = V_{s,t,i}/Q_{s,t,i}$$
 
 where: 
 
- - $P_{t,i,s}$ is the price per individual species (s), category (i), for each year (t)
+ - $P_{s,t,i}$ is the price per individual species (s), category (i), for each year (t)
  
- - $Q_{t,i,s}$ is the quantity (lb) per individual species (s), category (i), for each year (t)
+ - $Q_{s,t,i}$ is the quantity (lb) per individual species (s), category (i), for each year (t)
  
  - $V_{t,i}$ is the value ($) per category (i), for each year (t)
 
 Here we calculate the price for each species
 
 ```{r, echo = echoTF(TRUE, code)}
-  # Find which columns in this table are price Columns - we will need this for later
-  PColumns<-paste0("P", substr(x = VColumns,#names(temp)[VColumns], 
-                               start = 2, 
-                               stop = nchar(VColumns)))#nchar(names(temp)[VColumns])))
+
+    # Find which columns in this table are price Columns - we will need this for later
+    PColumns<-paste0("P", substr(x = VColumns, 
+                                    start = 2, 
+                                    stop = nchar(VColumns)))
+
+#####Price for each species#####
+tempP<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+for (c in 1:length(VColumns)) {
   
-  #####Price for each species
-  tempP<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
-  for (c0 in 1:length(VColumns)) {
-    
     NameBase<-substr(start = 2, 
-                     stop = nchar(VColumns[c0]), 
-                     x = VColumns[c0]) 
+                   stop = nchar(VColumns[c]), 
+                   x = VColumns[c]) 
     
     Q0<-temp[,names(temp) %in% paste0("Q", NameBase)]
     V0<-temp[,names(temp) %in% paste0("V", NameBase)] #to make sure its the same column
-    tempP[,c0]<-V0/Q0
-    names(tempP)[c0]<-paste0("P", NameBase ) #name the column
-  }
-  
+  tempP[,c]<-V0/Q0
+  names(tempP)[c]<-paste0("P", NameBase ) #name the column
+}
+
   tempP<-as.matrix(tempP)
   tempP[tempP %in% Inf]<-NA
   tempP<-data.frame(tempP)
@@ -339,26 +320,29 @@ There may be instances where price cannot (or should not) be calculated because 
 
 #### 1. If there are instances for a species where there are too few pairs of $V$ and/or $Q$ are completely missing from the timeseries or where a percent of $V$ is missing from the timeseries, we will remove the offending price columns entierly, so they don't influence the downstream price change or price index calculations.  
 
-Let's say here that if `r pctmiss*100 `% of the data is missing in a given $V_{t,i,s}$, don't calculate that species $P_{t,i,s}$
+Let's say here that if `r pctmiss*100 `% of the data is missing in a given $V_{s,t,i}$, don't calculate that species $P_{s,t,i}$
 
 ```{r, echo = echoTF(TRUE, code)}
-  #Find which columns in this table are price Columns
-  cc<-c() #Empty
-  for (c0 in 1:length(VColumns)) {
-    
-    #If price could never be caluclated at any point in the timeseries (is 0/NaN/NA) for a column (c) 
-    #Remove the column from the analysis. 
-    #We will not be removing the column from the data, but simply remove it from the varaible "PColumns"
-    if (sum(temp[,names(temp) %in% PColumns[c0]] %in% c(0, NA, NaN))/nrow(temp) > pctmiss |
-        sum(temp[,names(temp) %in% VColumns[c0]] %in% c(0, NA, NaN))/nrow(temp) > pctmiss) {
-      cc<-c(cc, c0)#Collect offending columns
-    }
+#Find which columns in this table are price Columns
+
+cc<-c() #Empty
+for (c in 1:length(VColumns)) {
+  
+  #If price could never be caluclated at any point in the timeseries (is 0/NaN/NA) for a column (c) 
+  #Remove the column from the analysis. 
+  #We will not be removing the column from the data, but simply remove it from the varaible "PColumns"
+  if (#sum(temp[,PColumns[c]] %in% c(0, NA, NaN)) %in% nrow(temp) |
+      sum(temp[,PColumns[c]] %in% c(0, NA, NaN))/nrow(temp) > pctmiss) {
+    cc<-c(cc, c)#Collect offending columns
   }
   
-  if (length(cc)>0){
-    PColumns<-PColumns[-cc]
-    # VColumns<-VColumns[-cc]
-  }
+}
+
+if (length(cc)>0){
+  PColumns<-PColumns[-cc]
+  # VColumns<-VColumns[-cc]
+  # QColumns<-QColumns[-cc]
+}
   
 ```
 
@@ -406,13 +390,6 @@ temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-
-```{r, echo = echoTF(TRUE, code)}
-VVColumns<-paste0("V", substr(x = PColumns, start = 2, stop = nchar(PColumns)))
-temp<-ReplaceFirst(colnames = VVColumns, temp) 
-```
-
-
 ###Impute values of $V_{t,i,s}$ where P was able to be calculated
 
 To ensure that the price index does not rise or fall to quickly with changes (that are really because of NA values) we fill in the missing instances of $V_{t,i,s}$. 
@@ -445,101 +422,61 @@ temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-####Analysis Warnings Checks
-
-Just so we can get a sense of the data, we want to see how many species are significantly increasing or decreasing over time for P, V, and Q. 
-
-We'll use the below function to collect our info: 
-
-```{r, echo = echoTF(FALSE, code)}
-print(lmCheck)
-```
-
-```{r, echo = echoTF(FALSE, code)}
-Columns<-c(PColumns, 
-           paste0("V", substr(x = PColumns, start = 2, stop = nchar(PColumns))), 
-           paste0("Q", substr(x = PColumns, start = 2, stop = nchar(PColumns))))
-
-  lm_check<-data.frame(NameBasecategory, lmCheck(Columns, temp))
-  
-warnings.list[length(warnings.list)+1]<-list(lm_check)
-names(warnings.list)[[length(warnings.list)]]<-paste0("FYI ",NameBasecategory," species lm_check")
-
-lm_check %>%
-    knitr::kable(row.names = T, booktabs = T)
-```
-
-How many slopes are significantly increaseing or decreaseing
-
-```{r, echo = echoTF(FALSE, code)}
-lm_sig_slope <- data.frame(table(lm_check[, c("var", "slopecheck")]))
-lm_sig_slope <- lm_sig_slope[order(lm_sig_slope$var),]
-
-warnings.list[length(warnings.list)+1]<-list(lm_sig_slope)
-names(warnings.list)[[length(warnings.list)]]<-paste0("FYI ",NameBasecategory," species lm_sig_slope")
-
-lm_sig_slope %>%
-    knitr::kable(row.names = T, booktabs = T)
-```
-
-
 ###Value of species $VV_{t,i}$ where P was able to be calculated
 
-$R_{t,i}$, as defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{t,i}$ available (called $VV_{t,i}$) for the category using only values for species that were used to calculate $P_{t,i}$ (called  $V_{t,i,s, available}$). 
+$R_{t,i}$, as defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{t,i}$ available (called $VV_{t,i}$) for the category using only values for species that were used to calculate $P_{t,i}$ (called  $V_{s,t,i, available}$). 
 
-$$VV_{t,i} = \sum_{s=1}^{n}(V_{t,i,s, available})$$
+$$VV_{t,i} = \sum_{s=1}^{n}(V_{s,t,i, available})$$
 
 where: 
 
  - $VV_{t,i}$ is the new total of $V_{t,i}$ (called $VV_{t,i}$) for the category using only values for species that were used to calculate $P_{t,i}$
 
- - $V_{t,i,s, available}$ are the $V_{t,i,s}$ where P were able to be calculated
+ - $V_{s,t,i, available}$ are the $V_{s,t,i}$ where P were able to be calculated
 
 
 ```{r, echo = echoTF(TRUE, code)}
-  temp0<-data.frame(temp[,names(temp) %in% VVColumns], 
-                    rowSums(temp[,names(temp) %in% VVColumns], na.rm = T))#)
-  names(temp0)[ncol(temp0)]<-paste0("VV",NameBasecategory)
-  temp0<-data.frame(temp0)
-  temp[ncol(temp)+1]<-temp0[ncol(temp0)]
-```
 
+temp0<-data.frame(temp[,names(temp) %in% VVColumns], 
+                  rowSums(temp[,names(temp) %in% VVColumns], na.rm = T))
+names(temp0)[ncol(temp0)]<-paste0("VV",NameBasecategory)
+temp0<-data.frame(temp0)
+temp[ncol(temp)+1]<-temp0[ncol(temp0)]
 
-```{r, echo = echoTF(FALSE, code)}
 temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-###Revenue Share for each species ($R_{t,i,s}$; e.g., Salmon and Flounder) 
+###Revenue Share for each species ($R_{s,t,i}$; e.g., Salmon and Flounder) 
 
-$$R_{t,i,s} = V_{t,i,s}/VV_{t,i}$$
+$$R_{s,t,i} = V_{s,t,i}/VV_{t,i}$$
 
 where: 
 
- - $R_{t,i,s}$ is the revenue share per individual species (s), category (i), for each year (t)
+ - $R_{s,t,i}$ is the revenue share per individual species (s), category (i), for each year (t)
  
- - $V_{t,i,s}$ is the value ($) per individual species (s), category (i), for each year (t)
+ - $V_{s,t,i}$ is the value ($) per individual species (s), category (i), for each year (t)
 
 
-Here we divide $V_{t,i,s}$ by $VV_{t,i}$ because $VV_{t,i}$ only includes species used to calculate $V_{t,i,s}$ as per the above price calculations. 
+Here we divide $V_{s,t,i}$ by $VV_{t,i}$ because $VV_{t,i}$ only includes species used to calculate $V_{s,t,i}$ as per the above price calculations. 
 
 ```{r, echo = echoTF(TRUE, code)}
-  tempR<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
-  for (c0 in 1:length(QColumns)) {
-    
-    #for renaming the columns
-    NameBase<-substr(start = 2, 
-                     stop = nchar(QColumns[c0]), 
-                     x = QColumns[c0]) 
-    
-    VV<-(temp[,names(temp) %in% paste0("VV", NameBasecategory)])  # sum of V where P was calculated
-    V0<-temp[,names(temp) %in% paste0("V", NameBase)] #V of species; to make sure its the same column
-    tempR[,c0]<-V0/VV
-    names(tempR)[c0]<-paste0("R", NameBase ) #name the column
-  }
+tempR<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+for (c in 1:length(PColumns)) {
   
-  tempR<-data.frame(tempR)
-  temp<-cbind.data.frame(temp, tempR)
+  #for renaming the columns
+    NameBase<-substr(start = 2, 
+                   stop = nchar(PColumns[c]), 
+                   x = PColumns[c]) 
+    
+  V<-(temp[,names(temp) %in% paste0("VV", NameBasecategory)])  # sum of V where P was calculated
+  V0<-temp[,names(temp) %in% paste0("V", NameBase)] #V of species; to make sure its the same column
+  tempR[,c]<-V0/V
+  names(tempR)[c]<-paste0("R", NameBase ) #name the column
+}
+
+tempR<-data.frame(tempR)
+temp<-cbind.data.frame(temp, tempR)
 ```
 
 
@@ -560,7 +497,7 @@ Is there a warning?
 
 ```{r, echo = echoTF(FALSE, code)}
 if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
-  warnings.list[length(warnings.list)+1]<-paste0("Rows of R_{t,i,s} for ",NameBasecategory," did not sum to 1")
+  warnings.list[length(warnings.list)+1]<-paste0("Rows of R_{s,t,i} for ",NameBasecategory," did not sum to 1")
     a<-warnings.list[length(warnings.list)][[1]]
 } else {
     a<-"No warning."
@@ -569,9 +506,9 @@ if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
 
 *`r a `*
 
-###Revenue Share-Weighted Price Changes for each species ($PCW_{t,i,s}$; e.g., Salmon and Flounder)
+###Revenue Share-Weighted Price Changes for each species ($PCW_{s,t,i}$; e.g., Salmon and Flounder)
 
-$$PCW_{t,i,s} = \frac{R_{t,i,s} + R_{s,t-1,i}}{2} * ln(\frac{P_{t,i,s}}{P_{s,t-1,i}}) = \frac{R_{t,i,s} + R_{s,t-1,i}}{2} * [ln(P_{t,i,s}) - ln(P_{s,t-1,i})] $$
+$$PCW_{t,i,s} = \frac{R_{s,t,i} + R_{s,t-1,i}}{2} * ln(\frac{P_{s,t,i}}{P_{s,t-1,i}}) = \frac{R_{s,t,i} + R_{s,t-1,i}}{2} * [ln(P_{s,t,i}) - ln(P_{s,t-1,i})] $$
 
 Where: 
 
@@ -580,9 +517,9 @@ Where:
 
 Such that: 
 
- - category's (i) Price Change for each species (s) = $\frac{R_{t,i,s} + R_{s,t-1,i}}{2}$
+ - category's (i) Price Change for each species (s) = $\frac{R_{s,t,i} + R_{s,t-1,i}}{2}$
 
- - category's (i) Revenue Share for each species (s) = $ln(\frac{P_{t,i,s}}{P_{s,t-1,i}} = [ln(P_{t,i,s}) - ln(P_{s,t-1,i})]$
+ - category's (i) Revenue Share for each species (s) = $ln(\frac{P_{s,t,i}}{P_{s,t-1,i}} = [ln(P_{s,t,i}) - ln(P_{s,t-1,i})]$
 
 
 `r ifelse(showresults == TRUE, "We use this *PriceChange* function:", "")` 
@@ -592,22 +529,22 @@ print(PriceChange)
 ```
 
 ```{r, echo = echoTF(TRUE, code)}
-  #Find which columns in this table are price and revenue share columns
-  tempPCW<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
-  for (c in 1:length(PColumns)){
-    #For nameing columns
+#Find which columns in this table are price and revenue share columns
+tempPC<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+for (c in 1:length(PColumns)){
+  #For nameing columns
     NameBase<-substr(start = 2,
                      stop = nchar(PColumns[c]),
                      x = PColumns[c])
-    
-    # Calculate
-    P0<-temp[, names(temp) %in% paste0("P", NameBase)]
-    R0<-temp[, names(temp) %in% paste0("R", NameBase)] #to make sure its the same column
-    tempPCW[,c]<-PriceChange(R0, P0)
-    names(tempPCW)[c]<-paste0("PCW", NameBase ) #name the column
-  }
   
-  temp<-cbind.data.frame(temp, tempPCW)
+  # Calculate
+  P0<-temp[, names(temp) %in% paste0("P", NameBase)]
+  R0<-temp[, names(temp) %in% paste0("R", NameBase)] #to make sure its the same column
+  tempPC[,c]<-PriceChange(R0, P0)
+  names(tempPC)[c]<-paste0("PCW", NameBase ) #name the column
+}
+
+temp<-cbind.data.frame(temp, tempPC)
 ```
 
 ###Price Changes for the category ($PC_{t,i}$; e.g., Finfish)
@@ -619,12 +556,12 @@ Where:
  - $PC_{t,i}$ = Price change for a category (i)
 
 ```{r, echo = echoTF(TRUE, code)}
-  temp[ncol(temp)+1]<-rowSums(tempPCW, na.rm = T)
-  names(temp)[ncol(temp)]<-paste0("PC", NameBasecategory)
+temp[ncol(temp)+1]<-rowSums(tempPC, na.rm = T)
+names(temp)[ncol(temp)]<-paste0("PC", NameBasecategory)
 ```
 
 ```{r, echo = echoTF(FALSE, code)}
-temp0<-cbind.data.frame(tempPCW, rowSums(tempPCW, na.rm = T))
+temp0<-cbind.data.frame(tempPC, rowSums(tempPC, na.rm = T))
 names(temp0)[ncol(temp0)]<-paste0("PC", NameBasecategory)
 temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
@@ -635,11 +572,11 @@ temp0 %>%
 
 We calculate the price index first by comparing by multiplying the previous years $PI_{t-1}$ by that year's price change $PC_{t}$, where the PI of the first year $PI_{t=firstyear} = 1$
 
-$$PI_{t,i} = PI_{t-1,i}*\exp(ln(\frac{PC_{t,i}}{PC_{t-1,i}})) = PI_{t-1,i}*\exp(PC_{t,i})$$
+$$PI_t = PI_{t-1}*\exp(ln(\frac{P_{t,i}}{P_{t-1,i}})) = PI_{t-1}*\exp(PC_{t})$$
 
 Where
 
-$$PI_{i, t = first year} = 1$$
+$$PI_{i, t_{first year}} = 1$$
 
 ```{r, echo = echoTF(TRUE, code)}
 #Note that the first row of this column is = 1
@@ -673,9 +610,9 @@ print(PriceIndex)
 
 And we add the $PI$ to the data
 ```{r, echo = echoTF(TRUE, code)}
-  tempPI<-PriceIndex(temp, BaseColName = NameBasecategory, baseyr, var = "PC")
-  temp[ncol(temp)+1]<-(tempPI)
-  names(temp)[ncol(temp)]<-paste0("PI", NameBasecategory)
+tempPI<-PriceIndex(temp, BaseColName = NameBasecategory, baseyr)
+temp[ncol(temp)+1]<-(tempPI)
+names(temp)[ncol(temp)]<-paste0("PI", NameBasecategory)
 ```
 
 ```{r, echo = echoTF(FALSE, code)}
@@ -693,13 +630,10 @@ $$Q_{t,i}=V_{t,i}/PI_{t,i}$$
 
 
 ```{r, echo = echoTF(TRUE, code)}
+temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("V", NameBasecategory)]/
+  temp[,names(temp) %in% paste0("PI", NameBasecategory)]
 
-temp[,paste0("Q", NameBasecategory)]<-NULL
-
-  temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("V", NameBasecategory)]/
-    temp[,names(temp) %in% paste0("PI", NameBasecategory)]
-  
-  names(temp)[ncol(temp)]<-paste0("Q", NameBasecategory)
+names(temp)[ncol(temp)]<-paste0("Q", NameBasecategory)
 ```
 
 
@@ -708,29 +642,6 @@ temp0<-temp[,ncol(temp)]
 temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
-
-
-###Implicit Quantity Index for each category ($QI_{t,i}$; Finfish, Others, and Shellfish)
-
-$$QI_{t,i}=Q_{t,i}/Q_{t=baseyr,i}$$
-
-
-```{r, echo = echoTF(TRUE, code)}
-  temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("Q", NameBasecategory)]/
-    temp[rownames(temp) %in% baseyr, names(temp) %in% paste0("Q", NameBasecategory)]
-  
-  names(temp)[ncol(temp)]<-paste0("QI", NameBasecategory)
-```
-
-
-```{r, echo = echoTF(FALSE, code)}
-temp0<-temp[,ncol(temp)]
-temp0 %>%
-    knitr::kable(row.names = T, booktabs = T)
-```
-
-
-
 
 ###Analysis Warnings Checks
 
@@ -769,6 +680,7 @@ Is there a warning?
 
 *`r a `*
 
+
 ####2. When back calculated, $Q_{t,i}$ should equal $V_{t,i} / PI_{t,i}$
   
 $$Q_{t,i} = V_{t,i} / PI_{t,i}$$
@@ -803,17 +715,17 @@ Is there a warning?
 
 Now lets redo that whole analysis up to this point (via function) for the two species of the shellfish group, as we will need them for the next steps of this analysis. 
 
-`r ifelse(showresults == TRUE, "We use this *ImplicitQuantityOutput.p* function to calculate the Implicit Quanity Output at Species and category Level:", "")` 
+`r ifelse(showresults == TRUE, "We use this *ImplicitQuantityOutput* function to calculate the Implicit Quanity Output at Species and category Level:", "")` 
 
 ```{r, echo = echoTF(TRUE, code), include = includeTF(TRUE, showresults)}
-print(ImplicitQuantityOutput.speciescat.p)
+print(ImplicitQuantityOutput.species.cat)
 ```
 
 
 ```{r, echo = echoTF(TRUE, code)}
 ii<-2 #The category index value
 
-tempS<-ImplicitQuantityOutput.speciescat.p(temp, ii, baseyr, maxyr, minyr, 
+tempS<-ImplicitQuantityOutput.species.cat(temp, ii, baseyr, maxyr, minyr, 
                          pctmiss = pctmiss, 
                          warnings.list = warnings.list)
 temp<-cbind.data.frame(temp, tempS[[1]])
@@ -844,23 +756,15 @@ where:
  - $VV_{t}$ is the new total of $V_{t,i}$ for the entire fishery using only values for species that were used to calculate $P_{t,i}$
 
 ```{r, echo = echoTF(FALSE, code)}
-  #Total VV
-  temp0<-data.frame(temp[,grep(pattern = paste0("VV", "[0-9]+_", NumberOfSpecies), 
-                               x = names(temp))], 
-                    rowSums(temp[,grep(pattern = "VV", x = names(temp))], na.rm = T))
-  names(temp0)[ncol(temp0)]<-paste0("VV",NameBaseTotal)
-  temp0<-data.frame(temp0)
-  temp[ncol(temp)+1]<-temp0[ncol(temp0)]
-  
-  
-  #Total V
-  temp0<-temp[grep(x = names(temp), 
-                   pattern = paste0("V[0-9]+_", NumberOfSpecies))]
-  temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("VV")))]
-  temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("REMOVED_")))]
-  temp[ncol(temp)+1]<-rowSums(temp0, na.rm = T)
-  names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal)
-    
+
+temp0<-data.frame(temp[,grep(pattern = "VV", x = names(temp))], 
+                  rowSums(temp[,grep(pattern = "VV", x = names(temp))], na.rm = T))
+names(temp0)[ncol(temp0)]<-paste0("VV",NameBaseTotal)
+temp0<-data.frame(temp0)
+temp[ncol(temp)+1]<-temp0[ncol(temp0)]
+
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
 ```
 
 
@@ -877,20 +781,25 @@ where:
 Here, we don't use $VV_{t}$ beacause we want to expand the proportion to include all of the species caught, regardless if they were used in the price calculations. 
 
 ```{r, echo = echoTF(TRUE, code)}
-  tempR<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
+names(temp)[names(temp) %in% paste0("V", NameBaseTotal)]<-paste0("REMOVED_V", NameBaseTotal)
+
+temp0<-temp[grep(x = names(temp), 
+                            pattern = paste0("V[1-9]+_", NumberOfSpecies))]
+temp0<-temp0[,-(grep(x = names(temp0), pattern = c("VV")))]
+temp0<-temp0[,-(grep(x = names(temp0), pattern = c("REMOVED_")))]
+
+temp[ncol(temp)+1]<-rowSums(temp0, na.rm = T)
+names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal)
+
+#remove duplicates
+  temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+  temp <- temp[, !duplicated(colnames(temp))]
   
-  for (i in 1:length(category)) {
-    
-    CatCol<-names(temp)[grep(pattern = paste0("V", category[i],"_", NumberOfSpecies), 
-                             x = substr(x = names(temp), 
-                                        start = 1, 
-                                        stop = nchar(paste0("V", category[i],"_", NumberOfSpecies))))]
-    NameBasecategory<-substr(x = CatCol, start = 2, stop = nchar(CatCol))
-    
-    tempR[,i]<-temp[,paste0("V", NameBasecategory)]/temp[,paste0("V", NameBaseTotal)]
-    names(tempR)[i]<-paste0("R", NameBasecategory)
-  }
-  temp<-cbind.data.frame(temp, tempR)
+# temp$R1_0Finfish<-temp$VV1_0Finfish/temp$VV0_0Total
+# temp$R2_0Shellfish<-temp$VV2_0Shellfish/temp$VV0_0Total
+
+temp$R1_0Finfish<-temp$V1_0Finfish/temp$V0_0Total
+temp$R2_0Shellfish<-temp$V2_0Shellfish/temp$V0_0Total
 
 ```
 
@@ -904,6 +813,8 @@ temp[,c("R1_0Finfish", "R2_0Shellfish", "V1_0Finfish", "V2_0Shellfish", paste0("
 As an additional check, let's make sure that each row sums to 1. 
 
 ```{r, echo = echoTF(FALSE, code)}
+tempR<-temp[,c("R1_0Finfish", "R2_0Shellfish")]
+
 rowSums(tempR, na.rm = T) %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
@@ -911,7 +822,7 @@ rowSums(tempR, na.rm = T) %>%
 Is there a warning?
 ```{r, echo = echoTF(FALSE, code)}
 if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
-    warnings.list[length(warnings.list)+1]<-paste0("Warning: Rows of R_{t,i} for ",NameBaseTotal," did not sum to 1")
+  warnings.list[length(warnings.list)+1]<-paste0("Warning: Rows of R_{t,i} for ",NameBaseTotal," did not sum to 1")
     a<-warnings.list[length(warnings.list)][[1]]
 } else {
   a<-"No warning."
@@ -937,28 +848,11 @@ Such that:
 
 
 ```{r, echo = echoTF(TRUE, code)}
- #Find which columns in this table are price and revenue share columns
-  tempPCW<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
-  for (i in 1:length(category)) {
-    CatCol<-names(temp)[grep(pattern = paste0("VE", category[i], "_", NumberOfSpecies), 
-                             x = substr(x = names(temp), 
-                                        start = 1, 
-                                        stop = nchar(paste0("VE", category[i], "_", NumberOfSpecies))))]
-    
-    NameBasecategory<-substr(x = CatCol, start = 3, stop = nchar(CatCol))
-    
-    
-    R0 = temp[, names(temp) %in% paste0("R", NameBasecategory)]
-    
-    P0 = temp[, names(temp) %in% paste0("PI", NameBasecategory)]
-    
-    tempPCW[,i]<-PriceChange(R0, P0)
-    
-    names(tempPCW)[i]<-paste0("PCW", NameBasecategory)
-    
-  }
-  
-  temp<-cbind.data.frame(temp, tempPCW)
+#Find which columns in this table are price and revenue share columns
+tempPCW<-cbind.data.frame("PCW1_0Finfish" = 
+                            PriceChange(R0 = temp$R1_0Finfish, P0 = temp$PI1_0Finfish), 
+                          "PCW1_0Shellfish" = 
+                            PriceChange(R0 = temp$R2_0Shellfish, P0 = temp$PI2_0Shellfish))
 ```
 
 ###Price Changes for the entire fishery ($PC_{t,i}$; e.g., Finfish)
@@ -970,8 +864,7 @@ Where:
  - $PC_{t}$ = Price change for the entire fishery
 
 ```{r, echo = echoTF(TRUE, code)}
-  temp[,ncol(temp)+1]<-rowSums(tempPCW, na.rm = T)
-  names(temp)[ncol(temp)]<-paste0("PC", NameBaseTotal)
+temp$PC0_0Total<-rowSums(tempPCW, na.rm=T)
 ```
 
 ```{r, echo = echoTF(FALSE, code)}
@@ -993,9 +886,9 @@ Where
 $$PI_{t_{first year}, i} = 1$$
 
 ```{r, echo = echoTF(TRUE, code)}
-  tempPI<-PriceIndex(temp, BaseColName = NameBaseTotal, baseyr, var = "PC")
-  temp[ncol(temp)+1]<-(tempPI)
-  names(temp)[ncol(temp)]<-paste0("PI", NameBaseTotal)
+tempPI<-PriceIndex(temp, BaseColName = NameBaseTotal, baseyr)
+temp[ncol(temp)+1]<-(tempPI)
+names(temp)[ncol(temp)]<-paste0("PI", NameBaseTotal)
 ```
 
 ```{r, echo = echoTF(FALSE, code)}
@@ -1010,13 +903,11 @@ To get quantity estimates for total output using total value of landings divided
 $$Q_{t}=V_{t}/PI_{t}$$
 
 ```{r, echo = echoTF(TRUE, code)}
-  temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("V", NameBaseTotal)]/
-    temp[, names(temp) %in% paste0("PI", NameBaseTotal)]
-  names(temp)[ncol(temp)]<-paste0("Q", NameBaseTotal)
+temp$Q0_0Total<-temp$V0_0Total/temp$PI0_0Total
 ```
 
 ```{r, echo = echoTF(FALSE, code)}
-temp0<-temp[,paste0("Q", NameBaseTotal)]
+temp0<-temp$Q0_0Total
 temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
@@ -1030,13 +921,12 @@ Where:
  - $QI$ is the sum of Q after these equations
  
 ```{r, echo = echoTF(TRUE, code)}
-    Q<-names(temp)[names(temp) %in% paste0("Q", NameBaseTotal)]
-    temp[,ncol(temp)+1]<-temp[,Q]/temp[,Q][rownames(temp) %in% baseyr]
-    names(temp)[ncol(temp)]<-paste0("QI", NameBaseTotal) 
+    temp$QI0_0Total<-temp$Q0_0Total/temp$Q0_0Total[rownames(temp) %in% baseyr]
 ```
 
 ```{r, echo = echoTF(FALSE, code)}
-temp0<-temp[,paste0("QI", NameBaseTotal)]
+temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
+                 temp[,(ncol(temp)-4):ncol(temp)])
 temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
@@ -1052,13 +942,12 @@ Where:
  - $QEI_t$ is the index of the sum of Q before these equations
 
 ```{r, echo = echoTF(TRUE, code)}
-    QE<-names(temp)[names(temp) %in% paste0("QE", NameBaseTotal)]
-    temp[,ncol(temp)+1]<-temp[,QE]/temp[,QE][rownames(temp) %in% baseyr]
-    names(temp)[ncol(temp)]<-paste0("QEI", NameBaseTotal)  
+temp$QEI0_0Total<-temp$QE0_0Total/temp$QE0_0Total[rownames(temp) %in% baseyr]
 ```
 
 ```{r, echo = echoTF(FALSE, code)}
-temp0<-temp[,paste0("QEI", NameBaseTotal)]
+temp0<-cbind.data.frame("Other..." = rep_len(x = "...", length.out = nrow(temp)), 
+                 temp[,(ncol(temp)-4):ncol(temp)])
 temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
@@ -1068,22 +957,9 @@ temp0 %>%
 $$QC_{t} = \sum_{i=1}^n((\frac{R_{it} + R_{it-1}}{2}) * ln(\frac{Q_{it}}{Q_{it-1}}))$$
 
 ```{r, echo = echoTF(TRUE, code)}
-    tempQCW<-data.frame(data = rep_len(x = NA, length.out = nrow(temp)))
-    for (i in 1:length(category)) {
-      CatCol<-names(temp)[grep(pattern = paste0("VE", category[i], "_", NumberOfSpecies), 
-                               x = substr(x = names(temp), 
-                                          start = 1, 
-                                          stop = nchar(paste0("VE", category[i], "_", NumberOfSpecies))))]
-      NameBasecategory<-substr(x = CatCol, start = 3, stop = nchar(CatCol))
-      R0 = temp[, names(temp) %in% paste0("R", NameBasecategory)]
-      Q0 = temp[, names(temp) %in% paste0("Q", NameBasecategory)]
-      tempQCW[,i]<-PriceChange(R0, Q0)
-      names(tempQCW)[i]<-paste0("QCW", NameBasecategory)
-    }
-    temp<-cbind.data.frame(temp, tempQCW)
-    
-    temp[,ncol(temp)+1]<-rowSums(tempQCW, na.rm = T)
-    names(temp)[ncol(temp)]<-paste0("QC", NameBaseTotal) 
+temp$QC0_0Total<-rowSums(cbind(PriceChange(R0 = temp$R1_0Finfish, P0 = temp$Q1_0Finfish), 
+                            PriceChange(R0 = temp$R2_0Shellfish, P0 = temp$Q2_0Shellfish)), 
+                       na.rm = T)
 ```
 
 
@@ -1169,34 +1045,32 @@ Is there a warning?
 $$ln(Q_t/Q_{t-1}) = \sum( ( \frac{R_{i, t} + R_{i, t-1}}{2})  * ln(\frac{Q_{t,i}}{Q_{t-1,i}}))$$
 
 ```{r, echo = echoTF(TRUE, code)}
-  #Part 1
-  names0<-c(paste0("Q",NameBaseTotal))
-  for (i in 1:length(category)) {
-    names0<-c(names0, 
-              names(temp)[grep(pattern = paste0("Q", category[i], "_", NumberOfSpecies), names(temp))],
-              names(temp)[grep(pattern = paste0("R", category[i], "_", NumberOfSpecies), names(temp))])
+
+names0<-c(paste0("Q",NameBaseTotal))
+for (i in 1:ii) {
+  names0<-c(names0, 
+            names(temp)[grep(pattern = paste0("Q", i, "_", NumberOfSpecies), names(temp))],
+            names(temp)[grep(pattern = paste0("R", i, "_", NumberOfSpecies), names(temp))])
+}
+
+temp0<-temp[,names0]
+
+temp0[,(ncol(temp0)+1)]<-c(NA, ln(temp0[-nrow(temp0),paste0("Q",NameBaseTotal)]/
+                              temp0[-1,paste0("Q",NameBaseTotal)]))
+names(temp0)[ncol(temp0)]<-"part1"
+
+temp00<-data.frame()
+for (i in 1:(ii)) {
+  R0<-temp0[,grep(pattern = paste0("R", i), x = names(temp0))]
+  Q0<-temp0[,grep(pattern = paste0("Q", i), x = names(temp0))]
+  
+  for (r in 2:(nrow(temp))){
+    temp00[r,i]<-(((R0[r] + R0[r-1])/2) * ln(Q0[r] / Q0[r-1]) )
   }
-  
-  temp0<-temp[,names0]
-  
-  temp0[,(ncol(temp0)+1)]<-c(NA, ln(temp0[-nrow(temp0),paste0("Q",NameBaseTotal)]/
-                                      temp0[-1,paste0("Q",NameBaseTotal)]))
-  names(temp0)[ncol(temp0)]<-"part1"
-  
-  #Part 2
-  temp00<-data.frame()
-  for (i in 1:length(category)) {
-    R0<-temp0[,grepl(pattern = paste0("R", category[i]), x = names(temp0))]
-    Q0<-temp0[,grepl(pattern = paste0("Q", category[i]), x = names(temp0))]
-    
-    for (r in 2:(nrow(temp))){
-      temp00[r,i]<-(((R0[r] + R0[r-1])/2) * ln(Q0[r] / Q0[r-1]) )
-    }
-    names(temp00)[i]<-paste0("ln", category[i])
-  }
-  
-  temp0[,(ncol(temp0)+1)]<-rowSums(temp00)
-  names(temp0)[ncol(temp0)]<-"part2"  
+}
+
+temp0[,(ncol(temp0)+1)]<-rowSums(temp00)
+names(temp0)[ncol(temp0)]<-"part2"
 ```
 
 
@@ -1224,83 +1098,13 @@ Is there a warning?
 
 ### View Total Outputs
 ```{r, echo = echoTF(FALSE, code), warning = FALSE}
+# write.csv(x = temp, file = paste0(dir.docu, "Example_Output.csv"))
+
 temp0<-temp[, grepl(pattern = "0Total", x = names(temp))]
 
 temp0 %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
-
-
-### Missing Data
-```{r, echo = echoTF(TRUE, code), warning = FALSE}
-
-#value
-  a<-temp
-  a<-a[,grep(pattern = "V[1-9]+_[1-9]+", x = names(a))]
-  if(length(grep(pattern = "REMOVED_", x = names(a)) & 
-            grep(pattern = "Total", x = names(a), ignore.case = T)) != 0 ){ 
-    a<-a[,-c(grep(pattern = "REMOVED_", x = names(a)), grep(pattern = "Total", x = names(a), ignore.case = T))]
-  }
-  ncol0<-ncol(a)
-  aa<-0
-  a<-data.frame(a)
-  if(ncol(a) != 0){
-    for (iii in 1:ncol(a)) {
-      aa<-c(aa, ifelse(sum(a[,iii] %in% c(NA, NaN, 0)) == nrow(a), iii, NA))
-    }
-    vv<-(aa[!(is.na(aa))])
-  } else {
-    pp<-0
-  }
-  #quantity
-  a<-temp
-  a<-a[,grep(pattern = "Q[1-9]+_[1-9]+", x = names(a))]
-  if(length(grep(pattern = "REMOVED_", x = names(a)) & 
-            grep(pattern = "Total", x = names(a), ignore.case = T)) != 0 ){ 
-    a<-a[,-c(grep(pattern = "REMOVED_", x = names(a)), grep(pattern = "Total", x = names(a), ignore.case = T))]
-  }
-  ncol0<-ncol(a)
-  aa<-0
-  a<-data.frame(a)
-  if(ncol(a) != 0){
-    for (iii in 1:ncol(a)) {
-      aa<-c(aa, ifelse(sum(a[,iii] %in% c(NA, NaN, 0)) == nrow(a), iii, NA))
-    }
-    qq<-(aa[!(is.na(aa))])
-  } else {
-    pp<-0
-  }
-  #Price
-  a<-temp
-  a<-a[,grep(pattern = "P[1-9]+_[1-9]+", x = names(a))]
-  if(length(grep(pattern = "REMOVED_", x = names(a)) & 
-            grep(pattern = "Total", x = names(a), ignore.case = T)) != 0 ){ 
-    a<-a[,-c(grep(pattern = "REMOVED_", x = names(a)), grep(pattern = "Total", x = names(a), ignore.case = T))]
-  }
-  ncol0<-ncol(a)
-  aa<-0
-  
-  a<-data.frame(a)
-  if (ncol(a) != 0) {
-    for (iii in 1:ncol(a)) {
-      aa<-c(aa, ifelse(sum(a[,iii] %in% c(NA, NaN, 0)) == nrow(a), iii, NA))
-    }
-    pp<-(aa[!(is.na(aa))])
-  } else {
-    pp<-0
-  }
-
-```
-
-
-```{r, echo = echoTF(FALSE, code), warning = FALSE}
-a <-  warnings.list[length(warnings.list)+1]<-paste0("FYI: ", ifelse(length(vv)==1, 0, length(vv)-1) ,
-                                                 " of species V columns are completely empty, ", 
-                                                 ifelse(length(qq)==1, 0, length(qq)-1) ,
-                                                 " of species Q columns are completely empty.")
-```
-
-*`r a `*
 
 ### Graph 1: Price Index
 In theory, $PI$ should be negative slope after the baseyear and positive after the base year, but because this data was fabricated without thinking of this, we don't see that here. The index value for the base year is = 1, however. 
@@ -1380,10 +1184,10 @@ Now that we know the method, we can simplify most of it into a function and do t
 
 ### Function
 
-`r ifelse(showresults == TRUE, "We use this *ImplicitQuantityOutput.p* function to calculate the Implicit Quanity Output at Fishery Level:", "")` 
+`r ifelse(showresults == TRUE, "We use this *ImplicitQuantityOutput* function to calculate the Implicit Quanity Output at Fishery Level:", "")` 
 
 ```{r, echo = echoTF(TRUE, code), include = includeTF(TRUE, showresults)}
-print(ImplicitQuantityOutput.p)
+print(ImplicitQuantityOutput)
 ```
 
 ### A. Import and Edit data
@@ -1398,9 +1202,9 @@ temp.q$QE1_0Finfish<-rowSums(temp.q[,grepl(x = names(temp.q), pattern = "Q1") ],
 temp.q$QE2_0Shellfish<-rowSums(temp.q[,grepl(x = names(temp.q), pattern = "Q2") ], na.rm = T)
 
 temp.v<-temp[,grepl(pattern = "V", x = names(temp))]
-temp.v$VE0_0Total<-rowSums(temp.v, na.rm = T)
-temp.v$VE1_0Finfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V1") ], na.rm = T)
-temp.v$VE2_0Shellfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V2") ], na.rm = T)
+temp.v$V0_0Total<-rowSums(temp.v, na.rm = T)
+temp.v$V1_0Finfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V1") ], na.rm = T)
+temp.v$V2_0Shellfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V2") ], na.rm = T)
 
 temp<-orgional.data<-cbind.data.frame(temp.q, temp.v)
 
@@ -1414,7 +1218,7 @@ baseyr<-baseyr
  
 ### C. Run the function
 ```{r, echo = echoTF(TRUE, code), warning = FALSE}
-temp00<-ImplicitQuantityOutput.p(orgional.data, baseyr, pctmiss)
+temp00<-ImplicitQuantityOutput(orgional.data, baseyr, pctmiss)
 temp<-temp00[[1]]
 warnings.list0<-temp00[[2]]
 figures.list0<-temp00[[3]]
@@ -1422,7 +1226,7 @@ figures.list0<-temp00[[3]]
 
 ### D. Obtain the implicit quantity estimates
 ```{r, echo = echoTF(FALSE, code), warning = FALSE}
-write.csv(x = temp, file = paste0(dir.docu, "Example_Output_p.csv"))
+write.csv(x = temp, file = paste0(dir.docu, "Example_Output.csv"))
 
 temp0<-temp[, grepl(pattern = "0Total", x = names(temp))]
 
@@ -1450,13 +1254,13 @@ figures.list0$`_PI-Line`
 For comparison, let's recreate those graphs to make sure we are getting the same output:
 
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_QIvQEI-Line`
+figures.list0$`_QuantityIndexCompare`
 ```
 
 #### Graph 3: Quantity Compare
 
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_QvQE-Line`
+figures.list0$`_QuantityCompare`
 ```
 
 -------
@@ -1496,7 +1300,7 @@ pctmiss = 0.60
 
 ### C. Run the function
 ```{r, echo = echoTF(TRUE, code)}
-temp00<-ImplicitQuantityOutput.p(temp, baseyr, pctmiss)
+temp00<-ImplicitQuantityOutput(temp, baseyr, pctmiss)
 temp<-temp00[[1]]
 warnings.list0<-temp00[[2]]
 figures.list0<-temp00[[3]]
@@ -1535,13 +1339,12 @@ figures.list0$`_PI-Line`
 For comparison, let's recreate those graphs to make sure we are getting the same output:
 
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_QIvQEI-Line`
+figures.list0$`_QuantityIndexCompare`
 ```
 
 #### Graph 3: Quantity Compare
 
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_QvQE-Line`
+figures.list0$`_QuantityCompare`
 ```
-
 

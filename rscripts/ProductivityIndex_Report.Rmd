@@ -2,50 +2,42 @@
 title: ""
 author: ""
 date: ""
-output: word_document
+output: 
+  word_document
+    df_print: kable
 ---
   
 ```{r, echo = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
-# `r reg.order[r]` - `r category0 ` Analsys Notes
-
 This analysis uses nationally collected landings data for the `r ifelse(reg.order[r] %in% "National", "whole U.S.", paste0("for the", reg.order[r], "region")) `, downloaded from the NOAA FOSS site <https://foss.nmfs.noaa.gov/apexfoss/f?p=215:200::::::>. 
-
-##Warnings/FYIs
 
 ```{r, echo = FALSE, warnings = FALSE}
 print(warnings.list0)
 ```
 
-## The number of species in origional data, used in the analysis, and removed from the analysis: 
+The number of species in origional data, used in the analysis, and removed from the analysis: 
 ```{r, echo = FALSE, warnings = FALSE}
 spptable0[,-1] %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-## Species in Each category by Common Name
-
-"pre" is for species in the origional data
-"pst" are the species that were used in the final anlaysis
+#### Species in Each category by Common Name
 ```{r, echo = FALSE}
-spp.output
+spp.temp
 ```
 
-## Negative values?
 
-### Dollars
 
+Where are there negative values?
 ```{r, echo = FALSE, warning = FALSE}
 a0<-landings.data#[idx,]
 a0[(a0$Dollars<0 & !(is.na(a0$Dollars))),] %>%
     knitr::kable(row.names = F, booktabs = T)
 ```
 
-### Pounds
-
+Where are there negative values?
 ```{r, echo = FALSE, warning = FALSE}
 a0<-landings.data#[idx,]
 a0[(a0$Pounds<0 & !(is.na(a0$Pounds))),] %>%

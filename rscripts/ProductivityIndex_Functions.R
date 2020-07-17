@@ -14,6 +14,7 @@ library(filesstrings)
 library(data.table) # := to tag species codes
 require(plyr)  #ddply function
 library(sas7bdat)
+library(rlist)
 
 #RMarkdown
 library(rmarkdown)
@@ -46,6 +47,410 @@ NOAADarkGrey<-"#56575A" #text
 NOAABlueScale<-colorRampPalette(colors = c(NOAALightBlue, NOAADarkBlue))
 
 #########***########
+######DEALING WITH TOP 10 KEY SPECIES########
+tolower2 <- function(str0, capitalizefirst=F) {
+  str2<-c()
+  
+  if (str0[1] %in% "") { 
+    str<-""
+  } else {
+    for (i in 1:length(str0)) {
+      str1<-gsub(pattern = "\\(", replacement = "\\( ", x = tolower(str0[i]))
+      str1<-gsub(pattern = "\\)", replacement = " \\)", x = str1)
+      str1<-strsplit(x = str1, split = " ")[[1]]
+      
+      keywords <- c(
+        #State
+        "Alabama", "Alaska", "California", "Connecticut", 
+        "Delaware", "East Florida", "West Florida", "Florida", "Georgia", 
+        "Louisiana", "Maine", "Maryland", "Massachusetts", 
+        "Mississippi", "New Hampshire", "New Jersey", "New York", 
+        "North Carolina", "Oregon", "Rhode Island", "South Carolina", 
+        "Texas",  "Virginia", "Washington", 
+        #Region
+        "North Pacific", "Pacific", "Western Pacific (Hawai`i)", "Western Pacific",
+        "New England",
+        "Mid-Atlantic","Gulf of Mexico",
+        "South Atlantic", 
+        #For specific Species
+        "Spanish", "Gulf", "Bringham's", "Von Siebold's", "Pfluger's", "African", "Eurpoean",
+        # Other
+        "Atlantic", "American", 
+        "Atka", "Chinook", "Great Lakes") 
+      
+      # keywords<-c(keywords, paste0("(", keywords), paste0(keywords, ")"))
+      
+      
+      for (ii in 1:length(keywords)) {
+        keywords1<-strsplit(x = keywords[ii], split = " ")[[1]]
+        if (length(keywords1) %in% 1 & 
+            sum(grepl(x = str0, pattern = keywords1[1], ignore.case = T))>0) {
+          str1[grep(x = str1, pattern = keywords[ii], ignore.case = T)]<-keywords[ii]
+        } else if (length(keywords1) %in% 2 & 
+                   sum(grepl(x = str0, pattern = keywords1[1], ignore.case = T)>0) & 
+                   sum(grepl(x = str0, pattern = keywords1[2], ignore.case = T)>0)) {
+          str1[grep(x = str1, pattern = keywords1[1], ignore.case = T)]<-keywords1[1] 
+          str1[grep(x = str1, pattern = keywords1[2], ignore.case = T)]<-keywords1[2] 
+        } else if (length(keywords1) %in% 3 & 
+                   grepl(x = str0, pattern = keywords1[1], ignore.case = T) & 
+                   grepl(x = str0, pattern = keywords1[2], ignore.case = T) &
+                   grepl(x = str0, pattern = keywords1[3], ignore.case = T)) {
+          str1[sum(grep(x = str1, pattern = keywords1[1], ignore.case = T)>0)]<-keywords1[1] 
+          str1[sum(grep(x = str1, pattern = keywords1[2], ignore.case = T)>0)]<-keywords1[2] 
+          str1[sum(grep(x = str1, pattern = keywords1[3], ignore.case = T)>0)]<-keywords1[3] 
+        }     
+      }
+      
+      str1<-paste(str1, collapse = " ")
+      str1<-gsub(pattern = "\\( ", replacement = "\\(", x = str1)
+      str1<-gsub(pattern = " \\)", replacement = "\\)", x = str1)
+      if (capitalizefirst==T) {
+        str1<-paste(toupper(substr(str1, 1, 1)), substr(str1, 2, nchar(str1)), sep="")
+        
+      }
+      
+      str1<-gsub(pattern = "&", replacement = "and", x = str1)
+      
+      str2<-c(str2, str1)
+    }
+    str2<-trimws(str2)
+  }
+  return(str2)
+}
+
+itis_reclassify<-function(tsn, categories, missing.name){
+  
+  # Find which codes are in which categories
+  
+  tsn.indata<-classification(tsn[!(is.na(tsn))], db = 'itis')
+  tsn.indata<-tsn.indata[!(names(tsn.indata) %in% 0)]
+  valid0<- sciname<-category0<-bottomrank<-sppname<- TSN<-c() 
+  
+  for (i in 1:length(categories)) {
+    
+    a<-c()
+    for (ii in 1:length(categories[i][[1]])) {
+      a<-c(a, list.search(lapply(X = tsn.indata, '[[', 3), categories[i][[1]][[ii]] %in% . ))
+    }
+    
+    if (length(a)!=0) {
+      
+      sppcode<-names(a)
+      
+      for (ii in 1:length(sppcode)) {
+        TSN<-c(TSN, sppcode[ii])
+        
+        bottomrank<-c(bottomrank, tsn.indata[names(tsn.indata) %in% sppcode[ii]][[1]]$rank[
+          nrow(tsn.indata[names(tsn.indata) %in% sppcode[ii]][[1]])])
+        
+        category0<-c(category0, names(categories[i]))  
+        
+        sciname<-c(sciname, tsn.indata[names(tsn.indata) %in% sppcode[ii]][[1]]$name[
+          nrow(tsn.indata[names(tsn.indata) %in% sppcode[ii]][[1]])])
+        
+        valid0<-c(valid0, 
+                  ifelse(nrow(tsn.indata[names(tsn.indata) %in% sppcode[ii]][[1]])>1, 
+                         "valid", "invalid"))
+      }
+    }
+  }
+  
+  df.out<-data.frame(TSN = TSN, 
+                     category = category0, 
+                     valid = valid0, 
+                     rank = bottomrank, 
+                     sciname = sciname )
+  
+  return(list("df.out" = data.frame(df.out), 
+              "tsn.indata" = (tsn.indata)))
+}
+
+
+######***GENERAL########
+SpCodeName.General<-list(
+  "Finfish" = 914179, # Infraphylum	Gnathostomata
+  "Shellfish" = c(82696, # Phylum	Arthropoda  – Artrópode, arthropodes, arthropods
+                  69458), # Phylum	Mollusca  – mollusques, molusco, molluscs, mollusks     
+  
+  ###
+  #Crustaceans
+  ###
+  'Arthropoda' = 82696, # Phylum	Arthropoda  – Artrópode, arthropodes, arthropods
+  'American lobster' = 97314, #Species: Homarus americanus H. Milne Edwards, 1837 – valid
+  'Shrimp' = c(96106, # Infraorder	Caridea Dana, 1852
+               83688, # Order	Anostraca G. O. Sars, 1867 – brine shrimp, fairy shrimp
+               621194, # Superfamily	Callianassoidea Dana, 1852
+               97294, #  Infraorder	Stenopodidea Claus, 1872
+               95600), # Suborder	Dendrobranchiata Bate, 1888
+  'Mantis Shrimp' = 99140, # Order	Stomatopoda Latreille, 1817 – mantis shrimp, mantis shrimps
+  'Penaeidae Shirmp' = 95602, # Family	Penaeidae Rafinesque, 1815 – penaeid shrimps, crevettes pénaéïdes
+  'Crab'= c(#95599, # Order	Decapoda Latreille, 1802 – crabs, crayfishes, lobsters, prawns, shrimp, crabes, crevettes, écrevisses, homards # Has previously also included all decapods
+    98276, #Infraorder	Brachyura Latreille, 1802 – short-tailed crabs, true crabs
+    97698), #  Infraorder	Anomura MacLeay, 1838
+  'Sea urchins' = 157821, #Class	Echinoidea Leske, 1778 – heart urchins, sand dollars, sea urchins, châtaignes de mer, clypéastres, oursins, bolacha da praia, equinóide, ouriço do mar, heart urchins, sand dollars, sea urchins, urchins
+  'Pac Spiny lobster' = 97650, # Species	Panulirus interruptus (J. W. Randall, 1840) – California spiny lobster
+  'Crawfish' = 97306, # Superfamily	Astacoidea Latreille, 1802 – crayfishes
+  'Lobsters' = c(97660, # Family	Scyllaridae Latreille, 1825 – slipper lobsters
+                 97646), # Family	Palinuridae Latreille, 1802 – spiny lobsters
+  'Stone crab' = 98810, # Genus	Menippe De Haan, 1833
+  'Blue crab' = 98696, # Species	Callinectes sapidus M. J. Rathbun, 1896 – blue crab, bluepoint
+  'Caribbean Spiny lobster' = 97648, # Species	Panulirus argus (Latreille, 1804) – Caribbean spiny lobster
+  
+  ###
+  #Other
+  ###
+  'Bloodworms' = 66107, # Species	Glycera dibranchiata Ehlers, 1868
+  
+  
+  ###
+  #Fish
+  ###
+  'Halibut' = c(172931, # Genus	Hippoglossus Cuvier, 1816 – halibuts
+                172929), #  Genus	Reinhardtius Gill, 1861
+  'Pacific halibut' = 172932, #Species: Hippoglossus stenolepis Schmidt, 1904 – valid
+  'Flatfish' = c(172707), #Suborder	Pleuronectoidei
+  'Summer flounder' = 172735, #Species	Paralichthys dentatus (Linnaeus, 1766) – summer flounder, fluke, cardeau d'été, Summer Flounder
+  'Flounders' = c(553179, #  Family	Paralichthyidae  – flétans de sable, lenguados areneros, sand flounders, lefteye flounders 
+                  172714, # Family	Bothidae  – lefteyed flounders, lefteye flounders, lenguados chuecos, turbots flounders
+                  172859), # Family	Pleuronectidae  – halibuts, dabs, righteyed flounders, platijas, plies, righteye flounders    
+  
+  'Menhaden' = 161731, #Genus	Brevoortia Gill, 1861 – menhadens
+  'Herring' = 551153, # Subfamily	Clupeinae  – herrings, sardines, sprats
+  'Atlantic Cod' = 164712, # Species	Gadus morhua Linnaeus, 1758 – morue de l'Atlantique, bacalao del Atlántico, cod, rock cod, morue franche, Atlantic cod 
+  'Atlantic haddock' = 164744, # Species	Melanogrammus aeglefinus (Linnaeus, 1758) – haddock, aiglefin
+  'Atlantic mackerel' = 172414, #Species	Scomber scombrus Linnaeus, 1758 – caballa del Atlántico, maquereau commun, maquereau bleu, Atlantic mackerel
+  'Atlantic pollock' = 164727, #Species	Pollachius virens (Linnaeus, 1758) – pollock, coalfish, carbonero, lieu noir, saithe, goberge 
+  'Atlantic croaker' = 169283, # Species	Micropogonias undulatus (Linnaeus, 1766) – Atlantic croaker, roncadina, gurrubata
+  
+  
+  'Pacific salmon' = c(
+    # 161974 # Genus	Oncorhynchus Suckley, 1861 – Pacific salmon
+    161975, # Species	Oncorhynchus gorbuscha (Walbaum, 1792) – pink salmon, humpback, humpbacked salmon, saumon rose
+    161976, # Species	Oncorhynchus keta (Walbaum in Artedi, 1792) – chum salmon
+    161977, # Species	Oncorhynchus kisutch (Walbaum, 1792) – coho salmon, salmón plateado, saumon coho, silver salmon
+    161979, # Species	Oncorhynchus nerka (Walbaum in Artedi, 1792) – blueback salmon, kokanee, red salmon, sockeye salmon, saumon rouge
+    161980 # Species	Oncorhynchus tshawytscha (Walbaum in Artedi, 1792) – Chinook salmon, salmón boquinegra, king salmon, saumon chinook
+    # 161989 # Species	Oncorhynchus mykiss (Walbaum, 1792) – rainbow trout, trucha arcoiris, steelhead, truite arc-en-ciel, redband trout
+  ),  
+  'Pacific cod' = 164711, #Species	Gadus macrocephalus Tilesius, 1810 – morue du Pacifique, bacalao del Pacifico, Pacific cod
+  # 'Pacific herring' = 551209, #Species	Clupea pallasii Valenciennes in Cuvier and Valenciennes, 1847 – arenque del Pacífico, Pacific herring
+  'Pacific hake (whiting)' = 164792, #Species	Merluccius productus (Ayres, 1855) – North Pacific hake, whiting, Pacific hake, merluza norteña, Pacific whiting
+  'Pacific sardine' = 161729,
+  
+  'Sablefish' = 167123, # Species	Anoplopoma fimbria (Pallas, 1814) – sablefish, bacalao negro
+  'Tunas' = c(638252, # Tribe	Thunnini Starks, 1910
+              -172454, # Genus	Auxis Cuvier, 1829 – frigate mackerels, frigate tunas
+              -172459), # Genus	Allothunnus Serventy, 1948
+  'Alaska Pollock' = c(#164722, #invalid - subsequent name/combination 
+    934083), # Species	Gadus chalcogrammus Pallas, 1814 – Walleye    
+  'Rockfish' = 166705, # Genus	Sebastes Cuvier, 1829 – rockfishes, rockcod, rosefishes
+  'Atka mackerel'= 167119, #Genus	Pleurogrammus Gill, 1861 – atka mackerels
+  'Swordfish' = 172480, #Family	Xiphiidae  – swordfishes, espadas, espadons
+  'Albacore tuna' = 172419, # Species	Thunnus alalunga (Bonnaterre, 1788) – atún blanco, albacore, longfinned albacore, albacora, germon
+  'Goosefish' = c(#164500, #Species	Lophius gastrophysus Miranda Ribeiro, 1915 – blackfin goosefish, rape pescador 
+    164498), # Genus	Lophius Linnaeus, 1758
+  'Porgies' = 169206, # Genus	Pagrus Cuvier, 1816
+  'Scups' = 169181, # Genus	Stenotomus Gill, 1865
+  'Weakfish' = 169241, #Species	Cynoscion regalis (Bloch and Schneider, 1801) – weakfish, gray trout, sea trout
+  'Hake' = c(164729, #Genus	Urophycis Gill, 1863 – codlings 
+             164790), # Genus	Merluccius Rafinesque, 1810 – hakes
+  'Red hake' = c(164730 #  Species	Urophycis chuss (Walbaum, 1792) – red hake, squirrel hake, merluche-écureuil
+  ),#164729), # Genus	Urophycis Gill, 1863 – codlings # Toledo, includes other hake
+  'Silver hake' = c(164791 #Species	Merluccius bilinearis (Mitchill, 1814) – silver hake, merlu argenté
+  ), # 164790), # Genus	Merluccius Rafinesque, 1810 – hakes # Toledo, includes other hake
+  'Snappers' = 168845, #Family	Lutjanidae  – sea perches, snappers, perches de mer, vivaneaux, fusiliers, pargos y huachinangos    
+  'Spiny dogfish' = 160617, #Species	Squalus acanthias Linnaeus, 1758 – cazón espinoso común, piked dogfish, spiny dogfish, galludo espinoso, aiguillat commun, dogfish, grayfish, spurdog
+  'White perch' = 167678, #Species	Morone americana (Gmelin, 1789) – white perch, baret
+  'Striped bass' = 167680, # Species	Morone saxatilis (Walbaum, 1792) – rockfish, striped bass, lobina estriada, bar rayé
+  'Spot' = 169267, # VSpecies	Leiostomus xanthurus Lacepède, 1802 – spot, croca
+  'King mackerel' = 172435, # Species	Scomberomorus cavalla (Cuvier, 1829) – king mackerel, sierra, carito, carite lucio, thazard serra
+  'Black sea bass' = 167687, # Species	Centropristis striata (Linnaeus, 1758) – black sea bass
+  'Spanish mackerel' = 172436, # Species	Scomberomorus maculatus (Mitchill, 1815) – serrucho, sierra común, carite Atlántico, thazard Atlantique, Atlantic Spanish mackerel, Spanish mackerel    
+  'Tilefish' = 168537, #Family	Malacanthidae  – tilefishes, blanquillos, tiles
+  'Sharks' = c(563987 # Superorder	Euselachii #TOLEDO - some of these are sawfish, rays, and etc. 
+               # 551500, # Order	Carcharhiniformes  – ground sharks
+               # 159788, # Order	Heterodontiformes  – bullhead sharks
+               # 159810, # Order	Hexanchiformes Compagno, 1973 – cow sharks, frilled sharks
+               # 159851, # Order	Lamniformes  – mackerel sharks
+               # 551499, # Order	Orectolobiformes  – gatas nodrizas, requins-tapis, tiburones tapiceros, carpet sharks
+               # 551498, # Order	Pristiophoriformes  – saw sharks
+               # 160602, #Order	Squaliformes Compagno, 1973 – dogfish sharks
+               # 563990 # Order	Squatiniformes 
+  ), 
+  'Mullets' = 170333, # Family	Mugilidae  – mullets, grey mullets, lisas, muges
+  'Vermilion snapper' = 168909, # Rhomboplites aurorubens (Cuvier in Cuvier and Valenciennes, 1829) – vermilion snapper, cotorro, besugo
+  'Bluefin tuna' = 172421, # Species	Thunnus thynnus (Linnaeus, 1758) – bluefin tuna, atún aleta azul, atún, horse mackerel, northern bluefin tuna, Atlantic bluefin tuna, thon rouge
+  'American eel' = 161127, # Species	Anguilla rostrata (Lesueur, 1817) – American eel, anguila, anguila americana, anguille d'Amérique
+  'Red grouper' = 167702, # Species	Epinephelus morio (Valenciennes in Cuvier and Valenciennes, 1828) – red grouper, cherna americana
+  'Red snapper' = 168853, # Species	Lutjanus campechanus (Poey, 1860) – red snapper, pargo colorado, huachinango del Golfo, northern red snapper   
+  'Black drum' = 169288, # Species	Pogonias cromis (Linnaeus, 1766) – black drum, corvina negra, tambor negro
+  'Groupers' = 643094, # Tribe	Epinephelini  
+  'Gag grouper' = 167759, # 167759 – Mycteroperca microlepis (Goode and Bean, 1879) – valid – abadejo, charcoal belly, gag
+  'Billfishes' = 172486, # Family	Istiophoridae  – billfishes, sailfishes, marlins, spearfishes, picudos, voiliers
+  
+  ###
+  # Mollescus
+  ###
+  'Mollusca' = 69458, # Phylum	Mollusca  – mollusques, molusco, molluscs, mollusks    
+  'Sea scallop' = 79718, #Species	Placopecten magellanicus (Gmelin, 1791) – sea scallop
+  'Squid' = 555706, # Superorder	Decabrachia Boettger, 1952
+  'Oysters' = c(79777, # Family	Spondylidae Gray, 1826
+                79857, # Family	Gryphaeidae Vyalov, 1936
+                79866), #  Family	Ostreidae Rafinesque, 1815
+  'Clams' = 80384, #Order	Veneroida H. Adams and A. Adams, 1856
+  'Mussels' = c(79451, #Family	Mytilidae Rafinesque, 1815
+                79913), #  Family	Unionidae Rafinesque, 1820 # TOLEDO - why include freshwater spp?
+  'Blue mussel' = 79454, #Species	Mytilus edulis Linnaeus, 1758 – edible blue mussel, blue mussel
+  'Conchs' = 72554, # Family	Strombidae Rafinesque, 1815 (Conches)
+  'Whelks' = 74069, # Family	Melongenidae Gill, 1867 (Whelks)
+  'Snails' = 72878, # Family	Naticidae Guilding, 1834 (Snails)
+  'Loligo squid' = 82370, # Genus	Loligo Lamarck, 1798
+  'Atlantic surf clam' = 80944, #Species	Spisula solidissima (Dillwyn, 1817) – Atlantic surfclam
+  'Arctic surf (Stimpson) clam' = 80983, #Species	Mactromeris polynyma (Stimpson, 1860) – Arctic surfclam
+  'Softshell clam' = 81692, #  Species	Mya arenaria Linnaeus, 1758 – softshell clam, softshell
+  "Scallops" = 79611, # Family	Pectinidae Rafinesque, 1815
+  'Eastern oyster' = 79872, # Species	Crassostrea virginica (Gmelin, 1791) – eastern oyster
+  
+  
+  'Quahog clams' =  81495, # Genus	Mercenaria Schumacher, 1817     
+  'Ocean quahog clam' = 81343, # Species	Arctica islandica (Linnaeus, 1767) – ocean quahog
+  'Snails' = 69459, # Class	Gastropoda Cuvier, 1797 – gastropods, slugs, snails, escargots, gastéropodes, limaces, caracol, caramujo, lesma
+  
+  ###
+  #HAWAII
+  ###
+  'Lobsters (*ula*)' = c(206946), # Superfamily	Palinuroidea Latreille, 1802
+  'Dolphinfish (*mahimahi*)' = 168790, # Genus	Coryphaena Linnaeus, 1758
+  "Marlin (*a'u*)" = c(#172486, # Family	Istiophoridae  – billfishes, sailfishes, marlins, spearfishes, picudos, voiliers TOLEDO
+    172490), #Genus	Makaira Lacepède, 1802 – marlins, blue marlin
+  'Moonfish (*opah*)' = 166326, # Species	Lampris guttatus (Brünnich, 1788) – opah, opah, pez mariposa
+  'Pomfrets (*Monchong*)' = 170287, #Family	Bramidae  – pomfrets, castagnoles, tristones
+  'Scad (*opelu*)' = c(168723, # Genus	Decapterus Bleeker, 1851 – mackerel scads, round scads
+                       168585, # Genus	Trachurus Rafinesque, 1810 – saurels
+                       168676), # Genus	Selar Bleeker, 1851 – bigeyed scads, goggle-eyes, gogglers 
+  'Hawaii Snappers' = c(168181, #Heteropriacanthus cruentatus (Lacepède, 1801) – catalufa espinosa, glasseye snapper, catalufa roquera
+                        168845), #Family	Lutjanidae  – sea perches, snappers, perches de mer, vivaneaux, fusiliers, pargos y huachinangos
+  'Wahoo (*ono*)' = 172451 #Species	Acanthocybium solandri (Cuvier in Cuvier and Valenciennes, 1832) – peto, wahoo, thazard-bâtard
+  
+)
+
+######***STATE and UNITED STATES########
+### Species names and codes for the state tables
+
+#########******United States#############
+SpCodeName<-list(
+  "United States" = list('American lobster' = SpCodeName.General$`American lobster`, 
+                         'Blue crab' = SpCodeName.General$`Blue crab`,
+                         'Menhaden' = SpCodeName.General$Menhaden,
+                         'Pacific halibut' = SpCodeName.General$`Pacific halibut`,
+                         'Pacific salmon' = SpCodeName.General$`Pacific salmon`,  
+                         'Sablefish' = SpCodeName.General$Sablefish,
+                         'Sea scallop' = SpCodeName.General$`Sea scallop`,
+                         'Shrimp' = SpCodeName.General$Shrimp,
+                         'Tunas' = SpCodeName.General$Tunas,
+                         'Alaska pollock' = SpCodeName.General$`Alaska Pollock`),
+  
+  #####******North Pacific Region#####
+  "North Pacific"= list('Atka mackerel'=  SpCodeName.General$`Atka mackerel`,
+                        'Crab'= SpCodeName.General$Crab,
+                        'Flatfish' = SpCodeName.General$Flatfish,
+                        'Pacific cod' = SpCodeName.General$`Pacific cod`,
+                        'Pacific halibut' = SpCodeName.General$`Pacific halibut`,
+                        'Pacific herring' = SpCodeName.General$`Herring`,
+                        'Rockfish' = SpCodeName.General$Rockfish,
+                        'Sablefish' = SpCodeName.General$Sablefish,
+                        'Salmon' = SpCodeName.General$`Pacific salmon`,
+                        'Alaska Pollock' = SpCodeName.General$`Alaska Pollock`
+  ),
+  
+  #####******Pacific Region#####
+  "Pacific" = list('Albacore tuna' = SpCodeName.General$`Albacore tuna`, 
+                   'Crab' = SpCodeName.General$Crab, 
+                   'Flatfish' = SpCodeName.General$Flatfish, 
+                   'Pacific hake (whiting)' = SpCodeName.General$`Pacific hake (whiting)`, 
+                   'Other shellfish' = c(SpCodeName.General$Arthropoda, 
+                                         SpCodeName.General$Mollusca, 
+                                         -(SpCodeName.General$Crab),
+                                         -(SpCodeName.General$Shrimp), 
+                                         -(SpCodeName.General$Squid)),
+                   'Rockfish' = SpCodeName.General$Rockfish, 
+                   'Sablefish' = SpCodeName.General$Sablefish, 
+                   'Salmon' = SpCodeName.General$`Pacific salmon`, 
+                   'Shrimp' = SpCodeName.General$Shrimp,
+                   'Squid' = SpCodeName.General$Squid),
+  
+  
+
+  ########******Western Pacific Region (Hawaii)#######
+  "Western Pacific (Hawai`i)" = list('Lobsters (*ula*)' = SpCodeName.General$`Lobsters (*ula*)`,
+                                     'Dolphinfish (*mahimahi*)' = SpCodeName.General$`Dolphinfish (*mahimahi*)`,
+                                     "Marlin (*a'u*)" = SpCodeName.General$`Marlin (*a'u*)`,
+                                     'Moonfish (*opah*)' = SpCodeName.General$`Moonfish (*opah*)`,
+                                     'Pomfrets (*Monchong*)' = SpCodeName.General$`Pomfrets (*Monchong*)`,
+                                     'Scad (*opelu*)' = SpCodeName.General$`Scad (*opelu*)`,
+                                     'Snappers' = SpCodeName.General$`Hawaii Snappers`,
+                                     'Swordfish (*mekajiki*)' = SpCodeName.General$Swordfish,
+                                     'Tunas (*aku*)' = SpCodeName.General$Tunas,
+                                     'Wahoo (*ono*)' = SpCodeName.General$`Wahoo (*ono*)`
+  ),
+  ########******New England Region########
+  "New England" = list('American lobster' = SpCodeName.General$`American lobster`, 
+                       'Atlantic herring' = SpCodeName.General$`Herring`, 
+                       'Atlantic mackerel' = SpCodeName.General$`Atlantic mackerel`, 
+                       'Bluefin tuna' = SpCodeName.General$`Bluefin tuna`, 
+                       'Cod and haddock' = c(SpCodeName.General$`Atlantic Cod`, 
+                                             SpCodeName.General$`Atlantic haddock`), 
+                       'Flounders' = SpCodeName.General$Flounders, 
+                       'Goosefish' = SpCodeName.General$Goosefish,
+                       'Quahog clam' = SpCodeName.General$`Quahog clam`, 
+                       'Sea scallop' = SpCodeName.General$`Sea scallop`, 
+                       'Squid' = SpCodeName.General$Squid), 
+  
+  ########******Mid-Atlantic Region########
+  "Mid-Atlantic" = list('American lobster' = SpCodeName.General$`American lobster`, 
+                        'Atlantic surf clam' = SpCodeName.General$`Atlantic surf clam`, 
+                        'Blue crab' = SpCodeName.General$`Blue crab`, 
+                        'Eastern oyster' = SpCodeName.General$`Eastern oyster`,
+                        'Menhaden' = SpCodeName.General$Menhaden,
+                        'Quahog clam' = SpCodeName.General$`Quahog clam`, 
+                        'Sea scallop' = SpCodeName.General$`Sea scallop`, 
+                        'Squid' = SpCodeName.General$Squid, 
+                        'Striped bass' = SpCodeName.General$`Striped bass`, 
+                        'Summer flounder' = SpCodeName.General$`Summer flounder`), 
+  
+  
+  ########******South Atlantic Region########
+  "South Atlantic" = list('Blue crab' = SpCodeName.General$`Blue crab`, 
+                          'Clams' = SpCodeName.General$Clams, 
+                          'Flounders' = SpCodeName.General$Flounders, 
+                          'Groupers' = SpCodeName.General$Groupers, 
+                          'King mackerels' = SpCodeName.General$`King mackerel`,
+                          'Oysters' = SpCodeName.General$Oysters, 
+                          'Shrimp' = SpCodeName.General$Shrimp, 
+                          'Snappers' = SpCodeName.General$Snappers, 
+                          'Swordfish' = SpCodeName.General$Swordfish, 
+                          'Tunas' = SpCodeName.General$Tunas), 
+  
+  ########******Gulf of Mexico Region########
+  "Gulf of Mexico" = list('Blue crab' = SpCodeName.General$`Blue crab`, 
+                          'Crawfish' = SpCodeName.General$Crawfish, 
+                          'Groupers' = SpCodeName.General$Groupers, 
+                          'Menhaden' = SpCodeName.General$Menhaden,
+                          'Mullets' = SpCodeName.General$Mullets,
+                          'Oysters' = SpCodeName.General$Oysters, 
+                          'Red snapper' = SpCodeName.General$`Red snapper`,
+                          'Shrimp' = SpCodeName.General$Shrimp, 
+                          'Spiny lobster' = SpCodeName.General$`Caribbean Spiny lobster`, 
+                          'Tunas' = SpCodeName.General$Tunas)
+)
+
+
+
+
+#####***spcat.list#####
+spcat.list<-SpCodeName
+###******Get the unique codes associated with the species listed in the tables####
+
 ##########USER FUNCTIONS##############
 
 echoTF<-function(typical, code = TRUE) {
@@ -363,7 +768,8 @@ lmCheck<-function(Columns, temp) {
                        Fstat = rep_len(x = NA, length.out = length(Columns)))
   
   for (c0 in 1:length(Columns)) {
-    if (sum(is.na(temp[,Columns[c0]])) == length(temp[,Columns[c0]])) {
+    if (sum(is.na(temp[,Columns[c0]])) == length(temp[,Columns[c0]]) | 
+        length(temp[,Columns[c0]]) %in% sum(temp[,Columns[c0]] %in% c(NA, 0))) {
       
       lm_check$col[c0]<-NA
       lm_check$slope[c0]<-NA
@@ -942,22 +1348,35 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
     # - $VV_{t}$ is the new total of $V_{i,t}$ for the entire fishery using only values for species that were used to calculate $P_{i,t}$
     
   #Total VV
+  if (is.null(dim(temp[,grep(pattern = "VV", x = names(temp))]))) {
+    temp00<-data.frame(temp[,grep(pattern = "VV", x = names(temp))])
+    names(temp00)<-names(temp)[grep(pattern = "VV", x = names(temp))]
+  } else {
+    temp00<-rowSums(temp[,grep(pattern = "VV", x = names(temp))], na.rm = T)
+  }
   temp0<-data.frame(temp[,grep(pattern = paste0("VV", "[0-9]+_", NumberOfSpecies), 
                                x = names(temp))], 
-                    rowSums(temp[,grep(pattern = "VV", x = names(temp))], na.rm = T))
+                    temp00)
   names(temp0)[ncol(temp0)]<-paste0("VV",NameBaseTotal)
   temp0<-data.frame(temp0)
   temp[ncol(temp)+1]<-temp0[ncol(temp0)]
   
   
   #Total V
-  temp0<-temp[grep(x = names(temp), 
-                   pattern = paste0("V[0-9]+_", NumberOfSpecies))]
-  temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("VV")))]
-  temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("REMOVED_")))]
-  temp[ncol(temp)+1]<-rowSums(temp0, na.rm = T)
-  names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal)
-    
+  temp0<-data.frame(temp[grep(x = names(temp), 
+                   pattern = paste0("V[0-9]+_", NumberOfSpecies))])
+
+    temp00<-data.frame(temp0[,!(grepl(x = names(temp0), pattern = c("VV")))])
+    names(temp00)<-names(temp0)[!(grepl(x = names(temp0), pattern = c("VV")))]
+    temp000<-data.frame(temp00[,!(grepl(x = names(temp00), pattern = c("REMOVED_")))])
+    names(temp000)<-names(temp00)[!(grepl(x = names(temp00), pattern = c("REMOVED_")))]
+    if (ncol(temp000) %in% 1) {
+      temp[ncol(temp)+1]<-sum(temp000, na.rm = T)
+    } else {
+      temp[ncol(temp)+1]<-rowSums(temp000, na.rm = T)
+    }
+    names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal)
+  
   
   
   
@@ -3019,29 +3438,6 @@ TFP_ChangeRate_Method2<-function(temp.output, temp.input, baseyr, pctmiss){
 }
 
 
-itis_reclassify<-function(tsn, categories, missing.name){
-  temp<-classification(tsn, db = 'itis')
-  TSN<-NA
-  category0<-NA
-  for (i in 1:length(temp)){
-    # print(i)
-    TSN[i]<-tsn[i]
-    if (is.na(temp[[i]])[1]) {
-      category0[i]<-"Other"
-    } else if (sum(temp[[i]]$name %in% names(categories) & #is the name of the group right?
-                   temp[[i]]$rank %in% as.character(categories))==0 #is the taxonomic level right? Just in case
-    ) {
-      category0[i]<-missing.name
-    } else {
-      category0[i]<-temp[[i]]$name[temp[[i]]$name %in% names(categories) & #is the name of the group right?
-                                     temp[[i]]$rank %in% as.character(categories)] #is the taxonomic level right? Just in case
-    }
-  }
-  tempcategories<-data.frame(TSN = TSN, 
-                             category.tax = category0)
-  return(tempcategories)
-}
-
 
 # This funciton standardizes the length of the category or species numbers e.g.,(numbers of 33, 440, and 1 are converted to 033, 440, and 001)
 numbers0<-function(x) {
@@ -3158,27 +3554,8 @@ plotnlines<-function(dat, title00, place){
 ##########LOAD DATA##############
 
 ##########*** State Codes##############
-state.codes <- read.csv(paste0(dir.data, '/statecodes.csv'), stringsAsFactors = FALSE)
-write.csv(x = state.codes, file = paste0(dir.rawdata, "/statecodes.csv"))
-
-state.codes<-state.codes[state.codes$STATE %in% c(1,2,5,7,8,10,11,13,14,21,22,23,24,27,32,33,35,36,40,42,43,46,49,50,98),]#Only,keep,the,data,for,the,states,that,we,are,making,state,tables,for
-state.codes$NAME[state.codes$NAME %in% "Florida East Coast"]<-"East Florida"
-state.codes$NAME[state.codes$NAME %in% "Florida West Coast"]<-"West Florida"
-state.codes$Region<-c("Gulf of Mexico","North Pacific","Pacific","New England","Mid-Atlantic",
-                      "South Atlantic","Gulf of Mexico","South Atlantic","Western Pacific (Hawai`i)", 
-                      "Gulf of Mexico","New England","Mid-Atlantic",
-                      "New England","Gulf of Mexico","New England","Mid-Atlantic","Mid-Atlantic",
-                      "South Atlantic","Pacific","New England","South Atlantic","Gulf of Mexico",
-                      "Mid-Atlantic","Pacific","Pacific")
-state.codes$Region.no<-c(5,7,6,1,2,
-                         4,5,4,8, 
-                         5,1,2,
-                         1,5,1,2,2,
-                         4,6,1,4,5,
-                         2,6,6)
-
-state.codes$NAME[state.codes$NAME %in% "Hawaii"]<-"Hawai`i"
-state.codes<-state.codes[!(state.codes$STATE %in% 98),]
+state.codes <- statereg <- read.csv(paste0(dir.data, '/statereg.csv'), stringsAsFactors = FALSE)
+write.csv(x = state.codes, file = paste0(dir.rawdata, "/statereg.csv"))
 
 
 

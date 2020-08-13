@@ -20,10 +20,12 @@ library(rlist)
 library(rmarkdown)
 library(knitr)
 library(gridExtra)
+library(ggpubr)
 
 #Excel File Management
 library(officer)
 library(xlsx)
+library(readxl)
 
 #Visuals
 library(ggplot2)
@@ -453,6 +455,23 @@ spcat.list<-SpCodeName
 
 ##########USER FUNCTIONS##############
 
+
+funct_list<-function(x) {
+  x<-x[which(x!="")]
+  # x<-x[which(!is.null(x))]
+  x<-x[which(!is.na(x))]
+  # x<-x[order(x)]
+  if (length(x)==2) { 
+    str1<-paste(x, collapse = " and ")
+  } else if (length(x)>2) {
+    str1<-paste(x[1:(length(x)-1)], collapse = ", ")
+    str1<-paste0(str1, ", and ", x[length(x)])
+  } else {
+    str1<-x
+  }
+  return(str1)
+}
+
 echoTF<-function(typical, code = TRUE) {
   return(ifelse(code == TRUE, typical, FALSE))
 }
@@ -634,6 +653,11 @@ EditCommData<-function(dat, category0) {
   rownames(temp.q)<-paste0("Q", temp.q$species)
   temp.q$species<-NULL
   temp.q<-data.frame(t(temp.q))
+  if (is.null(dim(temp.q))){
+    temp00<-temp.q
+  } else {
+    temp00<-rowSums(temp.q, na.rm = T)
+  }
   temp.q$temp<-rowSums(temp.q, na.rm = T)
   names(temp.q)[names(temp.q) %in% "temp"]<-paste0("QE",numbers0(x = c(0, length(cat0)))[1],"_", 
                                                    paste(rep_len(x = 0, 
@@ -658,8 +682,12 @@ EditCommData<-function(dat, category0) {
   rownames(temp.v)<-paste0("V", temp.v$species)
   temp.v$species<-NULL
   temp.v<-data.frame(t(temp.v))
-  
-  temp.v$temp<-rowSums(temp.v, na.rm = T)
+  if (is.null(dim(temp.v))){
+    temp00<-temp.v
+  } else {
+    temp00<-rowSums(temp.v, na.rm = T)
+  }
+  temp.v$temp<-temp00
   names(temp.v)[names(temp.v) %in% "temp"]<-paste0("VE",numbers0(x = c(0, length(cat0)))[1],"_", 
                                                    paste(rep_len(x = 0, 
                                                                  length.out = nchar(numbers0(x = as.numeric(factor(temp$species)))[1])), collapse = ""), 
@@ -1000,8 +1028,14 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   # temp[ncol(temp)+1]<-rowSums(data.frame(temp[,names(temp) %in% VVColumns]), na.rm = T)
   # names(temp)[ncol(temp)]<-paste0("VV",NameBasecategory)
   
+  if (is.null(dim(temp[,names(temp) %in% VVColumns]))) {
+    temp00<-temp[,names(temp) %in% VVColumns]
+  } else {
+    temp00<-rowSums(temp[,names(temp) %in% VVColumns], na.rm = T)
+  }
+  
   temp0<-data.frame(temp[,names(temp) %in% VVColumns], 
-                    rowSums(temp[,names(temp) %in% VVColumns], na.rm = T))#)
+                    temp00)#)
   names(temp0)[ncol(temp0)]<-paste0("VV",NameBasecategory)
   temp0<-data.frame(temp0)
   temp[ncol(temp)+1]<-temp0[ncol(temp0)]
@@ -1107,7 +1141,13 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   # Where: 
   # - $QC_{t,i}$ = Quantity change for a category (i)
   
-  temp[ncol(temp)+1]<-rowSums(tempPCW, na.rm = T)
+  if (is.null(dim(tempPCW))) {
+    temp00<-tempPCW
+  } else {
+    temp00<-rowSums(tempPCW, na.rm = T)
+  }
+  
+  temp[ncol(temp)+1]<-temp00
   names(temp)[ncol(temp)]<-paste0("PC", NameBasecategory)
   
   
@@ -1453,7 +1493,14 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   #   Where: 
   #   - $PC_{t}$ = Quantity change for the entire fishery
   
-  temp[,ncol(temp)+1]<-rowSums(tempPCW, na.rm = T)
+  
+  if (is.null(dim(tempPCW))) {
+    temp00<-tempPCW
+  } else {
+    temp00<-rowSums(tempPCW, na.rm = T)
+  }
+  
+  temp[,ncol(temp)+1]<-temp00
   names(temp)[ncol(temp)]<-paste0("PC", NameBaseTotal)
 
   
@@ -1541,9 +1588,16 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
     }
     temp<-cbind.data.frame(temp, tempQCW)
     
-    temp[,ncol(temp)+1]<-rowSums(tempQCW, na.rm = T)
-    names(temp)[ncol(temp)]<-paste0("QC", NameBaseTotal)  
+
     
+    if (is.null(dim(tempQCW))) {
+      temp00<-tempQCW
+    } else {
+      temp00<-rowSums(tempQCW, na.rm = T)
+    }
+    
+    temp[,ncol(temp)+1]<-temp00
+    names(temp)[ncol(temp)]<-paste0("QC", NameBaseTotal)  
     
   #Remove Duplicate Columns
   temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
@@ -1613,7 +1667,13 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
     names(temp00)[i]<-paste0("ln", category[i])
   }
   
-  temp0[,(ncol(temp0)+1)]<-rowSums(temp00)
+  if (is.null(dim(temp00))) {
+    temp000<-temp00
+  } else {
+    temp000<-rowSums(temp00, na.rm = T)
+  }
+  
+  temp0[,(ncol(temp0)+1)]<-temp000
   names(temp0)[ncol(temp0)]<-"part2"  
   
   
@@ -2179,8 +2239,8 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
     spptable0$TotCount[i]<-length(spp.pre)
     spptable0$UsedCount[i]<-ifelse(is.na(length(spp.pst)), 0, length(spp.pst))
     spptable0$RmCount[i]<-spptable0$TotCount[i] - spptable0$UsedCount[i]
-  }
   
+    }
   
   
   
@@ -2345,10 +2405,18 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
     #   - $VV_{t,i}$ is the new total of $V_{t,i}$ (called $VV_{t,i}$) for the category using only values for species that were used to calculate $Q_{t,i}$
     #   - $V_{t,i,s, available}$ are the $V_{t,i,s}$ where $Q_{t,i,s}$ were able to be calculated
     
+    
+    if (is.null(dim(temp[,names(temp) %in% VVColumns]))) {
+      temp00<-temp[,names(temp) %in% VVColumns]
+    } else {
+      temp00<-rowSums(temp[,names(temp) %in% VVColumns], na.rm = T)
+    }
+    
     temp0<-data.frame(temp[,names(temp) %in% VVColumns], 
                       # ifelse(length(VVColumns) == 1, 
                              # temp[,names(temp) %in% VVColumns], 
-                             rowSums(temp[,names(temp) %in% VVColumns], na.rm = T))#)
+                             temp00)#)
+    
     names(temp0)[ncol(temp0)]<-paste0("VV",NameBasecategory)
     temp0<-data.frame(temp0)
     temp[ncol(temp)+1]<-temp0[ncol(temp0)]
@@ -2452,7 +2520,13 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
     # Where: 
     # - $QC_{t,i}$ = Quantity change for a category (i)
     
-    temp[ncol(temp)+1]<-rowSums(tempQCW, na.rm = T)
+    if (is.null(dim(tempQCW))) {
+      temp00<-tempQCW
+    } else {
+      temp00<-rowSums(tempQCW, na.rm = T)
+    }
+    
+    temp[ncol(temp)+1]<-temp00
     names(temp)[ncol(temp)]<-paste0("QC", NameBasecategory)
     
     
@@ -2619,16 +2693,34 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   temp <- temp[, !duplicated(colnames(temp))]
   
     
+  # if (length(category) == 1) {
+    # 
+    # warnings.list[length(warnings.list)+1]<-paste0("Warning: There were too few categories that we could calculate for ",NameBaseTotal,". ")
+    # a<-warnings.list[length(warnings.list)][[1]]
+  #   spptable0<-data.frame("Analysis" = title0,   
+  #                         "Place" = place,  
+  #                         "Catagory" = NA, 
+  #                         "TotCount" = NA, 
+  #                         "RmCount" = NA, 
+  #                         "UsedCount" = NA)
+  # } else {    
+    
   ###Value for all fisheries for species where Q was able to be calculated
   # $R_{t,i}$, defined and discussed in the subsequent step, will need to sum to 1 across all species in a category. Therefore, you will need to sum a new total of $V_{t,i}$ (called $VV_{t}$) for the category using only values for species that were used to calculate $QI_{t,i}$. 
   # $$VV_{t} = \sum_{s=1}^{n}(VV_{t,i})$$ 
   #   where: 
   #   - $VV_{t}$ is the new total of $V_{t,i}$ for the entire fishery using only values for species that were used to calculate $P_{t,i}$
-    
+
   #Total VV
+  if (length(grep(pattern = "VV", x = names(temp))) == 1) {
+    aa<-temp[,grep(pattern = "VV", x = names(temp))]
+  } else {
+    aa<-rowSums(temp[,grep(pattern = "VV", x = names(temp))], na.rm = T)
+  }
+  
   temp0<-data.frame(temp[,grep(pattern = paste0("VV", "[0-9]+_", NumberOfSpecies), 
                                x = names(temp))], 
-                    rowSums(temp[,grep(pattern = "VV", x = names(temp))], na.rm = T))
+                    aa)
   names(temp0)[ncol(temp0)]<-paste0("VV",NameBaseTotal)
   temp0<-data.frame(temp0)
   temp[ncol(temp)+1]<-temp0[ncol(temp0)]
@@ -2641,8 +2733,12 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
                    pattern = paste0("V[0-9]+_", NumberOfSpecies))]
   temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("VV")))]
   temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("REMOVED_")))]
-  
-  temp[ncol(temp)+1]<-rowSums(temp0, na.rm = T)
+  if (ncol(data.frame(temp0)) == 1) {
+    aa<-temp0
+  } else {
+    aa<-rowSums(temp0, na.rm = T)
+  }
+  temp[ncol(temp)+1]<-aa
   names(temp)[ncol(temp)]<-paste0("V", NameBaseTotal)
   
   
@@ -2728,7 +2824,14 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   #   Where: 
   #   - $QC_{t}$ = Quantity change for the entire fishery
   
-  temp[ncol(temp)+1]<-rowSums(tempQCW, na.rm = T)
+  if (is.null(dim(tempQCW))) {
+    temp00<-tempQCW
+  } else {
+    temp00<-rowSums(tempQCW, na.rm = T)
+  }
+  
+  
+  temp[ncol(temp)+1]<-temp00
   names(temp)[ncol(temp)]<-paste0("QC", NameBaseTotal)
   
   
@@ -2811,7 +2914,13 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
     names(temp00)[i]<-paste0("ln", category[i])
   }
   
-  temp0[,(ncol(temp0)+1)]<-rowSums(temp00)
+  if (is.null(dim(temp00))) {
+    temp000<-temp00
+  } else {
+    temp000<-rowSums(temp00, na.rm = T)
+  }
+  
+  temp0[,(ncol(temp0)+1)]<-temp000
   names(temp0)[ncol(temp0)]<-"part2"  
   
 
@@ -3346,7 +3455,6 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   # 
   # figures.list[[length(figures.list)+1]]<-g
   # names(figures.list)[length(figures.list)]<-paste0(title0, title00)
-  
   
   
   

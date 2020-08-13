@@ -94,7 +94,6 @@ write.csv(x = landings.data, file = paste0(dir.rawdata, "landings_edited.csv"))
 ######MAKE REPORT########
 counter<-0
 
-# plotlist<-list()
 
 OutputAnalysis<-function(landings.data, category0, baseyr, 
                          state.codes, titleadd,
@@ -112,8 +111,8 @@ OutputAnalysis<-function(landings.data, category0, baseyr,
   dir.outputtables<-paste0(dir.analyses1, "/outputtables/")
   dir.create(paste0(dir.analyses1, "/outputtables/")) 
   
-  reg.order<-c("National", "North Pacific", "Pacific", "Western Pacific (Hawai`i)", "New England", "Mid-Atlantic", "South Atlantic", "Gulf of Mexico") 
-  reg.order0<-c("US", "NP", "Pac", "WP", "NE", "MA", "SA", "GOM")
+  reg.order<-c("National", "North Pacific", "Pacific", "Western Pacific (Hawai`i)", "New England", "Mid-Atlantic", "Northeast", "South Atlantic", "Gulf of Mexico") 
+  reg.order0<-c("US", "NP", "Pac", "WP", "NE", "MA", "SA", "GOM", "NorE")
   
   #Save Stuff
   editeddata.list<-list()
@@ -127,6 +126,11 @@ OutputAnalysis<-function(landings.data, category0, baseyr,
     
     if (r != 1) { #only because I am tired of getting the warning messages
       remove(place, title0, temp00, temp0, temp, title000)
+    }
+    
+    if (reg.order[r] == "Northeast") {
+      state.codes$Region[state.codes$Region %in% c("Mid-Atlantic", "New England")]<-"Northeast"
+      state.codes$abbvreg[state.codes$Region %in% c("Mid-Atlantic", "New England")]<-"NorE"
     }
     
     ### A. Import and Edit data
@@ -308,58 +312,63 @@ OutputAnalysis<-function(landings.data, category0, baseyr,
   
   ######PLOTS##########
   
-print("Create plots")
-
-#Side by Side graphs
-figs<-unique(paste0(lapply(X = strsplit(x = names(figures.list),
-                                        split = gsub(pattern = "\\.", replacement = "", x = category0)),
-                           function(x) x[2])))
-gridfigures.list<-list()
-
-for (i in 1:length(figs)){
-
-  a<-strsplit(x = names(figures.list)[i], split = "_")[[1]][length(strsplit(x = names(figures.list)[i], split = "_")[[1]])]
-
-  dir.create(paste0(dir.figures, "/", a, "/"))
-
-  fig<-figs[i]
-  list0<-figures.list[grep(pattern = fig, x = names(figures.list))]
-
-  g<-grid.arrange(list0[[1]],
-                  list0[[2]],
-                  list0[[3]],
-                  list0[[4]],
-                  list0[[5]],
-                  list0[[6]],
-                  list0[[7]],
-                  nrow=3, newpage = FALSE)
-
-  ggsave(filename = paste0(dir.figures, "/", a, "/", "000_All_byr",baseyr,
-                           "_",gsub(pattern = "\\.", replacement = "", x = category0), fig, ".png"),
-         plot = g,
-         width = 11, height = 8.5)
-
-  gridfigures.list[length(gridfigures.list)+1]<-g
-  names(gridfigures.list)[length(gridfigures.list)]<-paste0("000_All_byr",baseyr,
-                                                            "_",gsub(pattern = "\\.", replacement = "", x = category0), fig)
-}
-
-
+  print("Create plots")
+  
+  
+  #Side by Side graphs
+  figs<-unique(paste0(lapply(X = strsplit(x = names(figures.list),
+                                          split = gsub(pattern = "\\.", replacement = "", x = category0)),
+                             function(x) x[2])))
+  gridfigures.list<-list()
+  
+  for (i in 1:length(figs)){
+    
+    a<-strsplit(x = names(figures.list)[i], split = "_")[[1]][length(strsplit(x = names(figures.list)[i], split = "_")[[1]])]
+    
+    dir.create(paste0(dir.figures, "/", a, "/"))
+    
+    fig<-figs[i]
+    list0<-figures.list[grep(pattern = fig, x = names(figures.list))]
+    
+    # g<-ggarrange(list0[[1]],
+    #                 list0[[2]],
+    #                 list0[[3]],
+    #                 list0[[4]],
+    #                 list0[[5]],
+    #                 list0[[6]],
+    #                 list0[[7]],
+    #                 nrow=3, ncol = 3)
+    
+    g<-ggarrange(plotlist = list0,
+                 nrow=3, ncol = 3)
+    
+    ggsave(filename = paste0(dir.figures, "/", a, "/", "000_All_byr",baseyr,
+                             "_",gsub(pattern = "\\.", replacement = "", x = category0), fig, ".png"),
+           plot = g,
+           width = 11, height = 8.5)
+    
+    gridfigures.list[length(gridfigures.list)+1]<-g
+    names(gridfigures.list)[length(gridfigures.list)]<-paste0("000_All_byr",baseyr,
+                                                              "_",gsub(pattern = "\\.", replacement = "", x = category0), fig)
+  }
+  
   save(figures.list, gridfigures.list,
        file = paste0(dir.figures, "AllFigures.rdata"))
-
-#   #make single plots
-#   for (i in 1:length(figures.list)) {
-#     print(paste0(names(figures.list)[i]))
-#     a<-strsplit(x = names(figures.list)[i], split = "_")[[1]][length(strsplit(x = names(figures.list)[i], split = "_")[[1]])]
-#     dir.create(paste0(dir.figures, "/", a, "/"))
-# 
-#     # dir.create(paste0(dir.figures, "/", a, "/"))
-# 
-#     ggsave(filename = paste0(dir.figures, "/", a, "/", names(figures.list)[i], ".png"),
-#            plot = figures.list[[i]],
-#            width = 11, height = 8.5)
-# }
+  
+  
+  
+  #   #make single plots
+  #   for (i in 1:length(figures.list)) {
+  #     print(paste0(names(figures.list)[i]))
+  #     a<-strsplit(x = names(figures.list)[i], split = "_")[[1]][length(strsplit(x = names(figures.list)[i], split = "_")[[1]])]
+  #     dir.create(paste0(dir.figures, "/", a, "/"))
+  # 
+  #     # dir.create(paste0(dir.figures, "/", a, "/"))
+  # 
+  #     ggsave(filename = paste0(dir.figures, "/", a, "/", names(figures.list)[i], ".png"),
+  #            plot = figures.list[[i]],
+  #            width = 11, height = 8.5)
+  # }
   
 }
 
@@ -370,7 +379,7 @@ analysisby = "P"
 category0 = "category.orig"
 pctmiss = 0.60
 MinimumNumberOfSpecies = 10
-baseyr<-2010
+baseyr<-2007
 
 # # Data for the whole Time Series
 # OutputAnalysis(landings.data, category0, baseyr,
@@ -427,6 +436,7 @@ baseyr<-2010
 
 
 category0 = "category.origFSO"
+MinimumNumberOfSpecies = 1
 
 a<-landings.data
 a$category.origFSO<-a$category.orig
@@ -481,6 +491,7 @@ for (i in 1:length(unique(a$Region))) {
 }
 a<-cc
 category0 = "category.origFSO"
+MinimumNumberOfSpecies = 6
 
 OutputAnalysis(landings.data = a, 
                category0, baseyr,
@@ -501,7 +512,7 @@ analysisby = "P"
 category0 = "category.tax"
 pctmiss = 0.60
 MinimumNumberOfSpecies = 10
-baseyr<-2010
+baseyr<-2007
 
 # # Data for the whole Time Series
 # OutputAnalysis(landings.data, category0, baseyr,
@@ -533,6 +544,7 @@ baseyr<-2010
 
 
 category0 = "category.taxFSO"
+MinimumNumberOfSpecies = 1
 
 a<-landings.data
 a$category.taxFSO<-a$category.taxsimp
@@ -606,6 +618,7 @@ for (i in 1:length(unique(a$Region))) {
 }
 a<-cc
 category0 = "category.taxFSO"
+MinimumNumberOfSpecies = 6
 
 
 OutputAnalysis(landings.data =a, 
@@ -628,7 +641,7 @@ analysisby = "Q"
 category0 = "category.orig"
 pctmiss = 0.60
 MinimumNumberOfSpecies = 10
-baseyr<-2010
+baseyr<-2007
 
 # # Data for the whole Time Series
 # OutputAnalysis(landings.data, category0, baseyr,
@@ -655,6 +668,8 @@ baseyr<-2010
 #                state.codes, titleadd = "WholeTimeseries1",
 #                counter, dir.rawdata, pctmiss = 1.00) 
 category0 = "category.origFSO"
+MinimumNumberOfSpecies = 1
+
 
 a<-landings.data
 a$category.origFSO<-a$category.orig
@@ -709,6 +724,7 @@ for (i in 1:length(unique(a$Region))) {
 }
 a<-cc
 category0 = "category.origFSO"
+MinimumNumberOfSpecies = 6
 
 OutputAnalysis(landings.data = a, 
                category0, baseyr,
@@ -728,7 +744,7 @@ analysisby = "Q"
 category0 = "category.tax"
 pctmiss = 0.60
 MinimumNumberOfSpecies = 10
-baseyr<-2010
+baseyr<-2007
 
 # # Data for the whole Time Series
 # OutputAnalysis(landings.data, category0, baseyr,
@@ -757,6 +773,8 @@ baseyr<-2010
 
 
 category0 = "category.taxFSO"
+MinimumNumberOfSpecies = 1
+
 
 a<-landings.data
 a$category.taxFSO<-as.character(a$category.taxsimp)
@@ -832,6 +850,7 @@ for (i in 1:length(unique(a$Region))) {
 }
 a<-cc
 category0 = "category.taxFSO"
+MinimumNumberOfSpecies = 1
 
 
 OutputAnalysis(landings.data =a, 
@@ -841,11 +860,262 @@ OutputAnalysis(landings.data =a,
                MinimumNumberOfSpecies)
 
 # Data just from the last 20 years
-OutputAnalysis(landings.data = a[a$Year>=1997,],
+OutputAnalysis(landings.data = data.frame(a[a$Year>=1997,]),
                category0, baseyr,
                state.codes, titleadd = "1997ToP_FSKey",
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
                MinimumNumberOfSpecies)
+
+
+##############***Northeast##############
+
+#######KNOWNS
+maxyr <- 2017
+minyr <- 2007
+NMFSorITIS<-"ITISTax"
+reg.order<-c("National", "North Pacific", "Pacific", "Western Pacific (Hawai`i)", "New England", "Mid-Atlantic", "Northeast", "South Atlantic", "Gulf of Mexico") 
+
+#Functions common to all sections, to help instill standardization
+# Common.Funct<-paste0(dirname(getwd()), "/FEUS/2018/FEUS",maxyr,"Common/rscripts/Common_Functions.r")
+# source(Common.Funct)
+Comm.SppData<-paste0(dir.scripts, "ProductivityIndex_Species.R")
+dir.data0<-dir.data
+dir.data<-paste0(dirname(getwd()), "/FEUS/2018/FEUS2018Commercial/data/")
+dir.data.common<-paste0(dirname(getwd()), "/FEUS/2018/FEUS2018Common/data/")
+Comm.Data<-paste0(dirname(getwd()), "/FEUS/2018/FEUS2018Commercial/rscripts/Commercial_Data.R")
+dir.nore<-paste0(dir.out,"/analyses/",minyr,"To",maxyr,"_Fisheries_Northeast/")
+create_dir(dir.nore)
+#Download new data
+# source(Comm.DataDL)
+
+#Data specific to this section
+source(Comm.Data)
+source(Comm.SppData)
+dir.data<-dir.data0
+
+spcat<-c()
+spcat0<-read.csv(paste0(dir.data, "/specodes_W_names.csv"))
+
+#Find index of where these species can be found in spcat_list$General
+for (i in 1:nrow(spcat0)) {
+  spcat<-c(spcat, 
+           ifelse(sum(grepl(pattern = spcat0$Name[i], x = names(spcat.list$General) , ignore.case = T)) == 0, 
+                  NA, grep(pattern = spcat0$Name[i], x = names(spcat.list$General), ignore.case = T) ))
+}
+
+spcat1<-spcat.list$General[spcat]
+names(spcat1)<-spcat0$Name
+
+spcat00<-data.frame("TSN" = unlist(spcat.list$General[spcat]), 
+                    spcat0)
+
+write.xlsx(spcat00, file = paste0(dir.nore, "NortheastData.xlsx"), sheetName = "AskedFor", 
+           col.names = TRUE, row.names = TRUE, append = FALSE)
+
+spcat.list<-list()
+spcat.list$Areas<-list()
+spcat.list$Areas$Northeast<-spcat1
+
+landings.data1<-data.frame("State1" = landings.data$State, 
+                           "State" = landings.data$State, 
+                           "TSN" = landings.data$Tsn, 
+                           "year" = landings.data$Year, 
+                           "POUNDS" = landings.data$Pounds, 
+                           "DOLLARS"=landings.data$Dollars, 
+                           "CommonName" = landings.data$AFS.Name, 
+                           "Region" = landings.data$Region, 
+                           "category" = landings.data$category.orig, 
+                           "OFS" = substr(x = landings.data$category.orig, 1,1), 
+                           "abbvst" = landings.data$abbvst, 
+                           "abbvreg" = landings.data$abbvreg, 
+                           "xstate" = landings.data$xstate, 
+                           "xreg" = landings.data$xreg, 
+                           "State.no" = landings.data$State.no, 
+                           "Region.no" = landings.data$Region.no, 
+                           "fips" = landings.data$fips)
+
+
+a<-spp_reclassify(landings.df = landings.data1[landings.data1$Region %in% c("New England", "Mid-Atlantic"),], 
+                  spcat.list = spcat.list, 
+                  place = "Northeast")
+
+
+for (jjj in 1:length(a)) {
+  assign(names(a)[jjj], a[[jjj]])
+  write.xlsx(a[[jjj]], file = paste0(dir.nore, "NortheastData.xlsx"), sheetName = names(a)[jjj], 
+             col.names = TRUE, row.names = TRUE, append = TRUE)
+}
+
+revenue$keyspecies<-tolower(revenue$keyspecies)
+spcat0$Name<-tolower(spcat0$Name)
+FisherySums<-merge(x = revenue, y = spcat0, by.x = "keyspecies", by.y = "Name")
+
+FisherySums<-aggregate.data.frame(x = sapply(X = FisherySums[,as.character(minyr:maxyr)], FUN = as.numeric), 
+                                      by = list("PLAN" = FisherySums$PLAN),
+                                      FUN = sum, na.rm = T)
+
+FisherySums$Total<-rowSums(FisherySums[,as.character(minyr:maxyr)])
+
+FisherySums <- rbind.data.frame(FisherySums, 
+                                    cbind.data.frame("PLAN" = "Fisheries Total", 
+                                                     t(colSums(FisherySums[,c(as.character(minyr:maxyr), "Total")]))), 
+                                    cbind.data.frame("PLAN" = a$revenue$keyspecies[1:4], 
+                                                     a$revenue[1:4,as.character(minyr:maxyr)], 
+                                                     "Total" = rowSums(sapply(X = a$revenue[1:4,as.character(minyr:maxyr)], 
+                                                                              FUN = as.numeric))))
+
+fold<-list.files(paste0(dir.out, "/analyses/"), full.names = T)
+fold<-fold[-(grep(pattern = "Northeast", x = fold))]
+for (i in 1:length(fold)){
+  fold0<-list.files(path = paste0(fold[i], "/outputtables"), full.names = T, pattern = "000_All_")
+  if (!(length(fold0) %in% 0)) {
+  fold0<-fold0[grep(pattern = "_Review", x = fold0)]
+  fold00<-list.files(path = paste0(fold[i], "/outputtables"), pattern = "000_All_")
+  fold00<-fold00[grepl(pattern = "_Review", x = fold00)]
+  
+  # for (ii in 1:length(length( excel_sheets( fold0 ) ))){
+    temp <- read.xlsx2(file = fold0, sheetName = "Northeast")
+
+    temp0<- data.frame("PLAN" = paste0(fold00, c(" V_Total")), 
+                        t(temp[temp[,1] %in% as.character(minyr:maxyr), c("V_Total")]), 
+                        sum( as.numeric((temp[temp[,1] %in% as.character(minyr:maxyr), 
+                                              c("V_Total")])) ) )  
+    
+    if (sum(names(temp) %in% "VV_Total")==1) {
+      tempQ<- data.frame("PLAN" = paste0(fold00, c(" VV_Total")), 
+                         t(temp[temp[,1] %in% as.character(minyr:maxyr), c("VV_Total")]), 
+                         sum( as.numeric((temp[temp[,1] %in% as.character(minyr:maxyr), 
+                                               c("VV_Total")])) ) )   
+      temp0<-rbind.data.frame(temp0, tempQ)
+    }
+    
+    names(temp0)<-names(FisherySums)
+    FisherySums<-rbind.data.frame(FisherySums, temp0)
+  }
+}
+
+rownames(FisherySums)<-NULL
+FisherySums.rev<-FisherySums
+
+write.xlsx(FisherySums.rev, file = paste0(dir.nore, "NortheastData.xlsx"), sheetName = "FisherySums_Revenue", 
+           col.names = TRUE, row.names = TRUE, append = TRUE)
+
+########Landings
+
+landings$keyspecies<-tolower(landings$keyspecies)
+spcat0$Name<-tolower(spcat0$Name)
+FisherySums<-merge(x = landings, y = spcat0, by.x = "keyspecies", by.y = "Name")
+
+FisherySums<-aggregate.data.frame(x = sapply(X = FisherySums[,as.character(minyr:maxyr)], FUN = as.numeric), 
+                                  by = list("PLAN" = FisherySums$PLAN),
+                                  FUN = sum, na.rm = T)
+
+FisherySums$Total<-rowSums(FisherySums[,as.character(minyr:maxyr)])
+
+FisherySums <- rbind.data.frame(FisherySums, 
+                                cbind.data.frame("PLAN" = "Fisheries Total", 
+                                                 t(colSums(FisherySums[,c(as.character(minyr:maxyr), "Total")]))), 
+                                cbind.data.frame("PLAN" = a$landings$keyspecies[1:4], 
+                                                 a$landings[1:4,as.character(minyr:maxyr)], 
+                                                 "Total" = rowSums(sapply(X = a$landings[1:4,as.character(minyr:maxyr)], 
+                                                                          FUN = as.numeric))))
+
+fold<-list.files(paste0(dir.out, "/analyses/"), full.names = T)
+fold<-fold[-(grep(pattern = "Northeast", x = fold))]
+for (i in 1:length(fold)){
+  fold0<-list.files(path = paste0(fold[i], "/outputtables"), full.names = T, pattern = "000_All_")
+  if (!(length(fold0) %in% 0)) {
+    fold0<-fold0[grep(pattern = "_Review", x = fold0)]
+    fold00<-list.files(path = paste0(fold[i], "/outputtables"), pattern = "000_All_")
+    fold00<-fold00[grepl(pattern = "_Review", x = fold00)]
+    
+    # for (ii in 1:length(length( excel_sheets( fold0 ) ))){
+    temp <- read.xlsx2(file = fold0, sheetName = "Northeast")
+    
+    temp0<- data.frame("PLAN" = paste0(fold00, c(" QI_Total")), 
+                       t(temp[temp[,1] %in% as.character(minyr:maxyr), c("QI_Total")]), 
+                       sum( as.numeric((temp[temp[,1] %in% as.character(minyr:maxyr), 
+                                             c("QI_Total")])) ) )  
+    
+    if (sum(names(temp) %in% "Q_Total")==1) {
+      tempQ<- data.frame("PLAN" = paste0(fold00, c(" Q_Total")), 
+                         t(temp[temp[,1] %in% as.character(minyr:maxyr), c("Q_Total")]), 
+                         sum( as.numeric((temp[temp[,1] %in% as.character(minyr:maxyr), 
+                                               c("Q_Total")])) ) )   
+      temp0<-rbind.data.frame(temp0, tempQ)
+    }
+    
+    names(temp0)<-names(FisherySums)
+    FisherySums<-rbind.data.frame(FisherySums, temp0)
+  }
+}
+
+rownames(FisherySums)<-NULL
+FisherySums.land<-FisherySums
+
+write.xlsx(FisherySums.land, file = paste0(dir.nore, "NortheastData.xlsx"), sheetName = "FisherySums_Landings", 
+           col.names = TRUE, row.names = TRUE, append = TRUE)
+
+
+#######***Summary Files##########
+dir.sum<-paste0(dir.out,"/analyses/SummaryFiles/")
+create_dir(dir.sum)
+
+yearrange<-c("1997ToP", "1950ToP")
+category0<-c("FSKey", "FSO", "FS")
+methods0<-c("P", "Q")
+
+fold<-list.files(paste0(dir.out, "/analyses/"), full.names = T)
+fold<-fold[-(grep(pattern = "Northeast", x = fold))]
+
+for (yrange0 in 1:length(yearrange)) {
+  
+  # for (cat0 in 1:length(category0)) {
+    
+    fold0<-fold[#grepl(pattern = reg.order[reg0], x = fold) & 
+      # grepl(pattern = category0[cat0], x = fold) & 
+        grepl(pattern = yearrange[yrange0], x = fold)]
+    
+    
+    for (reg0 in 1:length(reg.order)) {
+      
+      for (i in 1:length(fold0)){
+        file00<-list.files(path = paste0(fold0[i], "/outputtables"), full.names = T, pattern = "000_All_")
+          if (!(length(file00) %in% 0)) {
+        file0<-file00[grep(pattern = "_Review", x = file00)]      
+          
+          # for (ii in 1:length(length( excel_sheets( fold0 ) ))){
+          temp <- read.xlsx2(file = file0, sheetIndex = reg.order[reg0])
+          rownames(temp)<-temp[,1]
+          
+          if (i==1) {
+            temp0<-rbind.data.frame(data.frame("QE" = temp$QE_Total, 
+                                               "QEI" = temp$QEI_Total))
+          }            
+          
+
+          temp00<-data.frame(temp[,names(temp) %in% c("QI_Total", "Q_Total")])
+          names(temp00)<-names(temp)[names(temp) %in% c("QI_Total", "Q_Total")]
+          names(temp00)<-gsub(pattern = "_Total", replacement = "", x = names(temp00))
+          names(temp00)[(ncol(temp00)-1):ncol(temp00)]<-paste0(names(temp00)[(ncol(temp00)-1):ncol(temp00)], " (", 
+                                                               ifelse(grepl(pattern = "_P_", x = file0), "Price", "Quantity"), 
+                                                               " ", 
+                                                               strsplit(x = fold0, split = "_")[[1]][grep(pattern = "category", 
+                                                                                                          x = strsplit(x = fold0, 
+                                                                                                                       split = "_")[[1]])], 
+                                                               " ", 
+                                                               as.character(category0[sapply(paste0("_", category0, "_"), grepl, file0) %in% TRUE]), 
+                                                               ")")
+          temp0<-cbind.data.frame(temp0, temp00)
+          
+      }  
+    }
+    
+    write.xlsx(temp0, file = paste0(dir.sum, "Summary.xlsx"), sheetName = paste0(reg.order[reg0], "_", yearrange[yrange0]), 
+               col.names = TRUE, row.names = TRUE, append = TRUE)      
+  }
+
+}
 
 ########DOCUMENTATION#################
 

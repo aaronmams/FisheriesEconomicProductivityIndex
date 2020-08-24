@@ -19,27 +19,40 @@ knitr::opts_chunk$set(
   # fig.retina = 3
   )
 
-print4plots<-function(plotlist, datadl, title00, legends = c(T,T,T,T)){
+print4plots<-function(plotlist, datadl, title00, legends = c(T,T,T,T), titles = c(F,F,F,F)){
 
   
   b1<-plotlist[1][[1]]
   if(legends[1] %in% F) {
-    b1<-b1 + theme(legend.position = "none") + ggtitle("")
+    b1<-b1 + theme(legend.position = "none")
   }
+  if(legends[1] %in% F) {
+    b1<-b1 + ggtitle("")
+  }
+  
   
   b2<-plotlist[2][[1]]
   if(legends[2] %in% F) {
-    b2<-b2 + theme(legend.position = "none") + ggtitle("")
+    b2<-b2 + theme(legend.position = "none")
+  }
+  if(legends[2] %in% F) {
+    b2<-b2 + ggtitle("")
   }
   
   b3<-plotlist[3][[1]]
   if(legends[3] %in% F) {
-    b3<-b3 + theme(legend.position = "none") + ggtitle("")
+    b3<-b3 + theme(legend.position = "none")
+  }
+  if(legends[3] %in% F) {
+    b3<-b3 + ggtitle("")
   }
   
   b4<-plotlist[4][[1]]
-    if(legends[4] %in% F) {
-    b4<-b4 + theme(legend.position = "none") + ggtitle("")
+  if(legends[4] %in% F) {
+    b4<-b4 + theme(legend.position = "none")
+  }
+  if(legends[4] %in% F) {
+    b4<-b4 + ggtitle("")
   }
   
   b<-plotlist
@@ -144,247 +157,274 @@ xunits<-function(temp00, combine=T) {
   return(out)
 }
 
-plotkeyfig<-function(yr, place, folderpattern, 
-                      plotpartnames){
-
-  outputrun<-list.files(path = dir.output, pattern = as.character(Date0), full.names = TRUE)
-  a<-list.files(path = (list.files(path = paste0(outputrun, "/analyses/"), full.names = TRUE, pattern = folderpattern)), 
-                     pattern = "figures", full.names = TRUE, ignore.case = TRUE)
-  b<-a[(grepl(pattern =paste0(yr, "To"), x = a))]
-  # b<-load(paste0(a, "/AllFigures.rdata"))
+plotcrossanalysis<-function(dat0, place, datadl){
   
-  load(file = paste0(b, "/AllFigures.rdata"))
+  #Q
+  dat<-dat0[,c(1, grep(pattern = "Q ", x = names(dat0)), 
+               which(names(dat0) %in% "QE"))]
   
-  if (sum(grepl(pattern = place, x = names(figures.list), ignore.case = T)) != 0) {
-    
-  c1<-figures.list[grepl(pattern = plotpartnames[1], x = names(figures.list), ignore.case = T) & 
-                    grepl(pattern = place, x = names(figures.list), ignore.case = T)]
-  c2<-figures.list[grepl(pattern = plotpartnames[2], x = names(figures.list), ignore.case = T) & 
-                    grepl(pattern = place, x = names(figures.list), ignore.case = T)]
-  c3<-figures.list[grepl(pattern = plotpartnames[3], x = names(figures.list), ignore.case = T) & 
-                    grepl(pattern = place, x = names(figures.list), ignore.case = T)]
-  c4<-figures.list[grepl(pattern = plotpartnames[4], x = names(figures.list), ignore.case = T) & 
-                    grepl(pattern = place, x = names(figures.list), ignore.case = T)]
+  temp0<-gather(dat, cat, val, 
+                names(dat)[2]:names(dat)[length(names(dat))], 
+                factor_key = T)  
   
-  p<-print4plots(plotlist = c(c1, c2, c3, c4), 
-                     datadl = datadl, title00 = "", 
-                     legends = c(F,T,F,F))
-  } else {
-    
-    title0<-strsplit(split = "/", x = b)
-    title0<-title0[[1]][length(title0[[1]])-1]
-    
-    title0<-strsplit(split = "_", x = title0)[[1]]
-    # title0<-title0[-length(title0)]
-    title0<-gsub(pattern = "To", replacement = "-", x = title0)
-    title0<-gsub(pattern = "byr", replacement = "base yr = ", x = title0)
-    title0<-paste(title0, collapse = " ")
-    title0<-gsub(pattern = " P ", replacement = " Price Method ", x = title0)
-    title0<-gsub(pattern = " Q ", replacement = " Quantity Method ", x = title0)
-    
-    p <- ggplot(dat = data.frame(x=1,y=1), aes(x, y, 
-                                               label = "We could not perform this analysis on this region")) + 
-      geom_text() + 
+  Q<-plotnlines(dat = temp0, title00 = "Q", place = place)
+  
+  
+  # #QE
+  # dat<-dat0[,c(1, grep(pattern = "QE", x = names(dat0)))]
+  # 
+  # temp0<-gather(dat, cat, val, 
+  #               names(dat)[2]:names(dat)[length(names(dat))], 
+  #               factor_key = T)  
+  # 
+  # QE<-plotnlines(dat = temp0, title00 = "QE", place = place)
+  
+  
+  #QI
+  dat<-dat0[,c(1, grep(pattern = "QI ", x = names(dat0)), 
+               grep(pattern = "QEI", x = names(dat0)))]
+  
+  temp0<-gather(dat, cat, val, 
+                names(dat)[2]:names(dat)[length(names(dat))], 
+                factor_key = T)  
+  
+  QI<-plotnlines(dat = temp0, title00 = "QI", place = place)
+  
+  
+  #PI
+  dat<-dat0[,c(1, grep(pattern = "PI ", x = names(dat0)))]
+  
+  temp0<-gather(dat, cat, val, 
+                names(dat)[2]:names(dat)[length(names(dat))], 
+                factor_key = T)  
+  
+  PI<-plotnlines(dat = temp0, title00 = "PI", place = place)
+  
+  #blank
+  blank<-ggplot(dat = data.frame(x=1,y=1), aes(x, y)) + 
       theme(panel.background = element_blank(), 
             axis.title = element_blank(), 
             axis.text = element_blank(), 
             axis.ticks = element_blank()) + 
-      ggtitle(title0)
-    
-  }
+      ggtitle("")
   
-
-  return(p)
+  plotlist<-list("Q" = Q, 
+                 "QI" = QI, 
+                 "blank" = blank, 
+                 # "QE" = QE, 
+                 "PI" = PI)
+  
+  print4plots(plotlist = plotlist, datadl, title00 = place)
+  
 }
 
+counter<-1
+```
 
-fold<-list.files(paste0(dir.out, "/analyses/"), pattern = folderpattern, full.names = FALSE)
 
-fold0<-strsplit(x = fold, split = "_")
-a<-unique(paste(lapply(fold0, `[[`, 3)))
+# `r reg.order[counter]` `r gsub(pattern = "To", replace = "-", yr)`
 
-if (a == "P") {
-  plotpartnames <- c("Q-Category", "QE-Category", "QI-Line", "PI-Line")
-  method0<-"Price Method"
-} else if (a == "Q") {
-  plotpartnames <- c("Q-Category", "QI-Line", "QE-Category", "VE-Line")
-  method0<-"Quantity Method"
+```{r}
+place<-reg.order[counter]
+
+if (place %in% "Pacific") {
+  temp000<-strsplit(x = names(summarydata), split = " ")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+  temp000<-strsplit(x = temp000, split = "_")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+
+  
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    temp000 %in% place][[1]]  
+} else {
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    grepl(pattern = place, x = names(summarydata))][[1]]
 }
-  
-
-
+plotcrossanalysis(dat0, place, datadl)
+counter<-counter+1
 ```
 
-```{r}
-yr<-1950
-var<-"QI"
-```
-
-# National `r yr`-`r maxyr` `r var`
+# `r reg.order[counter]` `r gsub(pattern = "To", replace = "-", yr)`
 
 ```{r}
-info<-data.frame("img_loc" = paste0(list.files(list.files(path = (list.files(path = dir.output, pattern = as.character(Date0), 
-                                                                             full.names = TRUE)), 
-                                               full.names = TRUE, pattern = "analyses"), full.names = TRUE), "/figures/"),
-                 "figname" = list.files(list.files(path = (list.files(path = dir.output, pattern = as.character(Date0), full.names = TRUE)), 
-                                               full.names = TRUE, pattern = "analyses"), full.names = FALSE))
+place<-reg.order[counter]
 
-info<-info[!(info$figname %in% c("2007To2017_Fisheries_Northeast",  "SummaryFiles")),]
+if (place %in% "Pacific") {
+  temp000<-strsplit(x = names(summarydata), split = " ")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+  temp000<-strsplit(x = temp000, split = "_")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
 
-  title0<-strsplit(split = "_", x = info$figname)
-  info$timeframe<-unlist(lapply(title0, `[[`, 1))
-  info$categories<-unlist(lapply(title0, `[[`, 2))
-  info$method<-unlist(lapply(title0, `[[`, 3))
-  info$categorysplittype<-unlist(lapply(title0, `[[`, 4))
-  info$pctmiss<-gsub(pattern = "pctmiss", replacement = "", x = unlist(lapply(title0, `[[`, 5)))
-  info$slidetitle = paste0("Regional Quantitiy Index")
-  info$slidesubtitle = paste0(ifelse(info$method=="P", "Price", "Quantity"), " Method, ", 
-                              gsub(pattern = "To", replacement = "-", x = info$timeframe))
   
-# for (ii in ) {
-  fig.list.atl<-list()
-  fig.list.pac<-list()
-  fig.list.ne<-list()
-  for (i in 1:nrow(info)) {
-    if (length(list.files(path = paste0(info$img_loc[i]), pattern = "AllFigures.rdata")) != 0) {
-      load(file = paste0(info$img_loc[i], "AllFigures.rdata")) #figure.list
-      temp<-figures.list[grep(pattern = "QI-Line", x = names(figures.list), ignore.case = T)]
-      
-    #Atl
-      fig.list.atl<-c(fig.list.atl, list(print4plots(plotlist = temp[1:4], datadl = datadl, title00 = paste0(info$figname[i], " Atlantic"))))
-      names(fig.list.atl)[length(fig.list.atl)]<-paste0(info$figname[i], " Atlantic")
-    #Pac
-      fig.list.pac<-c(fig.list.pac, list(print4plots(plotlist = temp[6:9], datadl = datadl, title00 = paste0(info$figname[i], " Pacific"))))
-      names(fig.list.pac)[length(fig.list.pac)]<-paste0(info$figname[i], " Pacific")
-    #NE
-      fig.list.ne<-c(fig.list.ne, temp[5])
-      names(fig.list.ne)[length(fig.list.ne)]<-paste0(info$figname[i])
-    } else {
-      fig.list.atl<-c(fig.list.atl, list("NA"))
-      fig.list.pac<-c(fig.list.pac, list("NA"))
-      fig.list.ne<-c(fig.list.ne, list("NA"))
-      names(fig.list.atl)[length(fig.list.atl)]<-names(fig.list.pac)[length(fig.list.pac)]<-names(fig.list.ne)[length(fig.list.ne)]<-"x"
-    }
-  }
-  
-  info$atl<-names(fig.list.atl)
-  info$pac<-names(fig.list.pac)
-  info$ne<-names(fig.list.ne)
-  info$img_loc_atl<-paste0(dir.pres, "/atl/", info$atl, ".jpg")
-  info$img_loc_pac<-paste0(dir.pres, "/pac/", info$pac, ".jpg")
-  info$img_loc_ne<-paste0(dir.pres, "/ne/", info$ne, ".jpg")
-  
-  dir.create(paste0(dir.pres, "atl"))
-  for (i in 1:length(fig.list.atl)) {
-    file_name = paste0(dir.pres, "atl/", names(fig.list.atl)[i], ".jpg")
-    jpeg(filename = file_name)
-    print(fig.list.atl[[i]])
-    dev.off()
-  }
-  
-    dir.create(paste0(dir.pres, "pac"))
-  for (i in 1:length(fig.list.pac)) {
-    file_name = paste0(dir.pres, "pac/", names(fig.list.pac)[i], ".jpg")
-    jpeg(filename = file_name)
-    print(fig.list.pac[[i]])
-    dev.off()
-  }
-    
-      dir.create(paste0(dir.pres, "ne"))
-  for (i in 1:length(fig.list.pac)) {
-    file_name = paste0(dir.pres, "ne/", names(fig.list.ne)[i], ".jpg")
-    jpeg(filename = file_name)
-    print(fig.list.ne[[i]])
-    dev.off()
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    temp000 %in% place][[1]]  
+} else {
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    grepl(pattern = place, x = names(summarydata))][[1]]
 }
+plotcrossanalysis(dat0, place, datadl)
+counter<-counter+1
+```
+
+
+# `r reg.order[counter]` `r gsub(pattern = "To", replace = "-", yr)`
+
+```{r}
+place<-reg.order[counter]
+
+if (place %in% "Pacific") {
+  temp000<-strsplit(x = names(summarydata), split = " ")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+  temp000<-strsplit(x = temp000, split = "_")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+
   
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    temp000 %in% place][[1]]  
+} else {
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    grepl(pattern = place, x = names(summarydata))][[1]]
+}
+plotcrossanalysis(dat0, place, datadl)
+counter<-counter+1
 ```
 
+
+# `r reg.order[counter]` `r gsub(pattern = "To", replace = "-", yr)`
+
 ```{r}
-yr<-1997
+place<-reg.order[counter]
+
+if (place %in% "Pacific") {
+  temp000<-strsplit(x = names(summarydata), split = " ")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+  temp000<-strsplit(x = temp000, split = "_")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+
+  
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    temp000 %in% place][[1]]  
+} else {
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    grepl(pattern = place, x = names(summarydata))][[1]]
+}
+plotcrossanalysis(dat0, place, datadl)
+counter<-counter+1
 ```
 
-# National `r yr`-`r maxyr` (`r method0`)
+
+# `r reg.order[counter]` `r gsub(pattern = "To", replace = "-", yr)`
 
 ```{r}
-plotkeyfig(yr = yr, 
-            place = "_US_", 
-            folderpattern, plotpartnames)
+place<-reg.order[counter]
+
+if (place %in% "Pacific") {
+  temp000<-strsplit(x = names(summarydata), split = " ")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+  temp000<-strsplit(x = temp000, split = "_")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+
+  
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    temp000 %in% place][[1]]  
+} else {
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    grepl(pattern = place, x = names(summarydata))][[1]]
+}
+plotcrossanalysis(dat0, place, datadl)
+counter<-counter+1
 ```
 
+
+# `r reg.order[counter]` `r gsub(pattern = "To", replace = "-", yr)`
+
 ```{r}
-yr<-2007
+place<-reg.order[counter]
+
+if (place %in% "Pacific") {
+  temp000<-strsplit(x = names(summarydata), split = " ")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+  temp000<-strsplit(x = temp000, split = "_")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+
+  
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    temp000 %in% place][[1]]  
+} else {
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    grepl(pattern = place, x = names(summarydata))][[1]]
+}
+plotcrossanalysis(dat0, place, datadl)
+counter<-counter+1
 ```
 
-# National `r yr`-`r maxyr` (`r method0`)
+
+# `r reg.order[counter]` `r gsub(pattern = "To", replace = "-", yr)`
 
 ```{r}
-plotkeyfig(yr, 
-            place = "_US_", 
-            folderpattern, plotpartnames)
+place<-reg.order[counter]
+
+if (place %in% "Pacific") {
+  temp000<-strsplit(x = names(summarydata), split = " ")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+  temp000<-strsplit(x = temp000, split = "_")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+
+  
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    temp000 %in% place][[1]]  
+} else {
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    grepl(pattern = place, x = names(summarydata))][[1]]
+}
+plotcrossanalysis(dat0, place, datadl)
+counter<-counter+1
 ```
 
-# North Pacific `r yr`-`r maxyr` (`r method0`)
+
+
+# `r reg.order[counter]` `r gsub(pattern = "To", replace = "-", yr)`
 
 ```{r}
-plotkeyfig(yr, 
-            place = "_NP_", 
-            folderpattern, plotpartnames)
+place<-reg.order[counter]
+
+if (place %in% "Pacific") {
+  temp000<-strsplit(x = names(summarydata), split = " ")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+  temp000<-strsplit(x = temp000, split = "_")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+
+  
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    temp000 %in% place][[1]]  
+} else {
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    grepl(pattern = place, x = names(summarydata))][[1]]
+}
+plotcrossanalysis(dat0, place, datadl)
+counter<-counter+1
 ```
 
-# Pacific `r yr`-`r maxyr` (`r method0`)
+
+# `r reg.order[counter]` `r gsub(pattern = "To", replace = "-", yr)`
 
 ```{r}
-plotkeyfig(yr, 
-            place = "_Pac_", 
-            folderpattern, plotpartnames)
-```
+place<-reg.order[counter]
 
-# Western Pacific `r yr`-`r maxyr` (`r method0`)
+if (place %in% "Pacific") {
+  temp000<-strsplit(x = names(summarydata), split = " ")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
+  temp000<-strsplit(x = temp000, split = "_")
+  temp000<-unlist(lapply(temp000, `[[`, 1))
 
-```{r}
-plotkeyfig(yr, 
-            place = "_WP_", 
-            folderpattern, plotpartnames)
-```
-
-# New England `r yr`-`r maxyr` (`r method0`)
-
-```{r}
-plotkeyfig(yr, 
-            place = "_NE_", 
-            folderpattern, plotpartnames)
-```
-
-# Mid-Atlantic `r yr`-`r maxyr` (`r method0`)
-
-```{r}
-plotkeyfig(yr, 
-            place = "_MA_", 
-            folderpattern, plotpartnames)
-```
-
-# Northeast `r yr`-`r maxyr` (`r method0`)
-
-```{r}
-plotkeyfig(yr, 
-            place = "_NorE_", 
-            folderpattern, plotpartnames)
-```
-
-# South Atlantic `r yr`-`r maxyr` (`r method0`)
-
-```{r}
-plotkeyfig(yr, 
-            place = "_SA_", 
-            folderpattern, plotpartnames)
-```
-
-# Gulf of Mexico `r yr`-`r maxyr` (`r method0`)
-
-```{r}
-plotkeyfig(yr, 
-            place = "_GOM_", 
-            folderpattern, plotpartnames)
+  
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    temp000 %in% place][[1]]  
+} else {
+dat0<-summarydata[grepl(pattern = yr, x = names(summarydata)) &
+                    grepl(pattern = place, x = names(summarydata))][[1]]
+}
+plotcrossanalysis(dat0, place, datadl)
+counter<-counter+1
 ```
 

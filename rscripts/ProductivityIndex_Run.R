@@ -1219,7 +1219,7 @@ library(scales)
 library(gridExtra)
 library(patchwork)
 
-Date0<-"2020-08-24"
+Date0<-"2020-08-24a"
 datadl<-"2020-08-14"
 
 # Opening Slides
@@ -1241,7 +1241,7 @@ aaa<-unique(paste(lapply(fold0, `[[`, 2),
                 lapply(fold0, `[[`, 5), 
                 sep = "_"))
 
-for (i in 1:length(aaa)){
+for (i in 11:length(aaa)){
   folderpattern <- aaa[i]
   rmarkdown::render(paste0(dir.scripts, "/ProductivityIndex_Presentation_KeyRegionPlots.Rmd"),
                     output_dir = paste0(dir.out, "/Presentation/"),
@@ -1250,29 +1250,16 @@ for (i in 1:length(aaa)){
 
 
 # Loop through Slide Placement of Cross Analysis Comparisons by Regions
-info<-data.frame("img_loc" = paste0(list.files(list.files(path = (list.files(path = dir.output, pattern = as.character(Date0), 
-                                                                             full.names = TRUE)), 
-                                                          full.names = TRUE, pattern = "analyses"), full.names = TRUE), "/figures/"),
-                 "figname" = list.files(list.files(path = (list.files(path = dir.output, pattern = as.character(Date0), full.names = TRUE)), 
-                                                   full.names = TRUE, pattern = "analyses"), full.names = FALSE))
 
-info<-info[!(info$figname %in% c("2007To2017_Fisheries_Northeast",  "SummaryFiles")),]
 
-title0<-strsplit(split = "_", x = info$figname)
-info$timeframe<-unlist(lapply(title0, `[[`, 1))
-info$categories<-unlist(lapply(title0, `[[`, 2))
-info$method<-unlist(lapply(title0, `[[`, 3))
-info$categorysplittype<-unlist(lapply(title0, `[[`, 4))
-info$pctmiss<-gsub(pattern = "pctmiss", replacement = "", x = unlist(lapply(title0, `[[`, 5)))
-info$slidetitle = paste0("Regional Quantitiy Index")
-info$slidesubtitle = paste0(ifelse(info$method=="P", "Price", "Quantity"), " Method, ", 
-                            gsub(pattern = "To", replacement = "-", x = info$timeframe))
-
+aaa<-unlist(unique(lapply(fold0, `[[`, 1)))
+load(file = paste0(dir.out, "/analyses/SummaryFiles/Summary.rdata")) #summarydata
+reg.order<-c("National", "North Pacific", "Pacific", "Western Pacific", "New England", "Mid-Atlantic", "Northeast", "South Atlantic", "Gulf of Mexico") 
 for (i in 1:length(aaa)){
-  folderpattern <- aaa[i]
+  yr<-aaa[i]
   rmarkdown::render(paste0(dir.scripts, "/ProductivityIndex_Presentation_CrossAnalysis.Rmd"),
                     output_dir = paste0(dir.out, "/Presentation/"),
-                    output_file = paste0("ProductivityIndex_Presentation_CrossAnalysis_", folderpattern, ".pptx"))
+                    output_file = paste0("ProductivityIndex_Presentation_CrossAnalysis_", yr, ".pptx"))
 }
 
 

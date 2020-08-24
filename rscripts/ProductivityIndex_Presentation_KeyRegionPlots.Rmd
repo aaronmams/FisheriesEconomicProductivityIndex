@@ -19,27 +19,40 @@ knitr::opts_chunk$set(
   # fig.retina = 3
   )
 
-print4plots<-function(plotlist, datadl, title00, legends = c(T,T,T,T)){
+print4plots<-function(plotlist, datadl, title00, legends = c(T,T,T,T), titles = c(F,F,F,F)){
 
   
   b1<-plotlist[1][[1]]
   if(legends[1] %in% F) {
-    b1<-b1 + theme(legend.position = "none") + ggtitle("")
+    b1<-b1 + theme(legend.position = "none")
   }
+  if(legends[1] %in% F) {
+    b1<-b1 + ggtitle("")
+  }
+  
   
   b2<-plotlist[2][[1]]
   if(legends[2] %in% F) {
-    b2<-b2 + theme(legend.position = "none") + ggtitle("")
+    b2<-b2 + theme(legend.position = "none")
+  }
+  if(legends[2] %in% F) {
+    b2<-b2 + ggtitle("")
   }
   
   b3<-plotlist[3][[1]]
   if(legends[3] %in% F) {
-    b3<-b3 + theme(legend.position = "none") + ggtitle("")
+    b3<-b3 + theme(legend.position = "none")
+  }
+  if(legends[3] %in% F) {
+    b3<-b3 + ggtitle("")
   }
   
   b4<-plotlist[4][[1]]
-    if(legends[4] %in% F) {
-    b4<-b4 + theme(legend.position = "none") + ggtitle("")
+  if(legends[4] %in% F) {
+    b4<-b4 + theme(legend.position = "none")
+  }
+  if(legends[4] %in% F) {
+    b4<-b4 + ggtitle("")
   }
   
   b<-plotlist

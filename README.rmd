@@ -1,0 +1,432 @@
+---
+title: "Best Scripting Practices"
+author: "Emily Markowitz"
+date: "7/22/2020"
+output: md_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warnings=FALSE, error = FALSE)
+```
+
+
+```{r}
+echoTF<-function(typical, code = TRUE) {
+  return(ifelse(code == TRUE, typical, FALSE))
+}
+
+code<-FALSE
+showresults<-FALSE
+
+dir.in<-getwd()
+#Local Directories
+dir.output<-paste0(dir.in, "/output/")
+dir.data<-paste0(dir.in, "/data/")
+
+
+#####LOAD CRAN LIBRARIES#######
+
+#Seperating species by taxonomic group
+# install.packages("remotes")
+# remotes::install_github("ropensci/taxize")
+library(taxize)
+
+# Data Managment
+library(tidyr)
+library(reshape2)
+library(tidyverse)
+library(filesstrings)
+library(data.table) # := to tag species codes
+require(plyr)  #ddply function
+library(sas7bdat)
+library(rlist)
+
+#RMarkdown
+library(rmarkdown)
+library(knitr)
+library(gridExtra)
+library(ggpubr)
+
+#Excel File Management
+library(officer)
+library(xlsx)
+library(readxl)
+
+#Visuals
+library(ggplot2)
+
+#Package Management
+library(roxygen2)
+library(devtools)
+
+#Presentations
+#remotes::install_github('yihui/xaringan')
+library(xaringan)
+options(htmltools.dir.version = FALSE)
+library(tidyverse)
+library(stargazer)
+
+
+options(java.parameters = "-Xmx1000m")
+options(scipen=10000)
+
+ln<-log #tricky, tricky, Base R! Didn't fool me this time!!!
+
+```
+
+
+# Study Purpose
+
+ - Develop alternative approaches to measure national and regional fishery outputs for productivity measurements.
+
+ - Evaluate the impacts of missing data and other issues on output estimates. 
+
+# Theoretical Framework: Törnqvist index
+### A Flexible Function and Superlative Quantity Index (Diewert 1976) 
+
+
+#Math Theory: General Total Factor Productivity ($TFP$) Equation
+
+The general form of the $TFP$ can be measured as aggregate output ($Y$) divided by real total inputs ($X$). Rates of TFP growth are constructed using the Törnqvist index approach. The TFP growth over two time periods is defined as:
+
+$$ln(TFP_t/TFP_{t-1}) = \sum_{i=1}^n((\frac{R_{t,i} + R_{t-1,i}}{2}) * ln(\frac{Y_{t,i}}{Y_{t-1,i}}))) - \sum_{j=1}^m((\frac{W_{j,t} + W_{j,t-1}}{2}) * ln(\frac{X_{j,t}}{X_{j,t-1}})))$$
+
+Such that:
+ 
+ - Output represents $\sum_{i=1}^n((\frac{R_{it} + R_{it-1}}{2}) * ln(\frac{Y_{it}}{Y_{it-1}}))$
+
+ - Input represents $\sum_{j=1}^n((\frac{W_{jt} + W_{jt-1}}{2}) * ln(\frac{X_{jt}}{X_{jt-1}}))$
+
+where: 
+
+ - $Y_i$ = individual outputs. This will later be refered to as $Q_i$ in the following equations. 
+ 
+ - $X_j$ = individual inputs
+ 
+ - $R_i$ = output revenue shares
+ 
+ - $W_j$ = input cost shares
+ 
+ - $t$ and $t-1$ = time, where 1 is the minimum year in the dataset
+ 
+ - $i$ = fishery category, e.g., Finfish (=1), Shellfish (=2)
+
+ - $s$ = species, e.g., Salmon, Alewife, Surf Clams
+
+-------
+
+#Output Method: From Quantity to Quantity Measures
+
+###Variable Summary
+
+Variables
+
+ - $Q$ = individual quantity outputs in pounds (lbs). 
+ 
+ - $V$ = individual value outputs in dollars ($)
+ 
+ - $QE$ and $VE$ = simple sum of Quantity (Q) and Value (V)
+
+ - $R$ = output revenue shares
+ 
+ - $baseyr$ is the year to base all indicides from
+ 
+Subscript Inidicies
+ 
+ - $t$ and $t-1$ are time subscripts, where 1 is the minimum year in the dataset
+ 
+ - $i$ is category, e.g., Finfish (=1), Shellfish (=2)
+
+ - $s$ is species, e.g., Salmon, Alewife, Surf Clams
+ 
+
+###Data requirements and source
+
+The Tornqvist quantity index requires data on quantity and revenue shares. We employ landings quantity (pounds) and landings value ($USD) data by year, state, and species. 
+ 
+ - Data source: [Fisheries One Stop Shop downloaded August 13 2020](https://foss.nmfs.noaa.gov/apexfoss/f?p=215:200::::::) 
+ 
+ - More information about the data: [Commericial Fisheries Landings Data](https://www.fisheries.noaa.gov/national/sustainable-fisheries/commercial-fisheries-landings)
+
+Here is the origional data:
+
+```{r, echo = echoTF(TRUE, code), warning = FALSE}
+temp<-read.csv(file = paste0(dir.data, "Tornqvist Index-Calculations_OutputEx.csv"))
+```
+
+```{r, echo = echoTF(FALSE, code)}
+temp %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+#### In this data, we use these nameing conventions for the column names. 
+
+For example, in "V1_0Finfish":
+
+ - "V"... refers to the variable represented in the column (here V = "Value")
+ 
+ - ..."1"... refers to the category iteration (here, = Finfish)
+ 
+  - ..."_"... is simply a seperator in the title
+ 
+ - ..."0".. refers to the total of the specific category. 
+ 
+ - ..."Finfish" is purely descriptive (here the name of the category), so you can follow along with what is happening!
+ 
+ 
+Similarly for "Q2_2Clam": 
+
+ - "Q"... refers to the variable represented in the column (here Q = "Quantity")
+ 
+ - ..."2"... refers to the category iteration (here, = Shellfish)
+ 
+ - ..."_"... is simply a seperator in the title
+ 
+ - ..."2".. refers to the iteration of the species, such that this organism happens to be the second species of this category. 
+ 
+ - ..."Clams" is purely descriptive (here the name of the species), so you can follow along with what is happening!
+
+###Lets get started
+
+###Caluclate Category and Entier Fishery Sums of $V$ and $Q$
+
+```{r, echo = echoTF(TRUE, code), warning = FALSE}
+rownames(temp)<-temp$year
+temp$year<-NULL
+
+temp.q<-temp[,grepl(pattern = "Q", x = names(temp))]
+temp.q$QE0_0Total<-rowSums(temp.q, na.rm = T)
+temp.q$QE1_0Finfish<-rowSums(temp.q[,grepl(x = names(temp.q), pattern = "Q1") ], na.rm = T)
+temp.q$QE2_0Shellfish<-rowSums(temp.q[,grepl(x = names(temp.q), pattern = "Q2") ], na.rm = T)
+
+temp.v<-temp[,grepl(pattern = "V", x = names(temp))]
+temp.v$VE0_0Total<-rowSums(temp.v, na.rm = T)
+temp.v$VE1_0Finfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V1") ], na.rm = T)
+temp.v$VE2_0Shellfish<-rowSums(temp.v[,grepl(x = names(temp.v), pattern = "V2") ], na.rm = T)
+
+temp<-orgional.data<-cbind.data.frame(temp.q, temp.v)
+
+# temp<-orgional.data
+# temp$Q1_6Flounder<-rnorm(n = nrow(temp), mean = 300, sd = 100)
+# temp$Q0_0Total<-temp0$QE0_0Total
+```
+
+# Ways to work your analysis
+
+## Simple Sum
+
+Calculate the simple sum of fisheries quantity from species’ quantities, you simply sum all of the species from the entire commerical fishing sector. No data is removed from the origional dataset for incompleteness (as it will in the two other methods). 
+
+$$Commerical Fishing = \sum_{t=1}(Cod, Lobster, Seaweed, Flounder, ...)$$
+
+## Quantity Method
+
+This method works directly from the quantity data so it is good for when $Q_{t,i,s}$ is often available. 
+
+I won’t get to deep in the math here – we can review these later if needed in the discussion – but the main takeaway is that this method simply uses the available quantity data at the species level to develop revenue-share weighed quantity changes. 
+
+###At the species level: 
+
+#### Total Value of species with available Q data
+
+For where 𝑄_(𝑡,𝑖,𝑠) is not available to a certain threshold (say 60% of the data is missing we call it "unavailable"), the data is simply removed from the analysis. 
+
+$$VV_{t,i} = \sum^l_{s=1}(V_{t,i,s_{available}})$$
+#### Revenue-share
+
+$$R_{t,i,s} = V_{t,i,s}/VV_{t,i}$$
+
+#### Revenue-share weighted quantity changes 
+
+$$QCW_{t,i,s} = \frac{R_{t,i,s}+R_{t-1,i,s}}{Q_{t,i,s}+Q_{t-1,i,s}}$$
+
+### At the fishery level:
+
+Then we calculate the revenue share, QI, and revenue-share weighted quantity changes at the category level, which are used at the commercial fishery level to develop the annual quantity change and index. 
+
+#### Quantity change
+
+These, specifically the QC, are what go into the output equation. 
+
+$$QC_{t,i} = \sum^l_{s=1}(QCW_{t,i,s})$$
+
+#### Implicit quantity index
+
+$$QI_{t,i} = QI_{t-1,i}*exp(QC_{t,i})$$ 
+
+where $QI_{t=1,i} = 1$ and then $QI_{t,i} = QI_{t,i}/QI_{t=baseyr,i}$
+
+#### Value of categories available
+
+$$VV_{t} = \sum^l_{i=1}(V_{t,i_{available}}$$
+
+#### Revenue share
+
+$$R_{t,i} = V_{t,i}/VV_{t}$$
+
+#### Revenue share weighted quantity changes
+
+$$QCW_{t,i} = \frac{R_{t,i}+R_{t-1,i}}{Q_{t,i}+Q_{t-1,i}}$$
+
+### At the entire commerical fisheries sector level:
+
+#### Quantity change
+
+$$QC_t = \sum_{i=1}^l(QCW_{t,i})$$
+
+#### Quantity index
+
+$$QI_{t} = QI_{t-1}*exp(QC_{t})$$ 
+
+where $QI_{t=1} = 1$ and then $QI_{t} = QI_{t}/QI_{t=baseyr}$
+
+
+## Price Method
+
+Alternitively, we have a price model method to calculate implicit quantity. Here, on top of all the work that is done for the Quantity-derived output, we also calculate price and use price to weigh the revenue share. 
+
+Essential by calculating price we are developing a deflator for the total landings values: We use the total value were $P_{t,i,s}$ was available ($VV_{t,i}$) to calculate $PI_{t,i}$ and extrapolate $Q_{t,i}$ by dividing the total value ($V_{t,i}$)
+
+### At the species level: 
+
+#### Price
+
+When I say “available here” I am asking how many values of P were we able to calculate. As you can see here, even though there were plenty of Q and V, they didn’t amount to many P. Even if a value of P for a species doesn’t make the cut, that gets applied to the total value of the category. 
+
+$$P_{t,i,s} = V_{t,i,s}/Q_{t,i,s}$$
+
+#### Total value of species
+
+And then I follow similar steps or the category and national level. 
+
+$$V_{t,i} = \sum^l_{s=1}(V_{t,i,s})$$
+
+#### Total value of species where P is available
+
+$$VV_{t,i} = \sum^l_{s=1} (V_{t,i,s_{available}})$$
+
+#### Revenue-share
+
+$$R_{t,i,s} = V_{t,i,s}/VV_{t,i}$$
+
+#### Revenue-share weighted price changes
+
+$$PCW_{t,i,s} = \frac{R_{t,i,s}+R_{t-1,i,s}}{2*ln(P_{t,i,s}/_{t-1,i,s})}$$
+
+### At the fishery level:
+
+#### Value of categories available
+
+$$VV_t = \sum^l_{i=1}(V_{t,i_{available}})$$
+
+#### Price change
+
+$$PC_{t,i} = \sum^l_{s=1}(PCW_{t,i,s})$$
+
+#### Price index
+
+$$PI_{t,i} = PI_{t-1,i}*exp(PC_{t,i})$$ 
+
+where $PI_{t=1,i} = 1$ and then $PI_{t,i} = PI_{t,i}/PI_{t=baseyr,i}$
+
+#### Implicit quantity
+
+$$Q_{t,i} = V_{t,i}/PI_{t,i}$$
+
+#### Implicit quantity index
+
+$$QI_{t,i} = QI_{t,i}/QI_{t=baseyr,i}$$
+
+#### Revenue share
+
+$$R_{t,i} = V_{t,i}/V_t$$
+
+#### Revenue share weighted price changes
+
+$$PCW_{t,i} = \frac{R_{t,i}+R_{t-1,i}}{2*ln(P_{t,i}/_{t-1,i})}$$
+
+### At the entire commerical fisheries sector level:
+
+#### Price change
+
+$$PC_t = \sum^l_{i=1} (PCW_{t,i})$$
+
+#### Price index
+
+$$PI_{t} = PI_{t-1}*exp(PC_{t})$$ 
+
+where $PI_{t=1} = 1$ and then $PI_{t} = PI_{t}/PI_{t=baseyr}$
+
+#### Implicit quantity
+
+$$QI_{t} = V_{t}/PI_{t=baseyr}$$
+
+#### Implicit quantity index
+
+$$QI_{t} = QI_{t-1}*exp(QC_{t})$$ 
+
+where $QI_{t=1} = 1$ and then $QI_{t} = QI_{t}/QI_{t=baseyr}$
+
+#### Quantity change
+
+Same as before, these are the values that would go into the output portion of the output equation. This method is good for data that are missing many of the quantity values. 
+
+$$QC_t = ln(QI_t/QI_{t-1})$$
+
+# Commercial fisheries data availability, issues, and mitigation
+
+ - How should we deal with missing data?
+
+ - How much of the timeseries should be assessed?
+
+ - How should species data be categorized?
+ 
+## Missing data
+
+NA in the commercial fisheries dataset does not mean 0, but rather that the data may be confidential (following the rule of 3) or simply be missing. This can be a serious issue here, as missing data could lead to artificially large price ($PC_t$) and quantity ($QC_t$) changes for years in the timeseries. 
+
+There are a lot of NAs in this dataset. Some data columns are completely filled with NA and even those that are not -- 
+So first thing we did was to take care of columns that were mostly made of NAs. We instituted a % missing data threshold. Here, these columns have too few data according to a 40% threshold we’ve instituted, so we are simply going to remove that data. Honestly, what could data with that much missing really tell us and at what point are we just making the data up to make up for what is missing?
+
+Now with those offending columns of missing data gone, we can go after the loose, infrequent, NAs. Here we impute the values from the closest value and harkening back to our previous example, the fictitious code value data looks a lot more realistic! 
+
+When we apply these practices for missing data to real data examples, we see that the removal of nearly 400 species data results in a plot for quantity index (one of our targeted end products) almost the same to one where no data was removed. This provides evidence that those removed data weren’t really contributing much to the results. This is also a large dataset such that the impact of the data removed (35% of the original data) is cushioned by how much data is remaining. 
+
+On the other hand, the removal of 58 species (approximately 25% of the original data) radically changes this regional plot. The y-axis is displaying beyond-reasoble values and the spike in the “Other” category can’t possibly be correct. With the percent missing threshold implemented, QI values appear to be in a much more sensible range. 
+
+
+## Timeseries Reporting Consistency
+
+On to our next issue: Consistent reporting throughout the timeseries. Looking simply at the summed quantity for each category and the entire fishery, there have been several periods of improved reporting, such that the increasing trend is so steep and is not indicative of real increases in the quantity of fish caught from 1950 (when data was first started to be collected) to today (2017). If we just take the last part of that timeline, the trend seems more level and reasonable. 
+
+If we look at the quantity index result, we see that much of our missing data is pre-1990 and our analysis inherently removes less data when we subset, giving us more species data to work with. 
+
+## Defining Species Categories
+
+The next question is something we are still thinking about: How to define our species categories. These can be specific or broad?
+
+Theoretically, categories should group species with similar economic impact (e.g., fishing costs) which can be difficult to define. 
+
+It is possible that we might be able to use taxonomic group as a proxy for this since species in the same taxonomic group are more likely to be caught in similar ways (an idea that is very pleasing to the biologist in me!). 
+
+More specifically, we applied two methods: 
+
+ 1. We used the same species groupings as were used in Fisheries Economics of the US report. This could work because there is a precedent for using this species split up, but it is fairly over-generalized. “Shellfish” is not really the same as saying “all invertebrates”, for example. 
+
+
+ 2. Alternatively, thanks to renewed data managing efforts done by ST1, we now have ITSN numbers associated with each species, and with some fancy footwork, can resort these species into a variety of taxonomically-relevant groups. 
+ 
+However, with the more categories we have, the less data we have for each category. 
+
+These plots were created using the same data, just by splitting the categories up differently. We can see that the QI is increasing in the first plot using the FEUS categories and that the second plot using the taxomcially defined species has species increasing and decreasing. 
+
+This may be a key to better seeing what is actually going on in the data.  
+
+
+
+
+
+# NOAA READ ME
+
+This repository is a scientific product and is not official communication of the National Oceanic and Atmospheric Administration, or the United States Department of Commerce. All NOAA GitHub project code is provided on an ‘as is’ basis and the user assumes responsibility for its use. Any claims against the Department of Commerce or Department of Commerce bureaus stemming from the use of this GitHub project will be governed by all applicable Federal law. Any reference to specific commercial products, processes, or services by service mark, trademark, manufacturer, or otherwise, does not constitute or imply their endorsement, recommendation or favoring by the Department of Commerce. The Department of Commerce seal and logo, or the seal and logo of a DOC bureau, shall not be used in any manner to imply endorsement of any commercial product or activity by DOC or the United States Government.
+

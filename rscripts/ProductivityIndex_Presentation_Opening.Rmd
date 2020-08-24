@@ -1,0 +1,71 @@
+---
+title: "Measuring Output for U.S. Commercial Fisheries — From Theory to Practice"
+author: 'Emily Markowitz^1^ (Emily.Markowitz@noaa.gov) Sun Ling Wang^2^ (Sun-Ling.Wang@noaa.gov) \n\n ^1^Contractor, ECS Federal in support of NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division \n\n ^2^On detail with the NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division \n\n >*The views expressed are those of the author and should not be attributed to the NOAA, ECS or ERS'
+date: "`r Sys.Date()`"
+output: 
+  powerpoint_presentation:
+    reference_doc: NOAAFisheriesPowerPointTemplate.pptx
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+#   dev = "svg",
+  fig.width = 12,
+  fig.height = 7
+  # fig.retina = 3
+  )
+
+# "`r paste('Emily Markowitz^1^ (Emily.Markowitz@noaa.gov)', 'Sun Ling Wang^2^ (Sun-Ling.Wang@noaa.gov)','^1^Contractor, ECS Federal in support of NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division','^2^On detail with the NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division','>*The views expressed are those of the author and should not be attributed to the NOAA, ECS or ERS', sep = '\n\n')`"
+
+# ---
+# title:  'This is the title: it contains a colon'
+# author:
+# - Author One
+# - Author Two
+# date: "`r format(Sys.time(), '%d %B %Y')`"
+# tags: [nothing, nothingness]
+# abstract: |
+#   This is the abstract.
+# 
+#   It consists of two paragraphs.
+# output: 
+#     pdf_document:
+#         template: NULL
+# ---
+
+```
+
+
+
+# Measuring Output for U.S. Commercial Fisheries — From Theory to Practice
+
+Emily Markowitz^1^ (Emily.Markowitz@noaa.gov)
+
+Sun Ling Wang^2^ (Sun-Ling.Wang@noaa.gov)
+
+^1^Contractor, ECS Federal in support of NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division
+
+^2^On detail with the NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division
+
+>*The views expressed are those of the author and should not be attributed to the NOAA, ECS or ERS
+
+
+
+## Study Purpose
+
+:::::: {.columns}
+::: {.column}
+ - Develop alternative approaches to measure national and regional fishery outputs for productivity measurements.
+ - Evaluate the impacts of missing data and other issues on output estimates. 
+:::
+
+::: {.column}
+![](C:/Users/Emii/Documents/Homework/FisheriesEconomicProductivityIndex/rpresentation/MapOfUS.jpg)
+:::
+::::::
+
+

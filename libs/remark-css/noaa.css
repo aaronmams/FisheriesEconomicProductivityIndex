@@ -1,0 +1,20 @@
+h1 {
+  font-weight: normal;
+  color: #008998;
+}
+
+h2, h3 {
+  font-weight: normal;
+  color: #00467F;
+}
+a, a > code {
+  color: #0563C1;
+}
+.remark-code-line-highlighted { background-color: #954F72; }
+
+.inverse {
+  background-color: #00467F;
+}
+.inverse, .inverse h1, .inverse h2, .inverse h3, .inverse a, inverse a > code {
+  color: #fff;
+}

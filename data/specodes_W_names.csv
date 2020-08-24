@@ -1,0 +1,42 @@
+NESPP3,PLAN,Name
+23,BF,Bluefish
+352,DF,Spiny Dogfish
+81,GFISH,Cod
+120,GFISH,Winter Flounder
+122,GFISH,Witch Flounder
+123,GFISH,Yellowtail Flounder
+124,GFISH,American Plaice Flounder
+125,GFISH,Sand Dab Flounder
+147,GFISH,Haddock
+153,GFISH,White Hake
+159,GFISH,Atlantic Halibut
+240,GFISH,Redfish
+250,GFISH,Ocean Pout
+269,GFISH,Pollock
+512,GFISH,Wolffish
+168,HER,Atlantic Herring
+12,MONK,Monkfish
+710,RCRAB,Red Crab
+800,SCAL,Sea Scallop
+754,SCOQ,Ocean Quahog
+769,SCOQ,Surf clam
+121,SF,Summer Flounder
+329,SF,Scup
+335,SF,Black Sea Bass
+364,SKATE,Rosette Skate
+365,SKATE,Skates
+366,SKATE,Little Skate
+367,SKATE,Winter Skate
+368,SKATE,Barndoor Skate
+369,SKATE,Smooth Skate
+370,SKATE,Thorny Skate
+372,SKATE,Clearnose Skate
+51,SMB,Butterfish
+212,SMB,Atlantic Mackerel
+801,SMB,Loligo Squid
+802,SMB,Illex Squid
+152,SMESH,Red Hake
+508,SMESH,Offshore Hake
+509,SMESH,Silver Hake
+444,TF,Blueline Tilefish
+446,TF,Golden Tilefish

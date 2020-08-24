@@ -1,0 +1,26 @@
+,State,State1,fips,Region,abbvst,abbvreg,xstate,xreg,State.no,Region.no
+1,Alabama,Alabama,1,Gulf of Mexico,AL,GOM,1,7,1,5
+2,Alaska,Alaska,2,North Pacific,AK,NP,1,1,2,7
+3,California,California,6,Pacific,CA,Pac,1,2,5,6
+4,Connecticut,Connecticut,9,New England,CT,NE,1,4,7,1
+5,Delaware,Delaware,10,Mid-Atlantic,DE,MA,1,5,8,2
+6,East Florida,Florida,12,South Atlantic,EFL,SA,1,6,10,4
+7,West Florida,Florida,12,Gulf of Mexico,WFL,GOM,2,7,11,5
+8,Georgia,Georgia,13,South Atlantic,GA,SA,2,6,13,4
+9,Hawai`i,Hawaii,15,Western Pacific (Hawai`i),HI,WP,1,3,14,8
+10,Louisiana,Louisiana,22,Gulf of Mexico,LA,GOM,3,7,21,5
+11,Maine,Maine,23,New England,ME,NE,2,4,22,1
+12,Maryland,Maryland,24,Mid-Atlantic,MD,MA,2,5,23,2
+13,Massachusetts,Massachusetts,25,New England,MA,NE,3,4,24,1
+14,Mississippi,Mississippi,28,Gulf of Mexico,MS,GOM,4,7,27,5
+15,New Hampshire,New Hampshire,33,New England,NH,NE,4,4,32,1
+16,New Jersey,New Jersey,34,Mid-Atlantic,NJ,MA,3,5,33,2
+17,New York,New York,36,Mid-Atlantic,NY,MA,4,5,35,2
+18,North Carolina,North Carolina,37,South Atlantic,NC,SA,3,6,36,4
+19,Oregon,Oregon,41,Pacific,OR,Pac,2,2,40,6
+20,Rhode Island,Rhode Island,44,New England,RI,NE,5,4,42,1
+21,South Carolina,South Carolina,45,South Atlantic,SC,SA,4,6,43,4
+22,Texas,Texas,48,Gulf of Mexico,TX,GOM,5,7,46,5
+23,Virginia,Virginia,51,Mid-Atlantic,VA,MA,5,5,49,2
+24,Washington,Washington,53,Pacific,WA,Pac,3,2,50,6
+25,Pacific At-Sea Processors,"At-Sea Process, Pac.",0,Pacific,Proc,Pac,4,2,98,6

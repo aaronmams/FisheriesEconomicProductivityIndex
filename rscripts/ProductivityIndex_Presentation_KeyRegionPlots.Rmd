@@ -1,0 +1,317 @@
+---
+title: "Measuring Output for U.S. Commercial Fisheries — From Theory to Practice"
+author: 'Emily Markowitz^1^ (Emily.Markowitz@noaa.gov) Sun Ling Wang^2^ (Sun-Ling.Wang@noaa.gov) \n\n ^1^Contractor, ECS Federal in support of NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division \n\n ^2^On detail with the NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division \n\n >*The views expressed are those of the author and should not be attributed to the NOAA, ECS or ERS'
+date: "`r Sys.Date()`"
+output: 
+  powerpoint_presentation:
+    reference_doc: NOAAFisheriesPowerPointTemplate.pptx
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+#   dev = "svg",
+  fig.width = 12,
+  fig.height = 7
+  # fig.retina = 3
+  )
+
+print4plots<-function(plotlist, datadl, title00, legends = c(T,T,T,T)){
+
+  
+  b1<-plotlist[1][[1]]
+  if(legends[1] %in% F) {
+    b1<-b1 + theme(legend.position = "none") + ggtitle("")
+  }
+  
+  b2<-plotlist[2][[1]]
+  if(legends[2] %in% F) {
+    b2<-b2 + theme(legend.position = "none") + ggtitle("")
+  }
+  
+  b3<-plotlist[3][[1]]
+  if(legends[3] %in% F) {
+    b3<-b3 + theme(legend.position = "none") + ggtitle("")
+  }
+  
+  b4<-plotlist[4][[1]]
+    if(legends[4] %in% F) {
+    b4<-b4 + theme(legend.position = "none") + ggtitle("")
+  }
+  
+  b<-plotlist
+  layout <- (b1 + b2) / (b3 + b4)
+  
+  title0<-strsplit(split = "_", x = names(b)[1])[[1]][-c(1,2)]
+  title0<-title0[-length(title0)]
+  title0<-gsub(pattern = "byr", replacement = "base yr = ", x = title0)
+  title0<-paste(title0, collapse = " ")
+  title0<-gsub(pattern = " P ", replacement = " Price Method ", x = title0)
+  title0<-gsub(pattern = " Q ", replacement = " Quantity Method ", x = title0)
+  
+  layout +
+    plot_annotation(
+    title = title00, 
+    subtitle = title0,
+    caption = paste0("Data downloaded from FOSS ", datadl),
+    theme = theme(plot.title = element_text(size = 20, hjust = 0.5, face = "bold"))
+    )
+}
+
+plotnlines<-function(dat, title00, place){
+  
+  xnames<-as.numeric(paste0(dat$Year))
+  xnames[!(xnames %in% seq(from = min((as.numeric(xnames))),
+                           to = max(as.numeric(xnames)),
+                           by = 10))]<-""
+  
+  dat$val<-as.numeric(as.character(dat$val))
+  dat$val[(is.infinite(dat$val))]<-NA
+  divideby<-paste0("(", strsplit(x = xunits(mean(dat$val, na.rm = T)), split = " ")[[1]][2], "s)")
+  if (divideby %in% "(trillions)") {
+    divideby0<-1e12
+  } else if (divideby %in% "(billions)") {
+    divideby0<-1e9
+  } else if (divideby %in% "(millions)") {
+    divideby0<-1e6
+  } else if (divideby %in% "(thousands)") {
+    divideby0<-1e3
+  } else if (divideby %in% "(NAs)") {
+    divideby0<-1
+    divideby<-""
+  }
+  
+  dat$val<-dat$val/divideby0
+  # ynames<-as.numeric(paste0(val))
+  
+  g<-ggplot(data = dat, aes(x = factor(Year), y = val, color = cat)) +
+    geom_line(aes(group = cat)) +
+    geom_point() +
+    theme(
+      # legend.position = c(0.9, 0.2), 
+      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
+      panel.grid.minor.y = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      axis.line = element_line( color=NOAALightBlue, size = .1 ),
+      axis.ticks = element_blank(), # remove ticks
+      panel.background = element_blank()
+    )  + 
+    ylab(paste0(gsub(pattern = "_", replacement = "", 
+                    x = strsplit(x = title00, split = "-")[[1]][1]), 
+               " ", divideby)) +
+    xlab("Year") +
+    scale_x_discrete(labels= xnames) +
+    # scale_y_discrete(labels= ynames) +
+    guides(fill=FALSE) + 
+    ggtitle(paste0(place))
+  
+  return(g)
+}
+
+xunits<-function(temp00, combine=T) {
+  
+  temp00<-sum(as.numeric(temp00))
+  sigfig<-format(temp00, digits = 3, scientific = TRUE)
+  sigfig0<-as.numeric(substr(x = sigfig, start = (nchar(sigfig)-1), stop = nchar(sigfig)))
+  
+  if (sigfig0<=5) {
+    # if (sigfig0<4) {
+    unit<-""
+    x<-format(x = temp00, big.mark = ",", digits = 0, scientific = F)
+    # } else if (sigfig0>=4 & sigfig0<6) {
+    #   unit<-" thousand"
+    # x<-round(temp00/1e3, digits = 1)
+    # } else if (sigfig0==5) {
+    #   unit<-" thousand"
+    #   x<-round(temp00/1e3, digits = 0)
+  } else if (sigfig0>=6 & sigfig0<9) {
+    unit<-" million"
+    x<-round(temp00/1e6, digits = 1)
+  } else if (sigfig0>=9 & sigfig0<12) {
+    unit<-" billion"
+    x<-round(temp00/1e9, digits = 1)
+  } else if (sigfig0>=12) {
+    unit<-" trillion"
+    x<-round(temp00/1e12, digits = 1)
+  }
+  
+  out<-ifelse(combine==T, paste0(x, unit), list(x, unit))
+  
+  return(out)
+}
+
+plotkeyfig<-function(yr, place, folderpattern, 
+                      plotpartnames){
+
+  outputrun<-list.files(path = dir.output, pattern = as.character(Date0), full.names = TRUE)
+  a<-list.files(path = (list.files(path = paste0(outputrun, "/analyses/"), full.names = TRUE, pattern = folderpattern)), 
+                     pattern = "figures", full.names = TRUE, ignore.case = TRUE)
+  b<-a[(grepl(pattern =paste0(yr, "To"), x = a))]
+  # b<-load(paste0(a, "/AllFigures.rdata"))
+  
+  load(file = paste0(b, "/AllFigures.rdata"))
+  
+  if (sum(grepl(pattern = place, x = names(figures.list), ignore.case = T)) != 0) {
+    
+  c1<-figures.list[grepl(pattern = plotpartnames[1], x = names(figures.list), ignore.case = T) & 
+                    grepl(pattern = place, x = names(figures.list), ignore.case = T)]
+  c2<-figures.list[grepl(pattern = plotpartnames[2], x = names(figures.list), ignore.case = T) & 
+                    grepl(pattern = place, x = names(figures.list), ignore.case = T)]
+  c3<-figures.list[grepl(pattern = plotpartnames[3], x = names(figures.list), ignore.case = T) & 
+                    grepl(pattern = place, x = names(figures.list), ignore.case = T)]
+  c4<-figures.list[grepl(pattern = plotpartnames[4], x = names(figures.list), ignore.case = T) & 
+                    grepl(pattern = place, x = names(figures.list), ignore.case = T)]
+  
+  p<-print4plots(plotlist = c(c1, c2, c3, c4), 
+                     datadl = datadl, title00 = "", 
+                     legends = c(F,T,F,F))
+  } else {
+    
+    title0<-strsplit(split = "/", x = b)
+    title0<-title0[[1]][length(title0[[1]])-1]
+    
+    title0<-strsplit(split = "_", x = title0)[[1]]
+    # title0<-title0[-length(title0)]
+    title0<-gsub(pattern = "To", replacement = "-", x = title0)
+    title0<-gsub(pattern = "byr", replacement = "base yr = ", x = title0)
+    title0<-paste(title0, collapse = " ")
+    title0<-gsub(pattern = " P ", replacement = " Price Method ", x = title0)
+    title0<-gsub(pattern = " Q ", replacement = " Quantity Method ", x = title0)
+    
+    p <- ggplot(dat = data.frame(x=1,y=1), aes(x, y, 
+                                               label = "We could not perform this analysis on this region")) + 
+      geom_text() + 
+      theme(panel.background = element_blank(), 
+            axis.title = element_blank(), 
+            axis.text = element_blank(), 
+            axis.ticks = element_blank()) + 
+      ggtitle(title0)
+    
+  }
+  
+
+  return(p)
+}
+
+
+fold<-list.files(paste0(dir.out, "/analyses/"), pattern = folderpattern, full.names = FALSE)
+
+fold0<-strsplit(x = fold, split = "_")
+a<-unique(paste(lapply(fold0, `[[`, 3)))
+
+if (a == "P") {
+  plotpartnames <- c("Q-Category", "QE-Category", "QI-Line", "PI-Line")
+  method0<-"Price Method"
+} else if (a == "Q") {
+  plotpartnames <- c("Q-Category", "QI-Line", "QE-Category", "VE-Line")
+  method0<-"Quantity Method"
+}
+  
+
+
+```
+
+```{r}
+yr<-1950
+```
+
+# National `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+plotkeyfig(yr = 1950, 
+            place = "_US_", 
+            folderpattern, plotpartnames)
+```
+
+```{r}
+yr<-1997
+```
+
+# National `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+plotkeyfig(yr = yr, 
+            place = "_US_", 
+            folderpattern, plotpartnames)
+```
+
+```{r}
+yr<-2007
+```
+
+# National `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+plotkeyfig(yr, 
+            place = "_US_", 
+            folderpattern, plotpartnames)
+```
+
+# North Pacific `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+plotkeyfig(yr, 
+            place = "_NP_", 
+            folderpattern, plotpartnames)
+```
+
+# Pacific `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+plotkeyfig(yr, 
+            place = "_Pac_", 
+            folderpattern, plotpartnames)
+```
+
+# Western Pacific `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+plotkeyfig(yr, 
+            place = "_WP_", 
+            folderpattern, plotpartnames)
+```
+
+# New England `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+plotkeyfig(yr, 
+            place = "_NE_", 
+            folderpattern, plotpartnames)
+```
+
+# Mid-Atlantic `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+plotkeyfig(yr, 
+            place = "_MA_", 
+            folderpattern, plotpartnames)
+```
+
+# Northeast `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+plotkeyfig(yr, 
+            place = "_NorE_", 
+            folderpattern, plotpartnames)
+```
+
+# South Atlantic `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+plotkeyfig(yr, 
+            place = "_SA_", 
+            folderpattern, plotpartnames)
+```
+
+# Gulf of Mexico `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+plotkeyfig(yr, 
+            place = "_GOM_", 
+            folderpattern, plotpartnames)
+```
+

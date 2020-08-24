@@ -51,5 +51,3 @@ a0<-landings.data#[idx,]
 a0[(a0$Pounds<0 & !(is.na(a0$Pounds))),] %>%
     knitr::kable(row.names = F, booktabs = T)
 ```
-
-

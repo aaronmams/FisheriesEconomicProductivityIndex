@@ -7,9 +7,12 @@ dir.in<-getwd()
 #Local Directories
 dir.output<-paste0(dir.in, "/output/")
 dir.data<-paste0(dir.in, "/data/")
-dir.out<-paste0(dir.output, "ProductivityIndex_", Sys.Date(), "/")
+dir.out<-paste0(dir.output, "ProductivityIndex_", Sys.Date(), "a/")
 dir.create(dir.out)
 dir.parent<-dirname(dir.in)
+dir.presdat<-paste0(dir.in, "/rpresentation/")
+dir.pres<-paste0(dir.out, "/Presentation")
+dir.create(dir.pres)
 dir.scripts<-paste0(dir.in, "/rscripts/")
 dir.create(paste0(dir.out, "/rscripts")) 
 dir.reports<-paste0(dir.out, "/reports/")
@@ -37,6 +40,7 @@ ProdI.Report<-paste0(dir.scripts, "ProductivityIndex_Report",date0,".rmd")
 ProdI.Docu.Out.P<-paste0(dir.scripts, "ProductivityIndex_Documentation_OutputP",date0,".rmd")
 ProdI.Docu.Out.Q<-paste0(dir.scripts, "ProductivityIndex_Documentation_OutputQ",date0,".rmd")
 ProdI.Docu.In<-paste0(dir.scripts, "ProductivityIndex_Documentation_Input",date0,".rmd")
+ProdI.Pres<-paste0(dir.pres, "ProductivityIndex_Presentation.rmd")
 
 ######SAVE WORKING FILES########
 #From Specific Files
@@ -62,12 +66,9 @@ source(ProdI.Funct)
 
 # source(ProdI.Data)
 landings.data<-read.csv(file = paste0(dir.data, "landings_edited.csv"))
-landings.data<-landings.data[landings.data$Year < 2018,] #FUS 2018 hasn't been published yet
-landings.data<-landings.data[landings.data$State %in% unique(state.codes$State),]
-
-landings.data<-merge(x = landings.data, y = statereg, by = "State")
 write.csv(x = landings.data, file = paste0(dir.rawdata, "landings_edited.csv"))
-
+maxyr<-max(landings.data$Year)
+reg.order<-c("National", "North Pacific", "Pacific", "Western Pacific (Hawai`i)", "New England", "Mid-Atlantic", "Northeast", "South Atlantic", "Gulf of Mexico") 
 
 ######PreLim Analysis##########
 # barplot(table(landings.data$category.tax))
@@ -314,6 +315,8 @@ OutputAnalysis<-function(landings.data, category0, baseyr,
   
   print("Create plots")
   
+  save(figures.list, #gridfigures.list,
+       file = paste0(dir.figures, "AllFigures.rdata"))
   
   #Side by Side graphs
   figs<-unique(paste0(lapply(X = strsplit(x = names(figures.list),
@@ -347,16 +350,16 @@ OutputAnalysis<-function(landings.data, category0, baseyr,
            plot = g,
            width = 11, height = 8.5)
     
-    gridfigures.list[length(gridfigures.list)+1]<-g
+    gridfigures.list<-c(gridfigures.list, list(g))
     names(gridfigures.list)[length(gridfigures.list)]<-paste0("000_All_byr",baseyr,
                                                               "_",gsub(pattern = "\\.", replacement = "", x = category0), fig)
   }
   
-  save(figures.list, gridfigures.list,
-       file = paste0(dir.figures, "AllFigures.rdata"))
-  
-  
-  
+  save(gridfigures.list,
+       file = paste0(dir.figures, "AllFiguresGrid.rdata"))
+
+
+
   #   #make single plots
   #   for (i in 1:length(figures.list)) {
   #     print(paste0(names(figures.list)[i]))
@@ -383,21 +386,21 @@ baseyr<-2007
 
 # # Data for the whole Time Series
 # OutputAnalysis(landings.data, category0, baseyr,
-#                state.codes, titleadd = "1950ToP",
+#                state.codes, titleadd = paste("1950To", maxyr),
 #                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
 #                MinimumNumberOfSpecies)
 # 
 # # Data just from the last 20 years
 # OutputAnalysis(landings.data = landings.data[landings.data$Year>=1997,],
 #                category0, baseyr,
-#                state.codes, titleadd = "1997ToP",
+#                state.codes, titleadd = paste0("1997To", maxyr),
 #                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
 #                MinimumNumberOfSpecies)
 # 
 # #Data just from the last 10 years
 # OutputAnalysis(landings.data = landings.data[landings.data$Year>=2007,], 
 #                category0, baseyr, 
-#                state.codes, titleadd = "2007ToP",
+#                state.codes, titleadd = paste0("2007To", maxyr),
 #                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
 #                MinimumNumberOfSpecies = 6) 
 
@@ -409,13 +412,13 @@ baseyr<-2007
 # 
 # # Data for the whole Time Series
 # OutputAnalysis(landings.data, category0, baseyr,
-#                state.codes, titleadd = "1950ToP",
+#                state.codes, titleadd = paste0("1950To", maxyr),
 #                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby)
 # 
 # #Data just from the last 20 years
 # OutputAnalysis(landings.data = landings.data[landings.data$Year>1997,], 
 #                category0, baseyr, 
-#                state.codes, titleadd = "1997ToP",
+#                state.codes, titleadd = paste0("1997To", maxyr),
 #                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby) 
 
 
@@ -449,15 +452,22 @@ a<-a[!(a$category.origFSO %in% "Other"),]
 # Data for the whole Time Series
 OutputAnalysis(landings.data = a, 
                category0, baseyr,
-               state.codes, titleadd = "1950ToP_FS",
+               state.codes, titleadd = paste0("1950To", maxyr, "_FS"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
                MinimumNumberOfSpecies)
 
 # Data just from the last 20 years
 OutputAnalysis(landings.data = a[a$Year>=1997,],
                category0, baseyr,
-               state.codes, titleadd = "1997ToP_FS",
+               state.codes, titleadd = paste0("1997To", maxyr, "_FS"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+# Data just from the last 20 years
+OutputAnalysis(landings.data = a[a$Year>=2007,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_FS"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
                MinimumNumberOfSpecies)
 
 
@@ -491,18 +501,25 @@ for (i in 1:length(unique(a$Region))) {
 }
 a<-cc
 category0 = "category.origFSO"
-MinimumNumberOfSpecies = 6
+MinimumNumberOfSpecies = 1
 
 OutputAnalysis(landings.data = a, 
                category0, baseyr,
-               state.codes, titleadd = "1950ToP_FSKey",
+               state.codes, titleadd = paste0("1950To", maxyr, "_FSKey"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
                MinimumNumberOfSpecies)
 
 # Data just from the last 20 years
 OutputAnalysis(landings.data = a[a$Year>=1997,],
                category0, baseyr,
-               state.codes, titleadd = "1997ToP_FSKey",
+               state.codes, titleadd = paste0("1997To", maxyr, "_FSKey"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+# Data just from the last 20 years
+OutputAnalysis(landings.data = a[a$Year>=2007,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_FSKey"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
                MinimumNumberOfSpecies)
 
@@ -514,31 +531,31 @@ pctmiss = 0.60
 MinimumNumberOfSpecies = 10
 baseyr<-2007
 
-# # Data for the whole Time Series
-# OutputAnalysis(landings.data, category0, baseyr,
-#                state.codes, titleadd = "1950ToP",
-#                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
-#                MinimumNumberOfSpecies)
-# 
-# # Data just from the last 20 years
-# OutputAnalysis(landings.data = landings.data[landings.data$Year>=1997,],
-#                category0, baseyr,
-#                state.codes, titleadd = "1997ToP",
-#                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
-#                MinimumNumberOfSpecies)
-# 
-# #Data just from the last 10 years
-# OutputAnalysis(landings.data = landings.data[landings.data$Year>=2007,], 
-#                category0, baseyr, 
-#                state.codes, titleadd = "2007ToP",
-#                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
-#                MinimumNumberOfSpecies = 6) 
-# 
+# Data for the whole Time Series
+OutputAnalysis(landings.data, category0, baseyr,
+               state.codes, titleadd = paste0("1950To", maxyr, "_AllTax"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+# Data just from the last 20 years
+OutputAnalysis(landings.data = landings.data[landings.data$Year>=1997,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("1997To", maxyr, "_AllTax"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+#Data just from the last 10 years
+OutputAnalysis(landings.data = landings.data[landings.data$Year>=2007,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_AllTax"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies = 6)
+
 # #Data for the whole timeseries with no pctmiss
-# OutputAnalysis(landings.data, category0, baseyr, 
+# OutputAnalysis(landings.data, category0, baseyr,
 #                state.codes, titleadd = "WholeTimeseries1",
-#                counter, dir.rawdata, pctmiss = 1.00, 
-#                MinimumNumberOfSpecies) 
+#                counter, dir.rawdata, pctmiss = 1.00,
+#                MinimumNumberOfSpecies)
 
 
 
@@ -556,14 +573,20 @@ a$category.taxFSO[a$category.taxFSO %in% c("Other", "Tetrapoda")]<-"Other"
 # Data for the whole Time Series
 OutputAnalysis(landings.data = a, 
                category0, baseyr,
-               state.codes, titleadd = "1950ToP_FSO",
+               state.codes, titleadd = paste0("1950To", maxyr, "_FSO"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
                MinimumNumberOfSpecies)
 
 # Data just from the last 20 years
 OutputAnalysis(landings.data = a[a$Year>=1997,],
                category0, baseyr,
-               state.codes, titleadd = "1997ToP_FSO",
+               state.codes, titleadd = paste0("1997To", maxyr, "_FSO"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+OutputAnalysis(landings.data = a[a$Year>=2007,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_FSO"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
                MinimumNumberOfSpecies)
 
@@ -576,14 +599,20 @@ a<-a[!(a$category.taxFSO %in% "Other"),]
 # Data for the whole Time Series
 OutputAnalysis(landings.data =a, 
                category0, baseyr,
-               state.codes, titleadd = "1950ToP_FS",
+               state.codes, titleadd = paste0("1950To", maxyr, "_FS"), 
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
                MinimumNumberOfSpecies)
 
 # Data just from the last 20 years
 OutputAnalysis(landings.data = a[a$Year>=1997,],
                category0, baseyr,
-               state.codes, titleadd = "1997ToP_FS",
+               state.codes, titleadd = paste0("1997To", maxyr, "_FS"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+OutputAnalysis(landings.data = a[a$Year>=2007,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_FS"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
                MinimumNumberOfSpecies)
 
@@ -618,23 +647,27 @@ for (i in 1:length(unique(a$Region))) {
 }
 a<-cc
 category0 = "category.taxFSO"
-MinimumNumberOfSpecies = 6
+MinimumNumberOfSpecies = 1
 
 
 OutputAnalysis(landings.data =a, 
                category0, baseyr,
-               state.codes, titleadd = "1950ToP_FSKey",
+               state.codes, titleadd = paste0("1950To", maxyr, "_FSKey"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
                MinimumNumberOfSpecies)
 
 # Data just from the last 20 years
 OutputAnalysis(landings.data = a[a$Year>=1997,],
                category0, baseyr,
-               state.codes, titleadd = "1997ToP_FSKey",
+               state.codes, titleadd = paste0("1997To", maxyr, "_FSKey"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
                MinimumNumberOfSpecies)
 
-
+OutputAnalysis(landings.data = a[a$Year>=2007,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_FSKey"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
 
 ########*** Quantity Driven Analysis - category.orig############
 analysisby = "Q"
@@ -645,21 +678,21 @@ baseyr<-2007
 
 # # Data for the whole Time Series
 # OutputAnalysis(landings.data, category0, baseyr,
-#                state.codes, titleadd = "1950ToP",
+#                state.codes, titleadd = paste0("1950To", maxyr),
 #                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
 #                MinimumNumberOfSpecies)
 # 
 # # Data just from the last 20 years
 # OutputAnalysis(landings.data = landings.data[landings.data$Year>=1997,],
 #                category0, baseyr,
-#                state.codes, titleadd = "1997ToP",
+#                state.codes, titleadd = paste0("1997To", maxyr),
 #                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
 #                MinimumNumberOfSpecies)
 # 
 # #Data just from the last 10 years
 # OutputAnalysis(landings.data = landings.data[landings.data$Year>=2007,], 
 #                category0, baseyr, 
-#                state.codes, titleadd = "2007ToP",
+#                state.codes, titleadd = paste0("2007To", maxyr),
 #                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
 #                MinimumNumberOfSpecies = 6)  
 # 
@@ -682,14 +715,20 @@ a<-a[!(a$category.origFSO %in% "Other"),]
 # Data for the whole Time Series
 OutputAnalysis(landings.data = a, 
                category0, baseyr,
-               state.codes, titleadd = "1950ToP_FS",
+               state.codes, titleadd = paste0("1950To", maxyr, "_FS"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
                MinimumNumberOfSpecies)
 
 # Data just from the last 20 years
 OutputAnalysis(landings.data = a[a$Year>=1997,],
                category0, baseyr,
-               state.codes, titleadd = "1997ToP_FS",
+               state.codes, titleadd = paste0("1997To", maxyr, "_FS"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+OutputAnalysis(landings.data = a[a$Year>=2007,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_FS"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
                MinimumNumberOfSpecies)
 
@@ -724,18 +763,24 @@ for (i in 1:length(unique(a$Region))) {
 }
 a<-cc
 category0 = "category.origFSO"
-MinimumNumberOfSpecies = 6
+MinimumNumberOfSpecies = 1
 
 OutputAnalysis(landings.data = a, 
                category0, baseyr,
-               state.codes, titleadd = "1950ToP_FSKey",
+               state.codes, titleadd = paste0("1950To", maxyr, "_FSKey"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
                MinimumNumberOfSpecies)
 
 # Data just from the last 20 years
 OutputAnalysis(landings.data = a[a$Year>=1997,],
                category0, baseyr,
-               state.codes, titleadd = "1997ToP_FSKey",
+               state.codes, titleadd = paste0("1997To", maxyr, "_FSKey"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+OutputAnalysis(landings.data = a[a$Year>=2007,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_FSKey"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
                MinimumNumberOfSpecies)
 
@@ -746,30 +791,30 @@ pctmiss = 0.60
 MinimumNumberOfSpecies = 10
 baseyr<-2007
 
-# # Data for the whole Time Series
-# OutputAnalysis(landings.data, category0, baseyr,
-#                state.codes, titleadd = "1950ToP",
-#                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
-#                MinimumNumberOfSpecies)
-# 
-# # Data just from the last 20 years
-# OutputAnalysis(landings.data = landings.data[landings.data$Year>=1997,],
-#                category0, baseyr,
-#                state.codes, titleadd = "1997ToP",
-#                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
-#                MinimumNumberOfSpecies)
-# 
-# # #Data just from the last 10 years
-# OutputAnalysis(landings.data = landings.data[landings.data$Year>=2007,], 
-#                category0, baseyr, 
-#                state.codes, titleadd = "2007ToP",
-#                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
-#                MinimumNumberOfSpecies = 6) 
-# 
+# Data for the whole Time Series
+OutputAnalysis(landings.data, category0, baseyr,
+               state.codes, titleadd = paste0("1950To", maxyr, "_AllTax"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+# Data just from the last 20 years
+OutputAnalysis(landings.data = landings.data[landings.data$Year>=1997,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("1997To", maxyr, "_AllTax"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+# #Data just from the last 10 years
+OutputAnalysis(landings.data = landings.data[landings.data$Year>=2007,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_AllTax"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies = 6)
+
 # #Data for the whole timeseries with no pctmiss
-# OutputAnalysis(landings.data, category0, baseyr, 
+# OutputAnalysis(landings.data, category0, baseyr,
 #                state.codes, titleadd = "WholeTimeseries1",
-#                counter, dir.rawdata, pctmiss = 1.00) 
+#                counter, dir.rawdata, pctmiss = 1.00)
 
 
 category0 = "category.taxFSO"
@@ -786,7 +831,7 @@ a$category.taxFSO[a$category.taxFSO %in% c("Other", "Tetrapoda")]<-"Other"
 # Data for the whole Time Series
 OutputAnalysis(landings.data = a, 
                category0, baseyr,
-               state.codes, titleadd = "1950ToP_FSO",
+               state.codes, titleadd = paste0("1950To", maxyr, "_FSO"),
                counter, dir.rawdata = dir.rawdata, dir.reports = dir.reports, 
                dir.figures = dir.figures, dir.outputtables = dir.outputtables, 
                pctmiss = pctmiss, analysisby = analysisby, 
@@ -795,7 +840,13 @@ OutputAnalysis(landings.data = a,
 # Data just from the last 20 years
 OutputAnalysis(landings.data = a[a$Year>=1997,],
                category0, baseyr,
-               state.codes, titleadd = "1997ToP_FSO",
+               state.codes, titleadd = paste0("1997To", maxyr, "_FSO"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+OutputAnalysis(landings.data = a[a$Year>=2007,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_FSO"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
                MinimumNumberOfSpecies)
 
@@ -808,14 +859,20 @@ a<-a[!(a$category.taxFSO %in% "Other"),]
 # Data for the whole Time Series
 OutputAnalysis(landings.data =a, 
                category0, baseyr,
-               state.codes, titleadd = "1950ToP_FS",
+               state.codes, titleadd = paste0("1950To", maxyr, "_FS"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
                MinimumNumberOfSpecies)
 
 # Data just from the last 20 years
 OutputAnalysis(landings.data = a[a$Year>=1997,],
                category0, baseyr,
-               state.codes, titleadd = "1997ToP_FS",
+               state.codes, titleadd = paste0("1997To", maxyr, "_FS"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+OutputAnalysis(landings.data = a[a$Year>=2007,],
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_FS"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
                MinimumNumberOfSpecies)
 
@@ -855,14 +912,20 @@ MinimumNumberOfSpecies = 1
 
 OutputAnalysis(landings.data =a, 
                category0, baseyr,
-               state.codes, titleadd = "1950ToP_FSKey",
+               state.codes, titleadd = paste0("1950To", maxyr, "_FSKey"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby, 
                MinimumNumberOfSpecies)
 
 # Data just from the last 20 years
 OutputAnalysis(landings.data = data.frame(a[a$Year>=1997,]),
                category0, baseyr,
-               state.codes, titleadd = "1997ToP_FSKey",
+               state.codes, titleadd = paste0("1997To", maxyr, "_FSKey"),
+               counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
+               MinimumNumberOfSpecies)
+
+OutputAnalysis(landings.data = data.frame(a[a$Year>=2007,]),
+               category0, baseyr,
+               state.codes, titleadd = paste0("2007To", maxyr, "_FSKey"),
                counter, dir.rawdata, pctmiss = pctmiss, analysisby = analysisby,
                MinimumNumberOfSpecies)
 
@@ -870,10 +933,9 @@ OutputAnalysis(landings.data = data.frame(a[a$Year>=1997,]),
 ##############***Northeast##############
 
 #######KNOWNS
-maxyr <- 2017
+maxyr0 <- 2017
 minyr <- 2007
 NMFSorITIS<-"ITISTax"
-reg.order<-c("National", "North Pacific", "Pacific", "Western Pacific (Hawai`i)", "New England", "Mid-Atlantic", "Northeast", "South Atlantic", "Gulf of Mexico") 
 
 #Functions common to all sections, to help instill standardization
 # Common.Funct<-paste0(dirname(getwd()), "/FEUS/2018/FEUS",maxyr,"Common/rscripts/Common_Functions.r")
@@ -883,7 +945,7 @@ dir.data0<-dir.data
 dir.data<-paste0(dirname(getwd()), "/FEUS/2018/FEUS2018Commercial/data/")
 dir.data.common<-paste0(dirname(getwd()), "/FEUS/2018/FEUS2018Common/data/")
 Comm.Data<-paste0(dirname(getwd()), "/FEUS/2018/FEUS2018Commercial/rscripts/Commercial_Data.R")
-dir.nore<-paste0(dir.out,"/analyses/",minyr,"To",maxyr,"_Fisheries_Northeast/")
+dir.nore<-paste0(dir.out,"/analyses/",minyr,"To",maxyr0,"_Fisheries_Northeast/")
 create_dir(dir.nore)
 #Download new data
 # source(Comm.DataDL)
@@ -950,18 +1012,18 @@ revenue$keyspecies<-tolower(revenue$keyspecies)
 spcat0$Name<-tolower(spcat0$Name)
 FisherySums<-merge(x = revenue, y = spcat0, by.x = "keyspecies", by.y = "Name")
 
-FisherySums<-aggregate.data.frame(x = sapply(X = FisherySums[,as.character(minyr:maxyr)], FUN = as.numeric), 
+FisherySums<-aggregate.data.frame(x = sapply(X = FisherySums[,as.character(minyr:maxyr0)], FUN = as.numeric), 
                                       by = list("PLAN" = FisherySums$PLAN),
                                       FUN = sum, na.rm = T)
 
-FisherySums$Total<-rowSums(FisherySums[,as.character(minyr:maxyr)])
+FisherySums$Total<-rowSums(FisherySums[,as.character(minyr:maxyr0)])
 
 FisherySums <- rbind.data.frame(FisherySums, 
                                     cbind.data.frame("PLAN" = "Fisheries Total", 
-                                                     t(colSums(FisherySums[,c(as.character(minyr:maxyr), "Total")]))), 
+                                                     t(colSums(FisherySums[,c(as.character(minyr:maxyr0), "Total")]))), 
                                     cbind.data.frame("PLAN" = a$revenue$keyspecies[1:4], 
-                                                     a$revenue[1:4,as.character(minyr:maxyr)], 
-                                                     "Total" = rowSums(sapply(X = a$revenue[1:4,as.character(minyr:maxyr)], 
+                                                     a$revenue[1:4,as.character(minyr:maxyr0)], 
+                                                     "Total" = rowSums(sapply(X = a$revenue[1:4,as.character(minyr:maxyr0)], 
                                                                               FUN = as.numeric))))
 
 fold<-list.files(paste0(dir.out, "/analyses/"), full.names = T)
@@ -977,14 +1039,14 @@ for (i in 1:length(fold)){
     temp <- read.xlsx2(file = fold0, sheetName = "Northeast")
 
     temp0<- data.frame("PLAN" = paste0(fold00, c(" V_Total")), 
-                        t(temp[temp[,1] %in% as.character(minyr:maxyr), c("V_Total")]), 
-                        sum( as.numeric((temp[temp[,1] %in% as.character(minyr:maxyr), 
+                        t(temp[temp[,1] %in% as.character(minyr:maxyr0), c("V_Total")]), 
+                        sum( as.numeric((temp[temp[,1] %in% as.character(minyr:maxyr0), 
                                               c("V_Total")])) ) )  
     
     if (sum(names(temp) %in% "VV_Total")==1) {
       tempQ<- data.frame("PLAN" = paste0(fold00, c(" VV_Total")), 
-                         t(temp[temp[,1] %in% as.character(minyr:maxyr), c("VV_Total")]), 
-                         sum( as.numeric((temp[temp[,1] %in% as.character(minyr:maxyr), 
+                         t(temp[temp[,1] %in% as.character(minyr:maxyr0), c("VV_Total")]), 
+                         sum( as.numeric((temp[temp[,1] %in% as.character(minyr:maxyr0), 
                                                c("VV_Total")])) ) )   
       temp0<-rbind.data.frame(temp0, tempQ)
     }
@@ -1006,18 +1068,18 @@ landings$keyspecies<-tolower(landings$keyspecies)
 spcat0$Name<-tolower(spcat0$Name)
 FisherySums<-merge(x = landings, y = spcat0, by.x = "keyspecies", by.y = "Name")
 
-FisherySums<-aggregate.data.frame(x = sapply(X = FisherySums[,as.character(minyr:maxyr)], FUN = as.numeric), 
+FisherySums<-aggregate.data.frame(x = sapply(X = FisherySums[,as.character(minyr:maxyr0)], FUN = as.numeric), 
                                   by = list("PLAN" = FisherySums$PLAN),
                                   FUN = sum, na.rm = T)
 
-FisherySums$Total<-rowSums(FisherySums[,as.character(minyr:maxyr)])
+FisherySums$Total<-rowSums(FisherySums[,as.character(minyr:maxyr0)])
 
 FisherySums <- rbind.data.frame(FisherySums, 
                                 cbind.data.frame("PLAN" = "Fisheries Total", 
-                                                 t(colSums(FisherySums[,c(as.character(minyr:maxyr), "Total")]))), 
+                                                 t(colSums(FisherySums[,c(as.character(minyr:maxyr0), "Total")]))), 
                                 cbind.data.frame("PLAN" = a$landings$keyspecies[1:4], 
-                                                 a$landings[1:4,as.character(minyr:maxyr)], 
-                                                 "Total" = rowSums(sapply(X = a$landings[1:4,as.character(minyr:maxyr)], 
+                                                 a$landings[1:4,as.character(minyr:maxyr0)], 
+                                                 "Total" = rowSums(sapply(X = a$landings[1:4,as.character(minyr:maxyr0)], 
                                                                           FUN = as.numeric))))
 
 fold<-list.files(paste0(dir.out, "/analyses/"), full.names = T)
@@ -1033,15 +1095,16 @@ for (i in 1:length(fold)){
     temp <- read.xlsx2(file = fold0, sheetName = "Northeast")
     
     temp0<- data.frame("PLAN" = paste0(fold00, c(" QI_Total")), 
-                       t(temp[temp[,1] %in% as.character(minyr:maxyr), c("QI_Total")]), 
+                       t(temp[temp[,1] %in% as.character(minyr:maxyr0), c("QI_Total")]), 
                        sum( as.numeric((temp[temp[,1] %in% as.character(minyr:maxyr), 
                                              c("QI_Total")])) ) )  
     
     if (sum(names(temp) %in% "Q_Total")==1) {
       tempQ<- data.frame("PLAN" = paste0(fold00, c(" Q_Total")), 
-                         t(temp[temp[,1] %in% as.character(minyr:maxyr), c("Q_Total")]), 
-                         sum( as.numeric((temp[temp[,1] %in% as.character(minyr:maxyr), 
+                         t(temp[temp[,1] %in% as.character(minyr:maxyr0), c("Q_Total")]), 
+                         sum( as.numeric((temp[temp[,1] %in% as.character(minyr:maxyr0), 
                                                c("Q_Total")])) ) )   
+      names(tempQ)<-names(temp0)
       temp0<-rbind.data.frame(temp0, tempQ)
     }
     
@@ -1058,15 +1121,24 @@ write.xlsx(FisherySums.land, file = paste0(dir.nore, "NortheastData.xlsx"), shee
 
 
 #######***Summary Files##########
+
 dir.sum<-paste0(dir.out,"/analyses/SummaryFiles/")
 create_dir(dir.sum)
 
-yearrange<-c("1997ToP", "1950ToP")
-category0<-c("FSKey", "FSO", "FS")
-methods0<-c("P", "Q")
+fold<-list.files(paste0(dir.out, "/analyses/"), full.names = FALSE)
+fold<-fold[-(grep(pattern = "Northeast", x = fold))]
+fold<-fold[-(grep(pattern = "SummaryFiles", x = fold))]
+
+fold<-strsplit(x = fold, split = "_")
+yearrange<-unique(unlist(lapply(fold, `[[`, 1)))
+category0<-unique(unlist(lapply(fold, `[[`, 2)))
+methods0<-unique(unlist(lapply(fold, `[[`, 3)))
 
 fold<-list.files(paste0(dir.out, "/analyses/"), full.names = T)
 fold<-fold[-(grep(pattern = "Northeast", x = fold))]
+fold<-fold[-(grep(pattern = "SummaryFiles", x = fold))]
+
+summarydata<-list()
 
 for (yrange0 in 1:length(yearrange)) {
   
@@ -1089,33 +1161,120 @@ for (yrange0 in 1:length(yearrange)) {
           rownames(temp)<-temp[,1]
           
           if (i==1) {
-            temp0<-rbind.data.frame(data.frame("QE" = temp$QE_Total, 
+            temp0<-rbind.data.frame(data.frame("Year" = as.numeric(temp$X.), 
+                                               "QE" = temp$QE_Total, 
                                                "QEI" = temp$QEI_Total))
           }            
           
-
-          temp00<-data.frame(temp[,names(temp) %in% c("QI_Total", "Q_Total")])
-          names(temp00)<-names(temp)[names(temp) %in% c("QI_Total", "Q_Total")]
+          if (sum(names(temp) %in% c("QI_Total", "Q_Total", "PI_Total")) != 0) {
+          temp00<-data.frame(temp[,names(temp) %in% c("QI_Total", "Q_Total", "PI_Total")])
+          names(temp00)<-names(temp)[names(temp) %in% c("QI_Total", "Q_Total", "PI_Total")]
           names(temp00)<-gsub(pattern = "_Total", replacement = "", x = names(temp00))
-          names(temp00)[(ncol(temp00)-1):ncol(temp00)]<-paste0(names(temp00)[(ncol(temp00)-1):ncol(temp00)], " (", 
+          names(temp00)<-paste0(names(temp00), " (", 
                                                                ifelse(grepl(pattern = "_P_", x = file0), "Price", "Quantity"), 
                                                                " ", 
-                                                               strsplit(x = fold0, split = "_")[[1]][grep(pattern = "category", 
-                                                                                                          x = strsplit(x = fold0, 
-                                                                                                                       split = "_")[[1]])], 
+                                                               unique(strsplit(x = file0, split = "_")[[1]][grep(pattern = "category", 
+                                                                                                          x = strsplit(x = file0, 
+                                                                                                                       split = "_")[[1]])]), 
                                                                " ", 
                                                                as.character(category0[sapply(paste0("_", category0, "_"), grepl, file0) %in% TRUE]), 
                                                                ")")
           temp0<-cbind.data.frame(temp0, temp00)
-          
+          }
       }  
     }
     
+          temp0names<-names(temp0)
+      temp0<-data.frame(sapply(temp0, as.numeric))
+          names(temp0)<-temp0names
+      
     write.xlsx(temp0, file = paste0(dir.sum, "Summary.xlsx"), sheetName = paste0(reg.order[reg0], "_", yearrange[yrange0]), 
-               col.names = TRUE, row.names = TRUE, append = TRUE)      
+               col.names = TRUE, row.names = TRUE, append = TRUE)  
+    
+    tempM<-temp0
+    
+      tempM[,grep(pattern = "Q ", x = names(tempM))]<-tempM[,grep(pattern = "Q ", x = names(tempM))]/1e6
+      names(tempM)[grep(pattern = "Q ", x = names(tempM))]<-paste0(names(tempM)[grep(pattern = "Q ", x = names(tempM))], " (Millions)")
+    
+    tempM[,names(tempM) %in% "QE"]<-tempM[,names(tempM) %in% "QE"]/1e6
+    names(tempM)[names(tempM) %in% "QE"]<-paste0(names(tempM)[names(tempM) %in% "QE"], " (Millions)")
+    
+    write.xlsx(tempM, file = paste0(dir.sum, "SummaryMill.xlsx"), sheetName = paste0(reg.order[reg0], "_", yearrange[yrange0]), 
+               col.names = TRUE, row.names = TRUE, append = TRUE)  
+    
+    summarydata[length(summarydata)+1]<-list(temp0)
+    names(summarydata)[length(summarydata)]<-paste0(reg.order[reg0], "_", yearrange[yrange0])
+    
   }
 
 }
+
+save(summarydata, file = paste0(dir.sum, "Summary.rdata"))
+
+
+########PRESENTATION######################
+library(tidyverse)
+library(gapminder)
+library(scales)
+library(gridExtra)
+library(patchwork)
+
+Date0<-"2020-08-24"
+datadl<-"2020-08-14"
+
+# Opening Slides
+
+rmarkdown::render(paste0(dir.scripts, "/ProductivityIndex_Presentation_Opening.Rmd"),
+                  output_dir = dir.pres,
+                  output_file = paste0("ProductivityIndex_EmilyMarkowitz_Opening.pptx"))
+
+
+# Loop through Slide Placement of Key Slides (Q, QE, QI, PI)
+fold<-list.files(paste0(dir.out, "/analyses/"), full.names = FALSE)
+fold<-fold[-(grep(pattern = "Northeast", x = fold))]
+fold<-fold[-(grep(pattern = "SummaryFiles", x = fold))]
+
+fold0<-strsplit(x = fold, split = "_")
+aaa<-unique(paste(lapply(fold0, `[[`, 2), 
+                lapply(fold0, `[[`, 3), 
+                lapply(fold0, `[[`, 4), 
+                lapply(fold0, `[[`, 5), 
+                sep = "_"))
+
+for (i in 1:length(aaa)){
+  folderpattern <- aaa[i]
+  rmarkdown::render(paste0(dir.scripts, "/ProductivityIndex_Presentation_KeyRegionPlots.Rmd"),
+                    output_dir = paste0(dir.out, "/Presentation/"),
+                    output_file = paste0("ProductivityIndex_EmilyMarkowitz_KeyRegionPlots_", folderpattern, ".pptx"))
+}
+
+
+# Loop through Slide Placement of Cross Analysis Comparisons by Regions
+info<-data.frame("img_loc" = paste0(list.files(list.files(path = (list.files(path = dir.output, pattern = as.character(Date0), 
+                                                                             full.names = TRUE)), 
+                                                          full.names = TRUE, pattern = "analyses"), full.names = TRUE), "/figures/"),
+                 "figname" = list.files(list.files(path = (list.files(path = dir.output, pattern = as.character(Date0), full.names = TRUE)), 
+                                                   full.names = TRUE, pattern = "analyses"), full.names = FALSE))
+
+info<-info[!(info$figname %in% c("2007To2017_Fisheries_Northeast",  "SummaryFiles")),]
+
+title0<-strsplit(split = "_", x = info$figname)
+info$timeframe<-unlist(lapply(title0, `[[`, 1))
+info$categories<-unlist(lapply(title0, `[[`, 2))
+info$method<-unlist(lapply(title0, `[[`, 3))
+info$categorysplittype<-unlist(lapply(title0, `[[`, 4))
+info$pctmiss<-gsub(pattern = "pctmiss", replacement = "", x = unlist(lapply(title0, `[[`, 5)))
+info$slidetitle = paste0("Regional Quantitiy Index")
+info$slidesubtitle = paste0(ifelse(info$method=="P", "Price", "Quantity"), " Method, ", 
+                            gsub(pattern = "To", replacement = "-", x = info$timeframe))
+
+for (i in 1:length(aaa)){
+  folderpattern <- aaa[i]
+  rmarkdown::render(paste0(dir.scripts, "/ProductivityIndex_Presentation_CrossAnalysis.Rmd"),
+                    output_dir = paste0(dir.out, "/Presentation/"),
+                    output_file = paste0("ProductivityIndex_Presentation_CrossAnalysis_", folderpattern, ".pptx"))
+}
+
 
 ########DOCUMENTATION#################
 

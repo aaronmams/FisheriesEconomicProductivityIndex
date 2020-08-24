@@ -34,6 +34,14 @@ library(ggplot2)
 library(roxygen2)
 library(devtools)
 
+#Presentations
+#remotes::install_github('yihui/xaringan')
+library(xaringan)
+options(htmltools.dir.version = FALSE)
+library(tidyverse)
+library(stargazer)
+
+
 options(java.parameters = "-Xmx1000m")
 options(scipen=10000)
 
@@ -120,24 +128,35 @@ tolower2 <- function(str0, capitalizefirst=F) {
   return(str2)
 }
 
+
 itis_reclassify<-function(tsn, categories, missing.name){
   
   # Find which codes are in which categories
-  
-  tsn.indata<-classification(tsn[!(is.na(tsn))], db = 'itis')
+  tsn0<-as.numeric(tsn)[!(is.na(tsn))]
+  tsn.indata<-classification(x = tsn0, db = 'itis')
   tsn.indata<-tsn.indata[!(names(tsn.indata) %in% 0)]
   valid0<- sciname<-category0<-bottomrank<-sppname<- TSN<-c() 
   
+  TSN<-c()
+  bottomrank<-c()
+  category0<-c()
+  sciname<-c()
+  valid0<-c()
+  
+  
   for (i in 1:length(categories)) {
+
+    a<-list.search(lapply(X = tsn.indata, '[', 3), categories[i][[1]] %in% . )
     
-    a<-c()
-    for (ii in 1:length(categories[i][[1]])) {
-      a<-c(a, list.search(lapply(X = tsn.indata, '[[', 3), categories[i][[1]][[ii]] %in% . ))
-    }
+    # for (ii in 1:length(categories[i][[1]])) {
+      # a<-c(a, list.search(lapply(X = tsn.indata, '[', 3), categories[i][[1]][[ii]] %in% . ))
+    # }
     
     if (length(a)!=0) {
       
       sppcode<-names(a)
+      sppcode<-gsub(pattern = "[a-zA-Z]+", replacement = "", x = sppcode)
+      sppcode<-gsub(pattern = "\\.", replacement = "", x = sppcode)
       
       for (ii in 1:length(sppcode)) {
         TSN<-c(TSN, sppcode[ii])
@@ -163,8 +182,8 @@ itis_reclassify<-function(tsn, categories, missing.name){
                      rank = bottomrank, 
                      sciname = sciname )
   
-  return(list("df.out" = data.frame(df.out), 
-              "tsn.indata" = (tsn.indata)))
+  return(list("df.out" = df.out, 
+              "tsn.indata" = tsn.indata))
 }
 
 
@@ -816,7 +835,7 @@ lmCheck<-function(Columns, temp) {
     lm_check$R2[c0]<-temp0$r.squared
     lm_check$R2adj[c0]<-temp0$adj.r.squared
     lm_check$Pr[c0]<-temp0$coefficients[8]
-    lm_check$Fstat[c0]<-temp0$fstatistic[1]
+    lm_check$Fstat[c0]<-ifelse(is.null(temp0$fstatistic[1]), NA, as.numeric(temp0$fstatistic[1]))
     }
   }
   
@@ -828,7 +847,8 @@ lmCheck<-function(Columns, temp) {
   return(lm_check)
 }
 
-ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pctmiss, warnings.list, MinimumNumberOfSpecies = 1) {
+ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pctmiss, warnings.list, 
+                                              MinimumNumberOfSpecies = 1) {
   
   ########Housekeeping
   # Here I am just going to collect some housekeeping items
@@ -893,7 +913,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   
   # if (length(VColumns) == 0) {
   #   
-  #   warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")
+  #   warnings.list<-c(warnings.list, list(paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss"))
   #   
   # } else {
     
@@ -908,7 +928,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   #if there are still columns to assess that haven't been "removed"
   PColumns<-c()
   if (length(VColumns0) == 0) {
-    warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns of V after data was removed for not meeting the pctmiss")
+    warnings.list<-c(warnings.list, list(paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns of V after data was removed for not meeting the pctmiss")))
     
   } else {
     
@@ -988,7 +1008,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   
   if (length(PColumns) < MinimumNumberOfSpecies) {
     
-    warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were less than ",MinimumNumberOfSpecies," columns of Q available (according to 'MinimumNumberOfSpecies') after data was removed for not meeting the pctmiss")
+    warnings.list<-c(warnings.list, list(paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were less than ",MinimumNumberOfSpecies," columns of Q available (according to 'MinimumNumberOfSpecies') after data was removed for not meeting the pctmiss")))
     
   } else {
     
@@ -1052,7 +1072,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   
   lm_check<-data.frame(NameBasecategory, lmCheck(Columns, temp))
   
-  # warnings.list[length(warnings.list)+1]<-list(lm_check)
+  # wwarnings.list<-c(warnings.list, list(lm_check))
   # names(warnings.list)[[length(warnings.list)]]<-paste0("FYI ", NameBasecategory, " species lm_check")
   
   # How many slopes are significantly increaseing or decreaseing
@@ -1060,7 +1080,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   lm_sig_slope <- data.frame(table(lm_check[, c("var", "slopecheck")]))
   lm_sig_slope <- lm_sig_slope[order(lm_sig_slope$var),]
   
-  warnings.list[length(warnings.list)+1]<-list(lm_sig_slope)
+  warnings.list<-c(warnings.list, list(lm_sig_slope))
   names(warnings.list)[[length(warnings.list)]]<-paste0("FYI ", NameBasecategory, " species lm_sig_slope")
   
   
@@ -1092,7 +1112,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   
   #Note if there is an error
   if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
-    warnings.list[length(warnings.list)+1]<-paste0("FYI: Rows of R_{s,i,t} for ",NameBasecategory," did not sum to 1")
+    warnings.list<-c(warnings.list, list(paste0("FYI: Rows of R_{s,i,t} for ",NameBasecategory," did not sum to 1")))
   }
   
   #remove duplicates
@@ -1243,7 +1263,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   
   if ((length(setdiff(as.character(temp0[,paste0("V", NameBasecategory, "_Check")]), 
                       as.character(temp0[,paste0("V", NameBasecategory)]))) != 0)) {
-    warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, V_{i,t} did not equal PI_{i,t} * Q_{i,t}"
+    warnings.list<-c(warnings.list, list("Warning: When back calculated, V_{i,t} did not equal PI_{i,t} * Q_{i,t}"))
   }
   
   
@@ -1255,7 +1275,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
     
  if (length(setdiff(as.character(temp0[,paste0("Q", NameBasecategory, "_Check")]), 
                                  as.character(temp0[,paste0("Q", NameBasecategory)]))) != 0) {
-    warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}"
+   warnings.list<-c(warnings.list, list("Warning: When back calculated, Q_{i,t} did not equal V_{i,t}/PI_{i,t}"))
   }
   }
 }
@@ -1266,15 +1286,14 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
 ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00, 
                                  title0 = "", place = "", MinimumNumberOfSpecies = 2){
   
-  temp.orig<-temp
+  temp.orig<-temp<-data.frame(temp)
   
   warnings.list<-list(title0)
   figures.list<-list()
   
   ########Housekeeping
   # Here I am just going to collect some housekeeping items
-  temp<-data.frame(temp)
-  
+
   NumberOfSpecies<-numbers0(x = c(0, strsplit(x = 
                                                 strsplit(x = names(temp)[2], 
                                                          split = "_")[[1]][2], 
@@ -1328,7 +1347,7 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
     
     if (length(VColumns0) < 2) {
       
-      warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")
+      warnings.list<-c(warnings.list, list(paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")))
       category.rm<-c(category.rm, ii)
       
     }  else  {
@@ -1358,13 +1377,15 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
       
       if (length(warnings.list1)>0) {
         for (i in 1:length(warnings.list1)) {
-          warnings.list[length(warnings.list)+1]<-warnings.list1[[i]]
+          warnings.list<-c(warnings.list, list(warnings.list1[[i]]))
         }
       }
     }
   }
   
   warnings.list<-unique(warnings.list)
+  
+  if (!(ncol(temp0) %in% 1)) {
   
   if(!(is.null(category.rm))) {
     category<-category[-category.rm]
@@ -1444,7 +1465,7 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   
   # Is there a warning?
   if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
-    warnings.list[length(warnings.list)+1]<-paste0("Warning: Rows of R_{t,i} for ",NameBaseTotal," did not sum to 1")
+    warnings.list<-c(warnings.list, list(paste0("Warning: Rows of R_{t,i} for ",NameBaseTotal," did not sum to 1")))
   }
   
   
@@ -1550,7 +1571,7 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   
   ### 11. Total Implicit Quantity/Output for the entire commercial fishery ($Q_t = Y_t$)
   # To get quantity estimates for total output using total value of landings divided by price index as follow: $Y=V/I$
-  temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("V", NameBaseTotal)]/
+  temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("VE", NameBaseTotal)]/
     temp[, names(temp) %in% paste0("PI", NameBaseTotal)]
   names(temp)[ncol(temp)]<-paste0("Q", NameBaseTotal)
   
@@ -1621,7 +1642,7 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   
   if (length(setdiff(as.character(temp0[,paste0("V", NameBaseTotal, "_Check")]), 
                      as.character(temp0[,paste0("V", NameBaseTotal)]))) != 0) {
-  warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, V_t did not equal PI_t * Q_t"
+    warnings.list<-c(warnings.list, list("Warning: When back calculated, V_t did not equal PI_t * Q_t"))
   }
 
   
@@ -1633,7 +1654,7 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   
   if (length(setdiff(as.character(temp0[,paste0("Q", NameBaseTotal, "_Check")]), 
                      as.character(temp0[,paste0("Q", NameBaseTotal)]))) != 0) {
-  warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, Q_t did not equal V_t/PI_t"
+    warnings.list<-c(warnings.list, list("Warning: When back calculated, Q_t did not equal V_t/PI_t"))
   }
   
   
@@ -1679,7 +1700,7 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   
   if (length(setdiff(as.character(temp0$part1), 
                      as.character(temp0$part2))) != 0) {
-    warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( R_{i, t} - R_{i, t-1} ) / 2 )  x ln( (Q_{i,t}) / (Q_{i,t-1} ) )"
+    warnings.list<-c(warnings.list, list("Warning: When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( R_{i, t} - R_{i, t-1} ) / 2 )  x ln( (Q_{i,t}) / (Q_{i,t-1} ) )"))
   }
   
   
@@ -1697,13 +1718,13 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   ncol0<-ncol(a)
   aa<-0
   a<-data.frame(a)
-  if(ncol(a) != 0){
+  if (ncol(a) != 0) {
     for (iii in 1:ncol(a)) {
       aa<-c(aa, ifelse(sum(a[,iii] %in% c(NA, NaN, 0)) == nrow(a), iii, NA))
     }
     vv<-(aa[!(is.na(aa))])
   } else {
-    pp<-0
+    vv<-0
   }
   #quantity
   a<-temp
@@ -1721,7 +1742,7 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
     }
     qq<-(aa[!(is.na(aa))])
   } else {
-    pp<-0
+    qq<-0
   }
   #Price
   a<-temp
@@ -1744,12 +1765,12 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   }
   
   
-  warnings.list[length(warnings.list)+1]<-paste0("FYI: ", ifelse(length(vv)==1, 0, length(vv)-1) ,
+  warnings.list<-c(warnings.list, list(paste0("FYI: ", ifelse(length(vv)==1, 0, length(vv)-1) ,
                                                  " of species V columns are completely empty, ", 
                                                  ifelse(length(qq)==1, 0, length(qq)-1) ,
                                                  " of species Q columns are completely empty, and ", 
                                                  ifelse(length(pp)==1, 0, length(pp)-1) ," of ", ncol0,
-                                                 " species P columns are completely empty. ")
+                                                 " species P columns are completely empty. ")))
   
   
   
@@ -2242,9 +2263,14 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
   
     }
   
-  
-  
-  return(list(temp, warnings.list, figures.list, spptable0, spp.output))
+    return(list(temp, warnings.list, figures.list, spptable0, spp.output))
+  } else {
+    return(list(temp = data.frame(), 
+                warnings.list, 
+                figures.list = list(), 
+                spptable0 = data.frame(), 
+                spp.output = data.frame()))
+  }
 }
 
 
@@ -2320,7 +2346,7 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
   if (length(VColumns0) == 0 #& length(QColumns0) == 0
       ) {
 
-    warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")
+    warnings.list<-c(warnings.list, list(paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")))
     
   } else {
     
@@ -2371,7 +2397,7 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
   
   if (length(QColumns) < MinimumNumberOfSpecies) {
     
-    warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were less than ",MinimumNumberOfSpecies," columns of P available (according to 'MinimumNumberOfSpecies') after data was removed for not meeting the pctmiss")
+    warnings.list<-c(warnings.list, list(paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were less than ",MinimumNumberOfSpecies," columns of P available (according to 'MinimumNumberOfSpecies') after data was removed for not meeting the pctmiss")))
     
   } else {
     
@@ -2432,7 +2458,7 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
     
       lm_check<-data.frame(NameBasecategory, lmCheck(Columns, temp)) 
     
-    # warnings.list[length(warnings.list)+1]<-list(lm_check)
+    # warnings.list<-c(warnings.list, list(list(lm_check)))
     # names(warnings.list)[[length(warnings.list)]]<-paste0("FYI ", NameBasecategory, " species lm_check")
     
     # How many slopes are significantly increaseing or decreaseing
@@ -2440,7 +2466,7 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
     lm_sig_slope <- data.frame(table(lm_check[, c("var", "slopecheck")]))
     lm_sig_slope <- lm_sig_slope[order(lm_sig_slope$var),]
     
-    warnings.list[length(warnings.list)+1]<-list(lm_sig_slope)
+    warnings.list<-c(warnings.list, list(list(lm_sig_slope)))
     names(warnings.list)[[length(warnings.list)]]<-paste0("FYI ", NameBasecategory, " species lm_sig_slope")
     
     
@@ -2472,7 +2498,7 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
     
     #Note if there is an error
     if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
-      warnings.list[length(warnings.list)+1]<-paste0("FYI: Rows of R_{s,i,t} for ",NameBasecategory," did not sum to 1")
+      warnings.list<-c(warnings.list, list(paste0("FYI: Rows of R_{s,i,t} for ",NameBasecategory," did not sum to 1")))
     }
     
     #remove duplicates
@@ -2638,7 +2664,7 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
     
     if (length(VColumns0) < 2) {
       
-      warnings.list[length(warnings.list)+1]<-paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")
+      warnings.list<-c(warnings.list, list(paste0("FYI: ", NameBasecategory, " is no longer being calculated because there were no more available columns o P after data was removed for not meeting the pctmiss")))
       category.rm<-c(category.rm, ii)
       
     }  else  {
@@ -2648,12 +2674,14 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
     ###Append species and category level calculations
     temp00<-ImplicitQuantityOutput.speciescat.q(temp, ii=category[ii],
                                                              baseyr, maxyr, minyr, 
-                                                             pctmiss, warnings.list, MinimumNumberOfSpecies)
+                                                             pctmiss, warnings.list, 
+                                                MinimumNumberOfSpecies)
     warnings.list1<-temp00[[2]]
     warnings.list1<-unique(warnings.list1)
     
     
     #If data for a catagory is no longer available after precentmissingthreshold etc, remove it from the category lineup
+    
     if (sum(names(temp00[1][[1]]) %in% paste0("QI", NameBasecategory)) == 0) {
       category.rm<-c(category.rm, ii)
     } else {
@@ -2662,10 +2690,11 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
       temp1<-temp1[, !(grepl(pattern = "\\.[0-9]+", x = names(temp1)))]
       temp1 <- temp1[, !duplicated(colnames(temp1))]
       temp0<-cbind.data.frame(temp0, temp1)
-    }
     
-    ###Remove duplicate columns
-    temp0<-temp0[, !(grepl(pattern = "\\.[0-9]+", x = names(temp0)))]    
+      ###Remove duplicate columns
+      temp0<-temp0[, !(grepl(pattern = "\\.[0-9]+", x = names(temp0)))]  
+    }
+  
     
     # warnings.list1<-ImplicitQuantityOutput.speciescat.q(temp, ii=category[ii],
     #                                                                 baseyr, maxyr, minyr, 
@@ -2695,7 +2724,7 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
     
   # if (length(category) == 1) {
     # 
-    # warnings.list[length(warnings.list)+1]<-paste0("Warning: There were too few categories that we could calculate for ",NameBaseTotal,". ")
+    # warnings.list<-c(warnings.list, list(paste0("Warning: There were too few categories that we could calculate for ",NameBaseTotal,". ")))
     # a<-warnings.list[length(warnings.list)][[1]]
   #   spptable0<-data.frame("Analysis" = title0,   
   #                         "Place" = place,  
@@ -2718,12 +2747,11 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
     aa<-rowSums(temp[,grep(pattern = "VV", x = names(temp))], na.rm = T)
   }
   
-  temp0<-data.frame(temp[,grep(pattern = paste0("VV", "[0-9]+_", NumberOfSpecies), 
-                               x = names(temp))], 
-                    aa)
-  names(temp0)[ncol(temp0)]<-paste0("VV",NameBaseTotal)
-  temp0<-data.frame(temp0)
-  temp[ncol(temp)+1]<-temp0[ncol(temp0)]
+  temp<-data.frame(temp, aa)
+  
+  names(temp)[ncol(temp)]<-paste0("VV",NameBaseTotal)
+  temp<-data.frame(temp)
+  # temp[ncol(temp)+1]<-temp0[ncol(temp0)]
   
   
   #Total V
@@ -2731,8 +2759,8 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
   temp0<-temp[grep(x = names(temp), 
                    pattern = paste0("V[0-9]+_", NumberOfSpecies))]
-  temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("VV")))]
-  temp0<-temp0[,!(grepl(x = names(temp0), pattern = c("REMOVED_")))]
+  temp0<-data.frame(temp0[,!(grepl(x = names(temp0), pattern = c("VV")))])
+  temp0<-data.frame(temp0[,!(grepl(x = names(temp0), pattern = c("REMOVED_")))])
   if (ncol(data.frame(temp0)) == 1) {
     aa<-temp0
   } else {
@@ -2767,7 +2795,7 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
   
   # Is there a warning?
   if (sum(rowSums(tempR, na.rm = T)) != nrow(temp)) {
-    warnings.list[length(warnings.list)+1]<-paste0("Warning: Rows of R_{t,i} for ",NameBaseTotal," did not sum to 1")
+    warnings.list<-c(warnings.list, list(paste0("Warning: Rows of R_{t,i} for ",NameBaseTotal," did not sum to 1")))
     a<-warnings.list[length(warnings.list)][[1]]
   } else {
     a<-"No warning."
@@ -2926,7 +2954,7 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
 
   if (length(setdiff(as.character(temp0$part1), 
                      as.character(temp0$part2))) != 0) {
-    warnings.list[length(warnings.list)+1]<-"Warning: When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( R_{i, t} - R_{i, t-1} ) / 2 )  x ln( (Q_{i,t}) / (Q_{i,t-1} ) )"
+    warnings.list<-c(warnings.list, list("Warning: When back calculated, ln(Q_t/Q_{t-1}) = did not equal sum( ( R_{i, t} - R_{i, t-1} ) / 2 )  x ln( (Q_{i,t}) / (Q_{i,t-1} ) )"))
   }
   
   
@@ -2949,7 +2977,7 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
     }
     vv<-(aa[!(is.na(aa))])
   } else {
-    pp<-0
+    vv<-0
   }
   
   #quantity
@@ -2968,15 +2996,15 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
     }
     qq<-(aa[!(is.na(aa))])
   } else {
-    pp<-0
+    qq<-0
   }
   
   
   
-  warnings.list[length(warnings.list)+1]<-paste0("FYI: ", ifelse(length(vv)==1, 0, length(vv)-1) ,
+  warnings.list<-c(warnings.list, list(paste0("FYI: ", ifelse(length(vv)==1, 0, length(vv)-1) ,
                                                  " of species V columns are completely empty, ", 
                                                  ifelse(length(qq)==1, 0, length(qq)-1) ,
-                                                 " of species Q columns are completely empty.")
+                                                 " of species Q columns are completely empty.")))
   
   
   

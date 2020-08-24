@@ -1,6 +1,6 @@
 ---
-title: "Best Scripting Practices"
-author: "Emily Markowitz"
+title: "Measuring Output for U.S. Commercial Fisheries — From Theory to Practice"
+author: 'Emily Markowitz^1^ (Emily.Markowitz@noaa.gov) Sun Ling Wang^2^ (Sun-Ling.Wang@noaa.gov) \n\n ^1^Contractor, ECS Federal in support of NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division \n\n ^2^On detail with the NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division \n\n >*The views expressed are those of the author and should not be attributed to the NOAA, ECS or ERS'
 date: "7/22/2020"
 output: md_document
 ---
@@ -9,6 +9,18 @@ output: md_document
 knitr::opts_chunk$set(echo = FALSE, error = FALSE, message = FALSE, warning = FALSE)
 ```
 
+# Measuring Output for U.S. Commercial Fisheries — From Theory to Practice
+
+
+Emily Markowitz^1^ (Emily.Markowitz@noaa.gov)
+
+Sun Ling Wang^2^ (Sun-Ling.Wang@noaa.gov)
+
+^1^Contractor, ECS Federal in support of NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division
+
+^2^On detail with the NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division
+
+>*The views expressed are those of the author and should not be attributed to the NOAA, ECS or ERS
 
 ```{r}
 echoTF<-function(typical, code = TRUE) {

@@ -1,35 +1,9 @@
-    echoTF<-function(typical, code = TRUE) {
-      return(ifelse(code == TRUE, typical, FALSE))
-    }
-
-    code<-FALSE
-    showresults<-FALSE
-
-    dir.in<-getwd()
-    #Local Directories
-    dir.output<-paste0(dir.in, "/output/")
-    dir.data<-paste0(dir.in, "/data/")
-
-
-    #####LOAD CRAN LIBRARIES#######
-
-    #Seperating species by taxonomic group
-    # install.packages("remotes")
-    # remotes::install_github("ropensci/taxize")
-    library(taxize)
-
-    # Data Managment
-    library(tidyr)
-    library(reshape2)
-
     ## 
     ## Attaching package: 'reshape2'
 
     ## The following object is masked from 'package:tidyr':
     ## 
     ##     smiths
-
-    library(tidyverse)
 
     ## -- Attaching packages ------------------------------------------------------------------------------------------------------ tidyverse 1.3.0 --
 
@@ -42,16 +16,12 @@
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
-    library(filesstrings)
-
     ## 
     ## Attaching package: 'filesstrings'
 
     ## The following object is masked from 'package:dplyr':
     ## 
     ##     all_equal
-
-    library(data.table) # := to tag species codes
 
     ## 
     ## Attaching package: 'data.table'
@@ -67,8 +37,6 @@
     ## The following objects are masked from 'package:reshape2':
     ## 
     ##     dcast, melt
-
-    require(plyr)  #ddply function
 
     ## Loading required package: plyr
 
@@ -92,22 +60,12 @@
     ## 
     ##     compact
 
-    library(sas7bdat)
-    library(rlist)
-
-    #RMarkdown
-    library(rmarkdown)
-    library(knitr)
-    library(gridExtra)
-
     ## 
     ## Attaching package: 'gridExtra'
 
     ## The following object is masked from 'package:dplyr':
     ## 
     ##     combine
-
-    library(ggpubr)
 
     ## Warning: package 'ggpubr' was built under R version 4.0.2
 
@@ -118,11 +76,6 @@
     ## 
     ##     mutate
 
-    #Excel File Management
-    library(officer)
-    library(xlsx)
-    library(readxl)
-
     ## 
     ## Attaching package: 'readxl'
 
@@ -130,21 +83,7 @@
     ## 
     ##     read_xlsx
 
-    #Visuals
-    library(ggplot2)
-
-    #Package Management
-    library(roxygen2)
-    library(devtools)
-
     ## Loading required package: usethis
-
-    #Presentations
-    #remotes::install_github('yihui/xaringan')
-    library(xaringan)
-    options(htmltools.dir.version = FALSE)
-    library(tidyverse)
-    library(stargazer)
 
     ## 
     ## Please cite as:
@@ -152,11 +91,6 @@
     ##  Hlavac, Marek (2018). stargazer: Well-Formatted Regression and Summary Statistics Tables.
 
     ##  R package version 5.2.2. https://CRAN.R-project.org/package=stargazer
-
-    options(java.parameters = "-Xmx1000m")
-    options(scipen=10000)
-
-    ln<-log #tricky, tricky, Base R! Didn't fool me this time!!!
 
 Study Purpose
 =============

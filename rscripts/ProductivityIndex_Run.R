@@ -7,7 +7,7 @@ dir.in<-getwd()
 #Local Directories
 dir.output<-paste0(dir.in, "/output/")
 dir.data<-paste0(dir.in, "/data/")
-dir.out<-paste0(dir.output, "ProductivityIndex_", Sys.Date(), "a/")
+dir.out<-paste0(dir.output, "ProductivityIndex_", Sys.Date(), "/")
 dir.create(dir.out)
 dir.parent<-dirname(dir.in)
 dir.presdat<-paste0(dir.in, "/rpresentation/")
@@ -1219,7 +1219,7 @@ library(scales)
 library(gridExtra)
 library(patchwork)
 
-Date0<-"2020-08-24a"
+Date0<-"2020-08-26"
 datadl<-"2020-08-14"
 
 # Opening Slides
@@ -1241,7 +1241,7 @@ aaa<-unique(paste(lapply(fold0, `[[`, 2),
                 lapply(fold0, `[[`, 5), 
                 sep = "_"))
 
-for (i in 11:length(aaa)){
+for (i in 1:length(aaa)){
   folderpattern <- aaa[i]
   rmarkdown::render(paste0(dir.scripts, "/ProductivityIndex_Presentation_KeyRegionPlots.Rmd"),
                     output_dir = paste0(dir.out, "/Presentation/"),
@@ -1250,8 +1250,6 @@ for (i in 11:length(aaa)){
 
 
 # Loop through Slide Placement of Cross Analysis Comparisons by Regions
-
-
 aaa<-unlist(unique(lapply(fold0, `[[`, 1)))
 load(file = paste0(dir.out, "/analyses/SummaryFiles/Summary.rdata")) #summarydata
 reg.order<-c("National", "North Pacific", "Pacific", "Western Pacific", "New England", "Mid-Atlantic", "Northeast", "South Atlantic", "Gulf of Mexico") 
@@ -1261,7 +1259,6 @@ for (i in 1:length(aaa)){
                     output_dir = paste0(dir.out, "/Presentation/"),
                     output_file = paste0("ProductivityIndex_Presentation_CrossAnalysis_", yr, ".pptx"))
 }
-
 
 ########DOCUMENTATION#################
 

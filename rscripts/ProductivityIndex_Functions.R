@@ -1236,7 +1236,7 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
   ###7. Implicit Quantity/Output for each category ($Q_{i,t}$; Finfish & others and Shellfish)
   temp[,paste0("Q", NameBasecategory)]<-NULL
   
-  temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("V", NameBasecategory)]/
+  temp[,ncol(temp)+1]<-temp[,names(temp) %in% paste0("VE", NameBasecategory)]/
     temp[,names(temp) %in% paste0("PI", NameBasecategory)]
   
   names(temp)[ncol(temp)]<-paste0("Q", NameBasecategory)
@@ -2008,6 +2008,7 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
                     "_",
                     as.character(lapply(X = strsplit(x = as.character(temp0$cat), 
                                                      split = paste0("_", NumberOfSpecies)), function(x) x[2])))
+  
   
   g<-plotnlines(dat = temp0, title00, place) 
   
@@ -3662,7 +3663,7 @@ plotnlines<-function(dat, title00, place){
   # ynames<-as.numeric(paste0(val))
   
   g<-ggplot(data = dat, aes(x = factor(Year), y = val, color = cat)) +
-    geom_line(aes(group = cat)) +
+    geom_line(aes(group = cat), size = 3) +
     geom_point() +
     theme(
       # legend.position = c(0.9, 0.2), 

@@ -21,42 +21,27 @@ knitr::opts_chunk$set(
 
 print4plots<-function(plotlist, datadl, title00, legends = c(T,T,T,T), titles = c(F,F,F,F)){
 
-  
-  b1<-plotlist[1][[1]]
-  if(legends[1] %in% F) {
-    b1<-b1 + theme(legend.position = "none")
-  }
-  if(legends[1] %in% F) {
-    b1<-b1 + ggtitle("")
-  }
-  
-  
-  b2<-plotlist[2][[1]]
-  if(legends[2] %in% F) {
-    b2<-b2 + theme(legend.position = "none")
-  }
-  if(legends[2] %in% F) {
-    b2<-b2 + ggtitle("")
-  }
-  
-  b3<-plotlist[3][[1]]
-  if(legends[3] %in% F) {
-    b3<-b3 + theme(legend.position = "none")
-  }
-  if(legends[3] %in% F) {
-    b3<-b3 + ggtitle("")
-  }
-  
-  b4<-plotlist[4][[1]]
-  if(legends[4] %in% F) {
-    b4<-b4 + theme(legend.position = "none")
-  }
-  if(legends[4] %in% F) {
-    b4<-b4 + ggtitle("")
-  }
+  b0<-list()
+  for (i in 1:length(plotlist)){
+    
+    b<-plotlist[i][[1]]
+    b<-b+
+      geom_line(aes(group = cat), size = 2) +
+      theme_classic(base_size = 20) 
+    if(legends[i] %in% F) {
+      b<-b + theme(legend.position = "none")
+    } else {
+      b<-b + theme(legend.title = element_blank())
+    }
+    if(titles[i] %in% F) {
+      b<-b + ggtitle("")
+    }
+    b0<-c(b0, list(b))
+    }
+    
   
   b<-plotlist
-  layout <- (b1 + b2) / (b3 + b4)
+  layout <- (b0[1][[1]] + b0[2][[1]]) / (b0[3][[1]] + b0[4][[1]])
   
   title0<-strsplit(split = "_", x = names(b)[1])[[1]][-c(1,2)]
   title0<-title0[-length(title0)]
@@ -68,62 +53,12 @@ print4plots<-function(plotlist, datadl, title00, legends = c(T,T,T,T), titles = 
   layout +
     plot_annotation(
     title = title00, 
-    subtitle = title0,
-    caption = paste0("Data downloaded from FOSS ", datadl),
+    subtitle = "",
+    caption = paste0(title0, "\n Data downloaded from FOSS ", datadl, ". "),
     theme = theme(plot.title = element_text(size = 20, hjust = 0.5, face = "bold"))
     )
 }
 
-plotnlines<-function(dat, title00, place){
-  
-  xnames<-as.numeric(paste0(dat$Year))
-  xnames[!(xnames %in% seq(from = min((as.numeric(xnames))),
-                           to = max(as.numeric(xnames)),
-                           by = 10))]<-""
-  
-  dat$val<-as.numeric(as.character(dat$val))
-  dat$val[(is.infinite(dat$val))]<-NA
-  divideby<-paste0("(", strsplit(x = xunits(mean(dat$val, na.rm = T)), split = " ")[[1]][2], "s)")
-  if (divideby %in% "(trillions)") {
-    divideby0<-1e12
-  } else if (divideby %in% "(billions)") {
-    divideby0<-1e9
-  } else if (divideby %in% "(millions)") {
-    divideby0<-1e6
-  } else if (divideby %in% "(thousands)") {
-    divideby0<-1e3
-  } else if (divideby %in% "(NAs)") {
-    divideby0<-1
-    divideby<-""
-  }
-  
-  dat$val<-dat$val/divideby0
-  # ynames<-as.numeric(paste0(val))
-  
-  g<-ggplot(data = dat, aes(x = factor(Year), y = val, color = cat)) +
-    geom_line(aes(group = cat)) +
-    geom_point() +
-    theme(
-      # legend.position = c(0.9, 0.2), 
-      panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
-      panel.grid.minor.y = element_blank(),
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      axis.line = element_line( color=NOAALightBlue, size = .1 ),
-      axis.ticks = element_blank(), # remove ticks
-      panel.background = element_blank()
-    )  + 
-    ylab(paste0(gsub(pattern = "_", replacement = "", 
-                    x = strsplit(x = title00, split = "-")[[1]][1]), 
-               " ", divideby)) +
-    xlab("Year") +
-    scale_x_discrete(labels= xnames) +
-    # scale_y_discrete(labels= ynames) +
-    guides(fill=FALSE) + 
-    ggtitle(paste0(place))
-  
-  return(g)
-}
 
 xunits<-function(temp00, combine=T) {
   
@@ -158,7 +93,7 @@ xunits<-function(temp00, combine=T) {
 }
 
 plotkeyfig<-function(yr, place, folderpattern, 
-                      plotpartnames){
+                      plotpartnames, plotyaxis = c(NA, NA, NA, NA)){
 
   outputrun<-list.files(path = dir.output, pattern = as.character(Date0), full.names = TRUE)
   a<-list.files(path = (list.files(path = paste0(outputrun, "/analyses/"), full.names = TRUE, pattern = folderpattern)), 
@@ -170,14 +105,24 @@ plotkeyfig<-function(yr, place, folderpattern,
   
   if (sum(grepl(pattern = place, x = names(figures.list), ignore.case = T)) != 0) {
     
+    for (i in 1:length(plotpartnames)){
   c1<-figures.list[grepl(pattern = plotpartnames[1], x = names(figures.list), ignore.case = T) & 
                     grepl(pattern = place, x = names(figures.list), ignore.case = T)]
-  c2<-figures.list[grepl(pattern = plotpartnames[2], x = names(figures.list), ignore.case = T) & 
-                    grepl(pattern = place, x = names(figures.list), ignore.case = T)]
-  c3<-figures.list[grepl(pattern = plotpartnames[3], x = names(figures.list), ignore.case = T) & 
-                    grepl(pattern = place, x = names(figures.list), ignore.case = T)]
-  c4<-figures.list[grepl(pattern = plotpartnames[4], x = names(figures.list), ignore.case = T) & 
-                    grepl(pattern = place, x = names(figures.list), ignore.case = T)]
+  if (plotpartnames[i] %in% c("QI-Line", "PI-Line")){
+  aa<-c1[[1]]$data
+    for ( i in 1:length(unique(aa$cat))){
+      aaa<-aa[aa$cat %in% unique(aa$cat)[i],]
+      aaa$val<-aaa$val/aaa$val[aaa$Year %in% min(aaa$Year)]
+      aa[aa$cat %in% unique(aa$cat)[i],]<-aaa
+    }
+    c1[[1]]$data<-aa
+  }
+  if (!(is.na(plotyaxis[i]))) {
+      c1[[1]]$labels$y<-plotyaxis[i]
+  }
+  assign(value = c1[[1]], x = paste0("c", i))
+}
+
   
   p<-print4plots(plotlist = c(c1, c2, c3, c4), 
                      datadl = datadl, title00 = "", 
@@ -210,21 +155,114 @@ plotkeyfig<-function(yr, place, folderpattern,
   return(p)
 }
 
+  
+speciestable<-function(Date0, yr, maxyr, folderpattern, dir.output){
+  outputrun<-list.files(path = dir.output, pattern = as.character(Date0), full.names = TRUE)
+  a<-list.files(path = (list.files(path = paste0(outputrun, "/analyses/"), full.names = TRUE, pattern = paste0(yr, "To", maxyr, "_", folderpattern))), 
+                     pattern = "outputtables", full.names = TRUE, ignore.case = TRUE)
+  b<-a[(grepl(pattern =paste0(yr, "To"), x = a))]
+  b<-list.files(path = b, pattern = "_All_", full.names = TRUE)
+  b<-b[grep(pattern = "_Species", x = b)]
+  
+  # b<-load(paste0(a, "/AllFigures.rdata"))
+  a<-read.csv(file = b)
 
+  a<-a[,-c(1,2)]
+  a$pct.used<-paste0(a$pct.used, "%")
+  names(a)<-c("Region", "Category", "Total Species", "Removed Species", "Used Species", "Percent Used")
+
+library(magrittr)
+library(flextable)
+a %>% 
+  tibble::rownames_to_column() %>% 
+  flextable() %>%
+  set_header_labels(rowname = "") %>% 
+  # add_header_row(values = c("", "Group 1", "Group 2"), 
+  #                colwidths = c(1, 2, 2)) %>% 
+  theme_zebra() %>% autofit()
+}
+
+
+keydatatable<-function(Date0, yr, maxyr, folderpattern, dir.output){
+  outputrun<-list.files(path = dir.output, pattern = as.character(Date0), full.names = TRUE)
+  a<-list.files(path = (list.files(path = paste0(outputrun, "/analyses/"), full.names = TRUE, pattern = paste0(yr, "To", maxyr, "_", folderpattern))), 
+                     pattern = "outputtables", full.names = TRUE, ignore.case = TRUE)
+  b<-a[(grepl(pattern =paste0(yr, "To"), x = a))]
+  b<-list.files(path = b, pattern = "_US_", full.names = TRUE)
+  b<-b[grep(pattern = "_Review", x = b)]
+  
+  # b<-load(paste0(a, "/AllFigures.rdata"))
+  a<-read.csv(file = b)
+  rownames(a)<-a$X
+  a$X<-NULL
+
+  a<-a[,(grepl(pattern = "PI",x = names(a)) | 
+          grepl(pattern = "Q[0-9]+_",x = names(a)) | 
+          grepl(pattern = "Q_Total",x = names(a)) | 
+          grepl(pattern = "QI",x = names(a)))]
+  
+  aa<-cbind.data.frame(data.frame(a[,grepl(pattern = "Total", x = names(a))]), 
+                      data.frame(a[,!(grepl(pattern = "Total", x = names(a)))]))
+  names(aa)<-c(names(a)[grepl(pattern = "Total", x = names(a))], 
+              names(a)[!(grepl(pattern = "Total", x = names(a)))])
+  a<-aa
+  groups<-unlist(lapply(strsplit(split = "_", x = names(a)), `[[`, 2))
+  names(a)<-gsub(pattern = "[0-9]+", replacement = "", x = names(a))
+  names(a)<-gsub(pattern = "_[a-zA-Z]+", replacement = "", x = names(a))
+
+  a[,(names(a) == "Q")]<-a[,(names(a) == "Q")]/1e6
+  
+  if (sum(names(a) == "PI")>0) {
+  for (i in 1:length(which(names(a) == "PI"))){
+    a[,which(names(a) == "PI")[i]]<-a[,which(names(a) == "PI")[i]]/a[1,which(names(a) == "PI")[i]]
+  }
+  }
+    for (i in 1:length(which(names(a) == "QI"))){
+    a[,which(names(a) == "QI")[i]]<-a[,which(names(a) == "QI")[i]]/a[1,which(names(a) == "QI")[i]]
+  }
+  
+  g<-t(data.frame(table(groups)))
+  g<-g[,match(table = g[1,], x = unique(groups))]
+
+library(magrittr)
+library(flextable)
+a %>% 
+  tibble::rownames_to_column() %>% 
+  flextable() %>%
+  set_header_labels(rowname = "") %>% 
+  add_header_row(values = c("", g[1,]),
+                 colwidths = c(1, as.numeric(g[2,]))) %>%
+   theme_box() %>% autofit()
+}
+
+fold<-list.files(path = list.files(path = list.files(paste0(dir.out, "/analyses/"), 
+                                                     pattern = folderpattern, 
+                                                     full.names = TRUE), 
+                                   pattern = "outputtables", 
+                                   full.names = TRUE)[3], 
+                 full.names = FALSE)[1]
+
+#Find base yr
+fold0<-strsplit(x = fold, split = "_")
+a<-unique(paste(lapply(fold0, `[[`, 3)))
+baseyr<-(gsub(pattern = "byr", replacement = "", x = a))
+
+#Method
 fold<-list.files(paste0(dir.out, "/analyses/"), pattern = folderpattern, full.names = FALSE)
 
 fold0<-strsplit(x = fold, split = "_")
 a<-unique(paste(lapply(fold0, `[[`, 3)))
 
+
+
 if (a == "P") {
   plotpartnames <- c("Q-Category", "QE-Category", "QI-Line", "PI-Line")
+  # plotyaxis<-c("Q ")
   method0<-"Price Method"
 } else if (a == "Q") {
   plotpartnames <- c("Q-Category", "QI-Line", "QE-Category", "VE-Line")
   method0<-"Quantity Method"
 }
-  
-
 
 ```
 
@@ -235,10 +273,17 @@ yr<-1950
 # National `r yr`-`r maxyr` (`r method0`)
 
 ```{r}
-plotkeyfig(yr = 1950, 
+plotkeyfig(yr, 
             place = "_US_", 
-            folderpattern, plotpartnames)
+            folderpattern, plotpartnames, plot, plotyaxis)
 ```
+
+# Species Percents `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+speciestable(Date0, yr, maxyr, folderpattern, dir.output)
+```
+
 
 ```{r}
 yr<-1997
@@ -247,9 +292,15 @@ yr<-1997
 # National `r yr`-`r maxyr` (`r method0`)
 
 ```{r}
-plotkeyfig(yr = yr, 
+plotkeyfig(yr, 
             place = "_US_", 
-            folderpattern, plotpartnames)
+            folderpattern, plotpartnames, plotyaxis)
+```
+
+# Species Percents `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+speciestable(Date0, yr, maxyr, folderpattern, dir.output)
 ```
 
 ```{r}
@@ -261,7 +312,24 @@ yr<-2007
 ```{r}
 plotkeyfig(yr, 
             place = "_US_", 
-            folderpattern, plotpartnames)
+            folderpattern, plotpartnames, plotyaxis)
+```
+
+# Species Percents `r yr`-`r maxyr` (`r method0`)
+
+```{r}
+speciestable(Date0, yr, maxyr, folderpattern, dir.output)
+```
+
+
+# Data `r yr`-`r maxyr` (`r method0`)
+
+>Price Index (2007 = 1)
+
+>Implicit Quantity (in 2007 $Million)
+
+```{r}
+keydatatable(Date0, yr, maxyr, folderpattern, dir.output)
 ```
 
 # North Pacific `r yr`-`r maxyr` (`r method0`)
@@ -269,7 +337,7 @@ plotkeyfig(yr,
 ```{r}
 plotkeyfig(yr, 
             place = "_NP_", 
-            folderpattern, plotpartnames)
+            folderpattern, plotpartnames, plotyaxis)
 ```
 
 # Pacific `r yr`-`r maxyr` (`r method0`)
@@ -277,7 +345,7 @@ plotkeyfig(yr,
 ```{r}
 plotkeyfig(yr, 
             place = "_Pac_", 
-            folderpattern, plotpartnames)
+            folderpattern, plotpartnames, plotyaxis)
 ```
 
 # Western Pacific `r yr`-`r maxyr` (`r method0`)
@@ -285,7 +353,7 @@ plotkeyfig(yr,
 ```{r}
 plotkeyfig(yr, 
             place = "_WP_", 
-            folderpattern, plotpartnames)
+            folderpattern, plotpartnames, plotyaxis)
 ```
 
 # New England `r yr`-`r maxyr` (`r method0`)
@@ -293,7 +361,7 @@ plotkeyfig(yr,
 ```{r}
 plotkeyfig(yr, 
             place = "_NE_", 
-            folderpattern, plotpartnames)
+            folderpattern, plotpartnames, plotyaxis)
 ```
 
 # Mid-Atlantic `r yr`-`r maxyr` (`r method0`)
@@ -301,7 +369,7 @@ plotkeyfig(yr,
 ```{r}
 plotkeyfig(yr, 
             place = "_MA_", 
-            folderpattern, plotpartnames)
+            folderpattern, plotpartnames, plotyaxis)
 ```
 
 # Northeast `r yr`-`r maxyr` (`r method0`)
@@ -309,7 +377,7 @@ plotkeyfig(yr,
 ```{r}
 plotkeyfig(yr, 
             place = "_NorE_", 
-            folderpattern, plotpartnames)
+            folderpattern, plotpartnames, plotyaxis)
 ```
 
 # South Atlantic `r yr`-`r maxyr` (`r method0`)
@@ -317,7 +385,7 @@ plotkeyfig(yr,
 ```{r}
 plotkeyfig(yr, 
             place = "_SA_", 
-            folderpattern, plotpartnames)
+            folderpattern, plotpartnames, plotyaxis)
 ```
 
 # Gulf of Mexico `r yr`-`r maxyr` (`r method0`)
@@ -325,6 +393,6 @@ plotkeyfig(yr,
 ```{r}
 plotkeyfig(yr, 
             place = "_GOM_", 
-            folderpattern, plotpartnames)
+            folderpattern, plotpartnames, plotyaxis)
 ```
 

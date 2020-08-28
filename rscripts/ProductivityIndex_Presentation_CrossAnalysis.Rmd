@@ -15,48 +15,34 @@ knitr::opts_chunk$set(
   warning = FALSE,
 #   dev = "svg",
   fig.width = 12,
-  fig.height = 7
+  fig.height = 12
   # fig.retina = 3
   )
 
-print4plots<-function(plotlist, datadl, title00, legends = c(T,T,T,T), titles = c(F,F,F,F)){
+print3plots<-function(plotlist, datadl, title00, legends = c(T,T,T,T), titles = c(F,F,F,F)){
 
-  
-  b1<-plotlist[1][[1]]
-  if(legends[1] %in% F) {
-    b1<-b1 + theme(legend.position = "none")
-  }
-  if(legends[1] %in% F) {
-    b1<-b1 + ggtitle("")
-  }
-  
-  
-  b2<-plotlist[2][[1]]
-  if(legends[2] %in% F) {
-    b2<-b2 + theme(legend.position = "none")
-  }
-  if(legends[2] %in% F) {
-    b2<-b2 + ggtitle("")
-  }
-  
-  b3<-plotlist[3][[1]]
-  if(legends[3] %in% F) {
-    b3<-b3 + theme(legend.position = "none")
-  }
-  if(legends[3] %in% F) {
-    b3<-b3 + ggtitle("")
-  }
-  
-  b4<-plotlist[4][[1]]
-  if(legends[4] %in% F) {
-    b4<-b4 + theme(legend.position = "none")
-  }
-  if(legends[4] %in% F) {
-    b4<-b4 + ggtitle("")
-  }
+  b0<-list()
+  for (i in 1:length(plotlist)){
+    b<-plotlist[i][[1]]
+    if (names(plotlist)[i] %in% "blank") {
+    b<-b+
+      geom_line(aes(group = cat), size = 2) +
+      theme_classic(base_size = 25) 
+    if(legends[i] %in% F) {
+      b<-b + theme(legend.position = "none")
+    } else {
+      b<-b + theme(legend.title = element_blank())
+    }
+    if(titles[i] %in% F) {
+      b<-b + ggtitle("")
+    }
+    }
+    b0<-c(b0, list(b))
+
+    }
   
   b<-plotlist
-  layout <- (b1 + b2) / (b3 + b4)
+  layout <- (b0[1][[1]]) / (b0[2][[1]]) / (b0[3][[1]])
   
   title0<-strsplit(split = "_", x = names(b)[1])[[1]][-c(1,2)]
   title0<-title0[-length(title0)]
@@ -68,8 +54,8 @@ print4plots<-function(plotlist, datadl, title00, legends = c(T,T,T,T), titles = 
   layout +
     plot_annotation(
     title = title00, 
-    subtitle = title0,
-    caption = paste0("Data downloaded from FOSS ", datadl),
+    subtitle = "",
+    caption = paste0("Data downloaded from FOSS ", datadl, ". "),
     theme = theme(plot.title = element_text(size = 20, hjust = 0.5, face = "bold"))
     )
 }
@@ -101,9 +87,11 @@ plotnlines<-function(dat, title00, place){
   # ynames<-as.numeric(paste0(val))
   
   g<-ggplot(data = dat, aes(x = factor(Year), y = val, color = cat)) +
-    geom_line(aes(group = cat)) +
+    geom_line(aes(group = cat), size = 3) +
     geom_point() +
+    theme_classic(base_size = 20) + 
     theme(
+      legend.title = element_blank(), 
       # legend.position = c(0.9, 0.2), 
       panel.grid.major.y = element_line( color=NOAALightBlue, size = .1 ),
       panel.grid.minor.y = element_blank(),
@@ -167,7 +155,11 @@ plotcrossanalysis<-function(dat0, place, datadl){
                 names(dat)[2]:names(dat)[length(names(dat))], 
                 factor_key = T)  
   
-  Q<-plotnlines(dat = temp0, title00 = "Q", place = place)
+  temp0$cat<-gsub(pattern = "Q ", replacement = "", x = temp0$cat)
+  temp0$cat<-gsub(pattern = "[[:punct:]]", replacement = "", x = temp0$cat)
+  
+  
+  Q<-plotnlines(dat = temp0, title00 = "Q", place = "")
   
   
   # #QE
@@ -188,7 +180,10 @@ plotcrossanalysis<-function(dat0, place, datadl){
                 names(dat)[2]:names(dat)[length(names(dat))], 
                 factor_key = T)  
   
-  QI<-plotnlines(dat = temp0, title00 = "QI", place = place)
+  temp0$cat<-gsub(pattern = "QI ", replacement = "", x = temp0$cat)
+  temp0$cat<-gsub(pattern = "[[:punct:]]", replacement = "", x = temp0$cat)
+  
+  QI<-plotnlines(dat = temp0, title00 = "QI", place = "")
   
   
   #PI
@@ -198,23 +193,26 @@ plotcrossanalysis<-function(dat0, place, datadl){
                 names(dat)[2]:names(dat)[length(names(dat))], 
                 factor_key = T)  
   
-  PI<-plotnlines(dat = temp0, title00 = "PI", place = place)
+  temp0$cat<-gsub(pattern = "PI ", replacement = "", x = temp0$cat)
+  temp0$cat<-gsub(pattern = "[[:punct:]]", replacement = "", x = temp0$cat)
   
-  #blank
-  blank<-ggplot(dat = data.frame(x=1,y=1), aes(x, y)) + 
-      theme(panel.background = element_blank(), 
-            axis.title = element_blank(), 
-            axis.text = element_blank(), 
-            axis.ticks = element_blank()) + 
-      ggtitle("")
+  PI<-plotnlines(dat = temp0, title00 = "PI", place = "")
+  
+  # #blank
+  # blank<-ggplot(dat = data.frame(x=1,y=1), aes(x, y)) + 
+  #     theme(panel.background = element_blank(), 
+  #           axis.title = element_blank(), 
+  #           axis.text = element_blank(), 
+  #           axis.ticks = element_blank()) + 
+  #     ggtitle("")
   
   plotlist<-list("Q" = Q, 
                  "QI" = QI, 
-                 "blank" = blank, 
+                 # "blank" = blank, 
                  # "QE" = QE, 
                  "PI" = PI)
   
-  print4plots(plotlist = plotlist, datadl, title00 = place)
+  print3plots(plotlist = plotlist, datadl, title00 = "")
   
 }
 

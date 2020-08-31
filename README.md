@@ -1,10 +1,10 @@
 Measuring Output for U.S. Commercial Fisheries From Theory to Practice
 ======================================================================
 
-Emily Markowitz<sup>1</sup>
+**Emily Markowitz**<sup>1</sup>
 (<a href="mailto:Emily.Markowitz@noaa.gov" class="email">Emily.Markowitz@noaa.gov</a>)
 
-Sun Ling Wang<sup>2</sup>
+**Sun Ling Wang**<sup>2</sup>
 (<a href="mailto:Sun-Ling.Wang@noaa.gov" class="email">Sun-Ling.Wang@noaa.gov</a>)
 
 <sup>1</sup>Contractor, ECS Federal in support of NOAA Fisheries Office
@@ -19,11 +19,11 @@ Technology Economics & Social Analysis Division
 > \*The views expressed are those of the author and should not be
 > attributed to the NOAA, ECS or ERS
 
-GitHub:
+**GitHub:**
 <https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex>
 
-A quick message from our sponcers: NOAA README
-==============================================
+NOAA README
+===========
 
 > This repository is a scientific product and is not official
 > communication of the National Oceanic and Atmospheric Administration,
@@ -49,7 +49,7 @@ Study Purpose
 -   Evaluate the impacts of missing data and other issues on output
     estimates.
 
-\#\#\#Data requirements and source
+### Data requirements and source
 
 The Tornqvist quantity index requires data on quantity and revenue
 shares. We employ landings quantity (pounds) and landings value ($USD)
@@ -90,10 +90,9 @@ R Package *FisheriesEconomicProductivityIndex* forthcomming.
 Theoretical Framework: Törnqvist index
 ======================================
 
-### A Flexible Function and Superlative Quantity Index (Diewert 1976)
+A Flexible Function and Superlative Quantity Index (Diewert 1976)
 
-Math Theory: General Total Factor Productivity (*T**F**P*) Equation
-===================================================================
+**Math Theory: General Total Factor Productivity (*T**F**P*) Equation**
 
 The general form of the *T**F**P* can be measured as aggregate output
 (*Y*) divided by real total inputs (*X*). Rates of TFP growth are

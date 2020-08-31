@@ -1,7 +1,6 @@
 ---
 title: "Measuring Output for U.S. Commercial Fisheries — From Theory to Practice"
 author: 'Emily Markowitz^1^ (Emily.Markowitz@noaa.gov) Sun Ling Wang^2^ (Sun-Ling.Wang@noaa.gov) \n\n ^1^Contractor, ECS Federal in support of NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division \n\n ^2^On detail with the NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division \n\n >*The views expressed are those of the author and should not be attributed to the NOAA, ECS or ERS'
-date: "7/22/2020"
 output: md_document
 ---
 
@@ -12,9 +11,9 @@ knitr::opts_chunk$set(echo = FALSE, error = FALSE, message = FALSE, warning = FA
 # Measuring Output for U.S. Commercial Fisheries From Theory to Practice
 
 
-Emily Markowitz^1^ (Emily.Markowitz@noaa.gov)
+**Emily Markowitz**^1^ (Emily.Markowitz@noaa.gov)
 
-Sun Ling Wang^2^ (Sun-Ling.Wang@noaa.gov)
+**Sun Ling Wang**^2^ (Sun-Ling.Wang@noaa.gov)
 
 ^1^Contractor, ECS Federal in support of NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division; as of Sept. 28, 2020: Alaska Fisheries Science Center, National Marine Fisheries Service, National Oceanic and Atmospheric Administration, Seattle, WA 98195
 
@@ -22,9 +21,9 @@ Sun Ling Wang^2^ (Sun-Ling.Wang@noaa.gov)
 
 >*The views expressed are those of the author and should not be attributed to the NOAA, ECS or ERS
 
-GitHub: [https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex)  
+**GitHub:** [https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex)  
 
-# A quick message from our sponcers: NOAA README
+# NOAA README
 
 >This repository is a scientific product and is not official communication of the National Oceanic and Atmospheric Administration, or the United States Department of Commerce. All NOAA GitHub project code is provided on an ‘as is’ basis and the user assumes responsibility for its use. Any claims against the Department of Commerce or Department of Commerce bureaus stemming from the use of this GitHub project will be governed by all applicable Federal law. Any reference to specific commercial products, processes, or services by service mark, trademark, manufacturer, or otherwise, does not constitute or imply their endorsement, recommendation or favoring by the Department of Commerce. The Department of Commerce seal and logo, or the seal and logo of a DOC bureau, shall not be used in any manner to imply endorsement of any commercial product or activity by DOC or the United States Government.
 
@@ -101,7 +100,7 @@ ln<-log #tricky, tricky, Base R! Didn't fool me this time!!!
  - Evaluate the impacts of missing data and other issues on output estimates. 
 
 
-###Data requirements and source
+### Data requirements and source
 
 The Tornqvist quantity index requires data on quantity and revenue shares. We employ landings quantity (pounds) and landings value ($USD) data by year, state, and species. 
  
@@ -130,10 +129,10 @@ Main fuctions of interest are:
 R Package *FisheriesEconomicProductivityIndex* forthcomming. 
 
 # Theoretical Framework: Törnqvist index
-### A Flexible Function and Superlative Quantity Index (Diewert 1976) 
 
+A Flexible Function and Superlative Quantity Index (Diewert 1976) 
 
-# Math Theory: General Total Factor Productivity ($TFP$) Equation
+**Math Theory: General Total Factor Productivity ($TFP$) Equation**
 
 The general form of the $TFP$ can be measured as aggregate output ($Y$) divided by real total inputs ($X$). Rates of TFP growth are constructed using the Törnqvist index approach. The TFP growth over two time periods is defined as:
 

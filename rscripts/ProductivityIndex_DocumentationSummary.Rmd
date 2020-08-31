@@ -3,14 +3,27 @@ title: ""
 author: ""
 date: ""
 output: 
-   word_document:
-     df_print: kable
-     toc: true
-     reference_docx: word-styles-reference.docx
+  pdf_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    df_print: kable
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, error = FALSE, message = FALSE, warning = FALSE)
+
+# word_document:
+#   df_print: kable
+#   toc: true
+#   reference_docx: word-styles-reference.docx
+
+
+  # pdf_document:
+  #   toc: true
+  #   toc_depth: 4
+  #   number_sections: true
+  #   df_print: kable
 ```
 
 # Measuring Output for U.S. Commercial Fisheries From Theory to Practice
@@ -21,12 +34,15 @@ Generated: `r Sys.Date()`
 
 **Sun Ling Wang**^2^ (Sun-Ling.Wang@noaa.gov)
 
-^1^Contractor, ECS Federal in support of NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division
+^1^Contractor, ECS Federal in support of NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division; as of Sept. 28, 2020: Alaska Fisheries Science Center, National Marine Fisheries Service, National Oceanic and Atmospheric Administration, Seattle, WA 98195
 
 ^2^On detail with the NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division
 
 * *The views expressed are those of the author and should not be attributed to the NOAA, ECS or ERS*
 
+GitHub: [https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex)  
+
+R Package is forthcomming. 
 
 ## A quick message from our sponsors: NOAA README
 
@@ -1063,41 +1079,6 @@ tempQI %>%
     knitr::kable(row.names = T, booktabs = T)
 ```
 
-
-#### Sum Total Simple Sum Quantity Output Index
-
-$$QEI_t = QE_t/QE_{t=baseyr}$$
-
-Where:
-
- - $QE_t$ is the sum of Q before these calculations; the simple sum
- 
- - $QEI_t$ is the index of the sum of Q before these equations
-
-```{r, echo = echoTF(TRUE, code)}
-#remove duplicates
-temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
-temp <- temp[, !duplicated(colnames(temp))]
-temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
-temp <- temp[, !duplicated(colnames(temp))]
-
-
-  QE<-names(temp)[names(temp) %in% paste0("QE", NameBaseTotal)]
-  # QE<-QE[substr(x = QE, start = 1, stop = 2) %in% "QE"]
-  temp[,ncol(temp)+1]<-temp[,QE]/temp[,QE][rownames(temp) %in% baseyr]
-  names(temp)[ncol(temp)]<-paste0("QEI", NameBaseTotal)  
-```
-
-
-```{r, echo = echoTF(FALSE, code)}
-temp0<-cbind.data.frame(temp[,paste0("QE", NameBaseTotal)], temp[,paste0("QEI", NameBaseTotal)])
-names(temp0)<-c(paste0("QE", NameBaseTotal) ,paste0("QEI", NameBaseTotal))
-rownames(temp0)<-rownames(temp)
-temp0 %>%
-    knitr::kable(row.names = T, booktabs = T)
-```
-
-
 ##### Other Analysis Warnings Checks
 
 To make sure our analyses worked as inteded, let's see if we can back calculate our numbers.
@@ -1162,6 +1143,42 @@ Is there a warning?
 
 *`r a `*
 
+
+#### Sum Total Simple Sum Quantity Output Index
+
+$$QEI_t = QE_t/QE_{t=baseyr}$$
+
+Where:
+
+ - $QE_t$ is the sum of Q before these calculations; the simple sum
+ 
+ - $QEI_t$ is the index of the sum of Q before these equations
+
+```{r, echo = echoTF(TRUE, code)}
+#remove duplicates
+temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+temp <- temp[, !duplicated(colnames(temp))]
+temp<-temp[, !(grepl(pattern = "\\.[0-9]+", x = names(temp)))]
+temp <- temp[, !duplicated(colnames(temp))]
+
+
+  QE<-names(temp)[names(temp) %in% paste0("QE", NameBaseTotal)]
+  # QE<-QE[substr(x = QE, start = 1, stop = 2) %in% "QE"]
+  temp[,ncol(temp)+1]<-temp[,QE]/temp[,QE][rownames(temp) %in% baseyr]
+  names(temp)[ncol(temp)]<-paste0("QEI", NameBaseTotal)  
+```
+
+
+```{r, echo = echoTF(FALSE, code)}
+temp0<-cbind.data.frame(temp[,paste0("QE", NameBaseTotal)], temp[,paste0("QEI", NameBaseTotal)])
+names(temp0)<-c(paste0("QE", NameBaseTotal) ,paste0("QEI", NameBaseTotal))
+rownames(temp0)<-rownames(temp)
+temp0 %>%
+    knitr::kable(row.names = T, booktabs = T)
+```
+
+
+
 #### View Total Outputs
 ```{r, echo = echoTF(FALSE, code), warning = FALSE}
 # write.csv(x = temp, file = paste0(dir.docu, "Example_Output.csv"))
@@ -1225,9 +1242,9 @@ a <-  warnings.list[length(warnings.list)+1]<-paste0("FYI: ", ifelse(length(vv)=
 
 *`r a `*
 
+##### Graph 1: Quantity Index Categories
 
-##### Graph 1: Price Index
-In theory, $PI$ should be negative slope after the baseyear and positive after the base year, but because this data was fabricated without thinking of this, we don't see that here. The index value for the base year is = 1, however. 
+For comparison, let's recreate those graphs to make sure we are getting the same output:
 
 ```{r, echo = echoTF(TRUE, code)}
   title00<- "_QI-Line"
@@ -1250,6 +1267,8 @@ In theory, $PI$ should be negative slope after the baseyear and positive after t
 
 ##### Graph 2: Quantity Index Compare
 
+For comparison, let's recreate those graphs to make sure we are getting the same output:
+
 ```{r, echo = echoTF(TRUE, code)}
   title00<- "_QIvQEI-Line"
 
@@ -1266,28 +1285,6 @@ In theory, $PI$ should be negative slope after the baseyear and positive after t
                 factor_key = T)  
   
   plotnlines(dat = temp0,  title00, place) 
-  
-```
-
-##### Graph 3: Quantity Compare
-
-```{r, echo = echoTF(TRUE, code)}
-  title00<- "_QvQE-Line"
-
-  temp0<-temp
-  temp0$Year<-rownames(temp0)
-  
-  temp0<-data.frame(temp0[,names(temp0) %in% c("Year", 
-                                               paste0("Q", NameBaseTotal), 
-                                               paste0("QE", NameBaseTotal))])
-  temp0$Year<-rownames(temp)
-  
-  temp0<-gather(temp0, cat, val, 
-                names(temp0)[1]:names(temp0)[length(names(temp0))-1], 
-                factor_key = T)  
-  
-  plotnlines(dat = temp0,  title00, place) 
-
 ```
 
 
@@ -1368,13 +1365,14 @@ Did all of the analyses work as intended?
 
 #### E. Graph
 
-##### Graph 1: Price Index
+##### Graph 1: Quantity Index Categories
 
 For comparison, let's recreate those graphs to make sure we are getting the same output:
 
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_QI-Line`
+figures.list0$`_QI-Category`
 ```
+
 
 ##### Graph 2: Quantity Index Compare
 
@@ -1382,12 +1380,6 @@ For comparison, let's recreate those graphs to make sure we are getting the same
 
 ```{r, echo = echoTF(TRUE, code)}
 figures.list0$`_QIvQEI-Line`
-```
-
-##### Graph 3: Quantity Compare
-
-```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_VvVV-Line`
 ```
 
 -------
@@ -1404,12 +1396,8 @@ landings.data<-read.csv(file = paste0(dir.data, "landings_edited.csv"))
 landings.data<-landings.data[landings.data$State %in% unique(state.codes$State),]
 region<-"National"
 #We'll categorize by this column I already added to the data
-category0 = "category.orig"
+category0 = "category.tax"
 ```
-  
-Summary information about the commercial dataset:
-
-`r data.frame(summary(landings.data[,c("Tsn", "Year", "State", "AFS.Name", "Pounds", "Dollars", "category.orig")])) `
   
 Edit/Restructure Data
 ```{r, echo = echoTF(TRUE, code)}
@@ -1455,12 +1443,12 @@ Did all of the analyses work as intended?
 
 #### E. Graph
 
-##### Graph 1: Price Index
+##### Graph 1: Quantity Index Categories
 
 For comparison, let's recreate those graphs to make sure we are getting the same output:
 
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_PI-Line`
+figures.list0$`_QI-Category`
 ```
 
 
@@ -1472,10 +1460,10 @@ For comparison, let's recreate those graphs to make sure we are getting the same
 figures.list0$`_QIvQEI-Line`
 ```
 
-##### Graph 3: Quantity Compare
+##### Graph 3: Missing values of V
 
 ```{r, echo = echoTF(TRUE, code)}
-figures.list0$`_QvQE-Line`
+figures.list0$`_VNumberMissing-Line`
 ```
 
 

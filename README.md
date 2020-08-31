@@ -8,13 +8,19 @@ Sun Ling Wang<sup>2</sup>
 (<a href="mailto:Sun-Ling.Wang@noaa.gov" class="email">Sun-Ling.Wang@noaa.gov</a>)
 
 <sup>1</sup>Contractor, ECS Federal in support of NOAA Fisheries Office
-of Science and Technology Economics & Social Analysis Division
+of Science and Technology Economics & Social Analysis Division; as of
+Sept. 28, 2020: Alaska Fisheries Science Center, National Marine
+Fisheries Service, National Oceanic and Atmospheric Administration,
+Seattle, WA 98195
 
 <sup>2</sup>On detail with the NOAA Fisheries Office of Science and
 Technology Economics & Social Analysis Division
 
 > \*The views expressed are those of the author and should not be
 > attributed to the NOAA, ECS or ERS
+
+GitHub:
+<https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex>
 
 A quick message from our sponcers: NOAA README
 ==============================================
@@ -43,12 +49,51 @@ Study Purpose
 -   Evaluate the impacts of missing data and other issues on output
     estimates.
 
+\#\#\#Data requirements and source
+
+The Tornqvist quantity index requires data on quantity and revenue
+shares. We employ landings quantity (pounds) and landings value ($USD)
+data by year, state, and species.
+
+-   Data source: [Fisheries One Stop Shop downloaded August 13
+    2020](https://foss.nmfs.noaa.gov/apexfoss/f?p=215:200::::::)
+
+-   More information about the data: [Commericial Fisheries Landings
+    Data](https://www.fisheries.noaa.gov/national/sustainable-fisheries/commercial-fisheries-landings)
+
+Documentation
+=============
+
+For specifics about how the Quantitative and Price Methods are derived,
+please read this
+[Documentation](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex/blob/master/rscripts/ProductivityIndex_DocumentationSummary.pdf).
+
+File Organization
+=================
+
+All of the functions are stored in the
+[*ProductivityIndex\_Functions.R*](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex/blob/master/rscripts/ProductivityIndex_Functions.R)
+r script.
+
+Main fuctions of interest are:
+
+-   PriceMethodOutput
+
+-   PriceMethodOutput.Category
+
+-   QuantityMethodOutput
+
+-   QuantityMethodOutput.Category
+
+R Package *FisheriesEconomicProductivityIndex* forthcomming.
+
 Theoretical Framework: Törnqvist index
 ======================================
 
 ### A Flexible Function and Superlative Quantity Index (Diewert 1976)
 
-\#Math Theory: General Total Factor Productivity (*T**F**P*) Equation
+Math Theory: General Total Factor Productivity (*T**F**P*) Equation
+===================================================================
 
 The general form of the *T**F**P* can be measured as aggregate output
 (*Y*) divided by real total inputs (*X*). Rates of TFP growth are
@@ -82,9 +127,8 @@ where:
 
 -   *s* = species, e.g., Salmon, Alewife, Surf Clams
 
-------------------------------------------------------------------------
-
-\#Output Method: From Quantity to Quantity Measures
+Output Method: From Quantity to Quantity Measures
+=================================================
 
 \#\#\#Variable Summary
 
@@ -108,41 +152,3 @@ Subscript Inidicies
 -   *i* is category, e.g., Finfish (=1), Shellfish (=2)
 
 -   *s* is species, e.g., Salmon, Alewife, Surf Clams
-
-\#\#\#Data requirements and source
-
-The Tornqvist quantity index requires data on quantity and revenue
-shares. We employ landings quantity (pounds) and landings value ($USD)
-data by year, state, and species.
-
--   Data source: [Fisheries One Stop Shop downloaded August 13
-    2020](https://foss.nmfs.noaa.gov/apexfoss/f?p=215:200::::::)
-
--   More information about the data: [Commericial Fisheries Landings
-    Data](https://www.fisheries.noaa.gov/national/sustainable-fisheries/commercial-fisheries-landings)
-
-Documentation
-=============
-
-For specifics about how the Quantitative and Price Methods are derived,
-please read this
-[Documentation](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex/blob/master/rscripts/ProductivityIndex_DocumentationSummary.docx).
-
-File Organization
-=================
-
-All of the functions are stored in the
-[*ProductivityIndex\_Functions.R*](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex/blob/master/rscripts/ProductivityIndex_Functions.R)
-r script.
-
-Main fuctions of interest are:
-
--   PriceMethodOutput
-
--   PriceMethodOutput.Category
-
--   QuantityMethodOutput
-
--   QuantityMethodOutput.Category
-
-R Package *FisheriesEconomicProductivityIndex* forthcomming.

@@ -126,7 +126,7 @@ Documentation
 
 For specifics about how the Quantitative and Price Methods are derived,
 please read this
-[Documentation](https://foss.nmfs.noaa.gov/apexfoss/f?p=215:200::::::).
+[Documentation](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex/blob/master/rscripts/ProductivityIndex_DocumentationSummary.docx).
 
 File Organization
 =================
@@ -134,5 +134,15 @@ File Organization
 All of the functions are stored in the
 [*ProductivityIndex\_Functions.R*](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex/blob/master/rscripts/ProductivityIndex_Functions.R)
 r script.
+
+Main fuctions of interest are:
+
+-   PriceMethodOutput
+
+-   PriceMethodOutput.Category
+
+-   QuantityMethodOutput
+
+-   QuantityMethodOutput.Category
 
 R Package *FisheriesEconomicProductivityIndex* forthcomming.

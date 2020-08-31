@@ -847,7 +847,8 @@ lmCheck<-function(Columns, temp) {
   return(lm_check)
 }
 
-ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pctmiss, warnings.list, 
+PriceMethodOutput.Category<-#ImplicitQuantityOutput.speciescat.p<-
+  function(temp, ii, baseyr, maxyr, minyr, pctmiss, warnings.list, 
                                               MinimumNumberOfSpecies = 1) {
   
   ########Housekeeping
@@ -1283,7 +1284,8 @@ ImplicitQuantityOutput.speciescat.p<-function(temp, ii, baseyr, maxyr, minyr, pc
 }
 
 ### Function to calculate the Implicit Quanity Output at Fishery Level
-ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00, 
+PriceMethodOutput<-#ImplicitQuantityOutput.p<-
+  function(temp, baseyr, pctmiss = 1.00, 
                                  title0 = "", place = "", MinimumNumberOfSpecies = 2){
   
   temp.orig<-temp<-data.frame(temp)
@@ -1354,7 +1356,7 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
       
       #if there are still columns to assess that haven't been "removed"
       ###Append species and category level calculations
-      temp00<-ImplicitQuantityOutput.speciescat.p(temp = temp.orig, ii=category[ii],
+      temp00<-PriceMethodOutput.Category(temp = temp.orig, ii=category[ii],
                                                   baseyr, maxyr, minyr, 
                                                   pctmiss, warnings.list, MinimumNumberOfSpecies)
 
@@ -2275,7 +2277,8 @@ ImplicitQuantityOutput.p<-function(temp, baseyr, pctmiss = 1.00,
 }
 
 
-ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pctmiss, warnings.list, MinimumNumberOfSpecies = 1) {
+QuantityMethodOutput.Category<-#ImplicitQuantityOutput.speciescat.q<-
+  function(temp, ii, baseyr, maxyr, minyr, pctmiss, warnings.list, MinimumNumberOfSpecies = 1) {
   
   ########Housekeeping
   # Here I am just going to collect some housekeeping items
@@ -2602,7 +2605,8 @@ ImplicitQuantityOutput.speciescat.q<-function(temp, ii, baseyr, maxyr, minyr, pc
 }
 
 ### Function to calculate the Implicit Quanity Output at Fishery Level
-ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00, 
+QuantityMethodOutput<-#ImplicitQuantityOutput.q<-
+  function(temp, baseyr, pctmiss = 1.00, 
                                    title0 = "", place = "", MinimumNumberOfSpecies = 2){
   
   temp.orig<-temp
@@ -2673,7 +2677,7 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
     #if there are still columns to assess that haven't been "removed"
     # if (length(VColumns) != 0) {
     ###Append species and category level calculations
-    temp00<-ImplicitQuantityOutput.speciescat.q(temp, ii=category[ii],
+    temp00<-QuantityMethodOutput.Category(temp, ii=category[ii],
                                                              baseyr, maxyr, minyr, 
                                                              pctmiss, warnings.list, 
                                                 MinimumNumberOfSpecies)
@@ -2697,7 +2701,7 @@ ImplicitQuantityOutput.q<-function(temp, baseyr, pctmiss = 1.00,
     }
   
     
-    # warnings.list1<-ImplicitQuantityOutput.speciescat.q(temp, ii=category[ii],
+    # warnings.list1<-QuantityMethodOutput.Category(temp, ii=category[ii],
     #                                                                 baseyr, maxyr, minyr, 
     #                                                                 pctmiss, warnings.list)[[2]]   
 

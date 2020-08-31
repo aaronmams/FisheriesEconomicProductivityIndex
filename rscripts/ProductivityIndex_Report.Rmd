@@ -9,7 +9,6 @@ output: word_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 # `r reg.order[r]` - `r category0 ` Analsys Notes
 
 This analysis uses nationally collected landings data for the `r ifelse(reg.order[r] %in% "National", "whole U.S.", paste0("for the", reg.order[r], "region")) `, downloaded from the NOAA FOSS site <https://foss.nmfs.noaa.gov/apexfoss/f?p=215:200::::::>. 

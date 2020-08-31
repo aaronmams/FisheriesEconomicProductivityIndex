@@ -170,11 +170,11 @@ OutputAnalysis<-function(landings.data, category0, baseyr,
     
     ### C. Run the function
     if (analysisby == "P") {
-      temp00<-ImplicitQuantityOutput.p(temp = temp.orig, baseyr, pctmiss, 
+      temp00<-PriceMethodOutput(temp = temp.orig, baseyr, pctmiss, 
                                        title0 = title0, place = place, 
                                        MinimumNumberOfSpecies = MinimumNumberOfSpecies)
     } else if (analysisby == "Q") {
-      temp00<-ImplicitQuantityOutput.q(temp = temp.orig, baseyr, pctmiss, 
+      temp00<-QuantityMethodOutput(temp = temp.orig, baseyr, pctmiss, 
                                        title0 = title0, place = place, 
                                        MinimumNumberOfSpecies = MinimumNumberOfSpecies)
     }
@@ -1161,12 +1161,12 @@ for (yrange0 in 1:length(yearrange)) {
           rownames(temp)<-temp[,1]
           
           if (i==1) {
-            temp0<-rbind.data.frame(data.frame("Year" = as.numeric(temp$X.), 
-                                               "QE" = temp$QE_Total, 
-                                               "QEI" = temp$QEI_Total))
+            temp0<-rbind.data.frame(data.frame("Year" = as.numeric(temp$X.)))#, 
+                                               # "QE" = temp$QE_Total, 
+                                               # "QEI" = temp$QEI_Total))
           }            
           
-          if (sum(names(temp) %in% c("QI_Total", "Q_Total", "PI_Total")) != 0) {
+          if (sum(names(temp) %in% c("QE_Total", "QEI_Total". "QI_Total", "Q_Total", "PI_Total")) != 0) {
           temp00<-data.frame(temp[,names(temp) %in% c("QI_Total", "Q_Total", "PI_Total")])
           names(temp00)<-names(temp)[names(temp) %in% c("QI_Total", "Q_Total", "PI_Total")]
           names(temp00)<-gsub(pattern = "_Total", replacement = "", x = names(temp00))

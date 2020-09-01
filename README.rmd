@@ -10,10 +10,9 @@ knitr::opts_chunk$set(echo = FALSE, error = FALSE, message = FALSE, warning = FA
 
 # Measuring Output for U.S. Commercial Fisheries From Theory to Practice
 
+**Emily Markowitz**^1^ (Emily.Markowitz AT noaa.gov)
 
-**Emily Markowitz**^1^ (Emily.Markowitz@noaa.gov)
-
-**Sun Ling Wang**^2^ (Sun-Ling.Wang@noaa.gov)
+**Sun Ling Wang**^2^ (Sun-Ling.Wang AT noaa.gov)
 
 ^1^Contractor, ECS Federal in support of NOAA Fisheries Office of Science and Technology Economics & Social Analysis Division; as of Sept. 28, 2020: Alaska Fisheries Science Center, National Marine Fisheries Service, National Oceanic and Atmospheric Administration, Seattle, WA 98195
 
@@ -21,12 +20,20 @@ knitr::opts_chunk$set(echo = FALSE, error = FALSE, message = FALSE, warning = FA
 
 >*The views expressed are those of the author and should not be attributed to the NOAA, ECS or ERS
 
-**GitHub:** [https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex)  
+**GitHub:** [https://github.com/emilyhmarkowitz/FishEconProdOutput](https://github.com/emilyhmarkowitz/FishEconProdOutput)  
 
 # NOAA README
 
 >This repository is a scientific product and is not official communication of the National Oceanic and Atmospheric Administration, or the United States Department of Commerce. All NOAA GitHub project code is provided on an ‘as is’ basis and the user assumes responsibility for its use. Any claims against the Department of Commerce or Department of Commerce bureaus stemming from the use of this GitHub project will be governed by all applicable Federal law. Any reference to specific commercial products, processes, or services by service mark, trademark, manufacturer, or otherwise, does not constitute or imply their endorsement, recommendation or favoring by the Department of Commerce. The Department of Commerce seal and logo, or the seal and logo of a DOC bureau, shall not be used in any manner to imply endorsement of any commercial product or activity by DOC or the United States Government.
 
+
+# Download this package
+
+```{r, echo=TRUE, eval=FALSE}
+library(devtools)
+devtools::install_github("emilyhmarkowitz/FishEconProdOutput", dependencies = TRUE)
+library(FishEconProdOutput)
+```
 
 ```{r}
 echoTF<-function(typical, code = TRUE) {
@@ -40,7 +47,6 @@ dir.in<-getwd()
 #Local Directories
 dir.output<-paste0(dir.in, "/output/")
 dir.data<-paste0(dir.in, "/data/")
-
 
 #####LOAD CRAN LIBRARIES#######
 
@@ -110,11 +116,9 @@ The Tornqvist quantity index requires data on quantity and revenue shares. We em
 
 # Documentation
 
-For specifics about how the Quantitative and Price Methods are derived, please read this [Documentation](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex/blob/master/rscripts/ProductivityIndex_DocumentationSummary.pdf). 
+For specifics about how the Quantitative and Price Methods are derived, please read this [Documentation](https://github.com/emilyhmarkowitz/FishEconProdOutput/blob/master/ProductivityIndex_DocumentationSummary.pdf). 
 
 # File Organization
-
-All of the functions are stored in the [*ProductivityIndex_Functions.R*](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex/blob/master/rscripts/ProductivityIndex_Functions.R) r script. 
 
 Main fuctions of interest are:
 
@@ -125,8 +129,6 @@ Main fuctions of interest are:
  - QuantityMethodOutput
  
  - QuantityMethodOutput.Category
-
-R Package *FisheriesEconomicProductivityIndex* forthcomming. 
 
 # Theoretical Framework: Törnqvist index
 

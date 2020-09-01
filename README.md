@@ -1,11 +1,9 @@
 Measuring Output for U.S. Commercial Fisheries From Theory to Practice
 ======================================================================
 
-**Emily Markowitz**<sup>1</sup>
-(<a href="mailto:Emily.Markowitz@noaa.gov" class="email">Emily.Markowitz@noaa.gov</a>)
+**Emily Markowitz**<sup>1</sup> (Emily.Markowitz AT noaa.gov)
 
-**Sun Ling Wang**<sup>2</sup>
-(<a href="mailto:Sun-Ling.Wang@noaa.gov" class="email">Sun-Ling.Wang@noaa.gov</a>)
+**Sun Ling Wang**<sup>2</sup> (Sun-Ling.Wang AT noaa.gov)
 
 <sup>1</sup>Contractor, ECS Federal in support of NOAA Fisheries Office
 of Science and Technology Economics & Social Analysis Division; as of
@@ -19,8 +17,7 @@ Technology Economics & Social Analysis Division
 > \*The views expressed are those of the author and should not be
 > attributed to the NOAA, ECS or ERS
 
-**GitHub:**
-<https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex>
+**GitHub:** <https://github.com/emilyhmarkowitz/FishEconProdOutput>
 
 NOAA README
 ===========
@@ -39,6 +36,13 @@ NOAA README
 > or the seal and logo of a DOC bureau, shall not be used in any manner
 > to imply endorsement of any commercial product or activity by DOC or
 > the United States Government.
+
+Download this package
+=====================
+
+    library(devtools)
+    devtools::install_github("emilyhmarkowitz/FishEconProdOutput", dependencies = TRUE)
+    library(FishEconProdOutput)
 
 Study Purpose
 =============
@@ -66,14 +70,10 @@ Documentation
 
 For specifics about how the Quantitative and Price Methods are derived,
 please read this
-[Documentation](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex/blob/master/rscripts/ProductivityIndex_DocumentationSummary.pdf).
+[Documentation](https://github.com/emilyhmarkowitz/FishEconProdOutput/blob/master/ProductivityIndex_DocumentationSummary.pdf).
 
 File Organization
 =================
-
-All of the functions are stored in the
-[*ProductivityIndex\_Functions.R*](https://github.com/emilyhmarkowitz/FisheriesEconomicProductivityIndex/blob/master/rscripts/ProductivityIndex_Functions.R)
-r script.
 
 Main fuctions of interest are:
 
@@ -84,8 +84,6 @@ Main fuctions of interest are:
 -   QuantityMethodOutput
 
 -   QuantityMethodOutput.Category
-
-R Package *FisheriesEconomicProductivityIndex* forthcomming.
 
 Theoretical Framework: Törnqvist index
 ======================================

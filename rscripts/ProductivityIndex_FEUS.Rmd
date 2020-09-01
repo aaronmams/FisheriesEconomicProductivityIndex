@@ -1,0 +1,259 @@
+---
+title: ""
+author: ""
+date: ""
+output: 
+  word_document:
+    df_print: kable
+    reference_docx: word-styles-reference.docx
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, error = FALSE, message = FALSE, warning = FALSE)
+designflowin<-FALSE
+```
+
+## Productivity Output Index
+
+```{r p1}
+minyr<-2009
+maxyr<-2018
+
+dir.in<-dirname(getwd())
+dir.data<-dir.rawdata<-paste0(dir.in, "/data/")
+dir.output<-paste0(dir.in, "/output/")
+dir.out<-paste0(dir.output, "ProductivityIndex_", Sys.Date(), "/")
+dir.scripts<-paste0(dir.in, "/rscripts/")
+dir.analyses<-paste0(dir.out, "/analyses/")
+ProdI.Report<-paste0(dir.scripts, "ProductivityIndex_Report.rmd")
+
+# aaa<-unlist(unique(lapply(fold0, `[[`, 1)))
+
+library(devtools)
+devtools::install_github("emilyhmarkowitz/FishEconProdOutput", dependencies = TRUE)
+library(FishEconProdOutput)
+
+### SOURCE FILES AND DATA #####
+#Load data for this section
+#Functions specific to this section
+ProdI.Funct<-paste0(dir.scripts, "ProductivityIndex_Functions.R")
+source(ProdI.Funct)
+
+aa<-list.files(path = paste0(dir.analyses), 
+                           pattern = paste0(minyr, "To", maxyr, "_FS"), 
+                           full.names = TRUE)
+
+bb<-list.files(path = paste0(aa, "/outputtables/"), full.names = TRUE, pattern = "000_All")
+
+
+
+
+```
+
+
+#### Table [1]. Regional Landing Values, `r minyr`-`r maxyr` (Implicit Quantity in `r maxyr` $ Million)
+
+```{r p3}
+
+a<-data.frame(Year = minyr:maxyr)
+for (i in 2:length(reg.order)){
+  temp<-read.xlsx(file = bb[grep(pattern = "_FinalOutput", x = bb)], sheetName = reg.order[i])
+  a<-cbind.data.frame(a, temp[,names(temp) %in% "QI_Total"])
+}
+names(a)<-c("Year", reg.order[2:length(reg.order)])
+a$Northeast<-NULL
+names(a)<-gsub(pattern = " \\(Hawai`i\\)", replacement = "", x = names(a))
+
+a[,2:ncol(a)]<-round(x = a[,2:ncol(a)], digits = 2)
+
+if (designflowin %in% F){
+  # print(a %>%
+  #   knitr::kable(row.names = T, booktabs = T))
+  
+  
+  a %>% 
+  # tibble::rownames_to_column() %>% 
+  flextable() %>%
+  set_header_labels(rowname = "") %>% 
+  # add_header_row(values = c("", "Group 1", "Group 2"), 
+  #                colwidths = c(1, 2, 2)) %>% 
+   theme_box()# %>% autofit()
+  
+}
+```
+
+
+#### Table [2]. Regional Price Index, `r minyr`-`r maxyr` (`r maxyr` = 1)
+
+```{r p4}
+
+a<-data.frame(Year = minyr:maxyr)
+for (i in 2:length(reg.order)){
+  temp<-read.xlsx(file = bb[grep(pattern = "_FinalOutput", x = bb)], sheetName = reg.order[i])
+  a<-cbind.data.frame(a, temp[,names(temp) %in% "PI_Total"])
+}
+names(a)<-c("Year", reg.order[2:length(reg.order)])
+
+a$Northeast<-NULL
+names(a)<-gsub(pattern = " \\(Hawai`i\\)", replacement = "", x = names(a))
+
+a[,2:ncol(a)]<-round(x = a[,2:ncol(a)], digits = 2)
+
+if (designflowin %in% F){
+  # print(a %>%
+  #   knitr::kable(row.names = T, booktabs = T))
+  
+  a %>% 
+  # tibble::rownames_to_column() %>% 
+  flextable() %>%
+  set_header_labels(rowname = "") %>% 
+  # add_header_row(values = c("", "Group 1", "Group 2"), 
+  #                colwidths = c(1, 2, 2)) %>% 
+   theme_box()# %>% autofit()
+  
+}
+```
+
+
+#### Table [3]. National Landing Values (Implicit Quantity in `r maxyr` $ Million) and Price Index, (`r maxyr` = 1), `r minyr`-`r maxyr` 
+
+```{r p5}
+
+keydatatable<-function(Date0, yr, maxyr, folderpattern, dir.output) {
+  outputrun<-list.files(path = dir.output, pattern = as.character(Date0), full.names = TRUE)
+  a<-list.files(path = (list.files(path = paste0(outputrun, "/analyses/"), full.names = TRUE, pattern = paste0(yr, "To", maxyr, "_", folderpattern))),
+                     pattern = "outputtables", full.names = TRUE, ignore.case = TRUE)
+  b<-a[(grepl(pattern =paste0(yr, "To"), x = a))]
+  b<-list.files(path = b, pattern = "_US_", full.names = TRUE)
+  b<-b[grep(pattern = "_Review", x = b)]
+
+  # b<-load(paste0(a, "/AllFigures.rdata"))
+  a<-read.csv(file = b)
+  rownames(a)<-a$X
+  a$X<-NULL
+
+  a<-a[,(grepl(pattern = "PI",x = names(a)) |
+          grepl(pattern = "Q[0-9]+_",x = names(a)) |
+          grepl(pattern = "Q_Total",x = names(a)) #|
+          # grepl(pattern = "QI",x = names(a))
+         )]
+
+  aa<-cbind.data.frame(data.frame(a[,grepl(pattern = "Total", x = names(a))]),
+                      data.frame(a[,!(grepl(pattern = "Total", x = names(a)))]))
+  names(aa)<-c(names(a)[grepl(pattern = "Total", x = names(a))],
+              names(a)[!(grepl(pattern = "Total", x = names(a)))])
+  a<-aa
+  groups<-unlist(lapply(strsplit(split = "_", x = names(a)), `[[`, 2))
+  names(a)<-gsub(pattern = "[0-9]+", replacement = "", x = names(a))
+  names(a)<-gsub(pattern = "_[a-zA-Z]+", replacement = "", x = names(a))
+
+  a[,(names(a) == "Q")]<-a[,(names(a) == "Q")]/1e6
+
+  if (sum(names(a) == "PI")>0) {
+  for (i in 1:length(which(names(a) == "PI"))){
+    a[,which(names(a) == "PI")[i]]<-a[,which(names(a) == "PI")[i]]/a[1,which(names(a) == "PI")[i]]
+  }
+  }
+  #   for (i in 1:length(which(names(a) == "QI"))){
+  #   a[,which(names(a) == "QI")[i]]<-a[,which(names(a) == "QI")[i]]/a[1,which(names(a) == "QI")[i]]
+  # }
+
+  g<-t(data.frame(table(groups)))
+  g<-g[,match(table = g[1,], x = unique(groups))]
+
+
+a %>%
+  tibble::rownames_to_column() %>%
+  flextable() %>%
+  set_header_labels(rowname = "") %>%
+  add_header_row(values = c("", g[1,]),
+                 colwidths = c(1, as.numeric(g[2,]))) %>%
+   theme_box() %>% autofit()
+}
+
+
+if (designflowin %in% F){
+keydatatable(Date0 = Sys.Date(), yr = minyr, maxyr = maxyr, 
+             folderpattern = "", dir.output)
+
+}
+```
+
+#### Graph [1]. National Landing Values (Implicit Quantity in [`r minyr`] $ Million), `r minyr`-`r maxyr` 
+
+```{r p6}
+
+a<-data.frame(Year = minyr:maxyr)
+
+temp<-read.xlsx(file = bb[grep(pattern = "_Review", x = bb)], sheetName = reg.order[1])
+
+Q<-cbind.data.frame(temp$Q_Total,
+  temp[,grep(x = names(temp), pattern = "Q[0-9]+_")])
+Q<-round(x = Q/1e6, digits = 2)
+
+a<-cbind.data.frame(a, Q)
+
+names(a)<-gsub(pattern = "[0-9]+", replacement = "", x = names(a))
+names(a)<-gsub(pattern = "temp\\$", replacement = "", x = names(a))
+names(a)<-gsub(pattern = "Q_", replacement = "", x = names(a))
+
+a<-a[,match(table = names(a),
+            x = c("Year","Total",
+                  "Finfish", "Shellfish"))]
+
+
+a0<-a
+a <- gather(a0, Category, val, names(a0)[-1], factor_key=TRUE)
+
+a$cat<-a$Category
+
+temp0<-a
+
+
+g<-plotnlines(dat = temp0, 
+              titleyaxis = paste0("Implicit Quantity in [", minyr,"] $ Million"), 
+              title0 = "")
+
+if (designflowin %in% F){
+  g
+} 
+
+# counter<-funct_counter(counter)
+# ggsave(g,
+#        filename = paste0(dir.figures, filename0, "_", counter, "_G4_Figure.pdf"),
+#        width = 4, height = 4)
+
+```
+
+#### Graph [2]. Total Quantity Index for Each Region (`r minyr` = 1), `r minyr`-`r maxyr`
+
+```{r p7}
+
+a<-data.frame(Year = minyr:maxyr)
+for (i in 2:length(reg.order)){
+  temp<-read.xlsx(file = bb[grep(pattern = "_FinalOutput", x = bb)], sheetName = reg.order[i])
+  a<-cbind.data.frame(a, temp[,names(temp) %in% "Q_Total"])
+}
+names(a)<-c("Year", reg.order[2:length(reg.order)])
+
+a0<-a
+a <- gather(a0, Category, val, names(a0)[-1], factor_key=TRUE)
+
+a$cat<-a$Category
+
+temp0<-a
+
+g<-plotnlines(dat = temp0, titleyaxis = paste0("Quantity Index (", minyr," = 1)"), title0 = "")
+
+if (designflowin %in% F){
+  g
+} 
+
+# counter<-funct_counter(counter)
+# ggsave(g,
+#        filename = paste0(dir.figures, filename0, "_", counter, "_G4_Figure.pdf"),
+#        width = 4, height = 4)
+
+```
+
+
